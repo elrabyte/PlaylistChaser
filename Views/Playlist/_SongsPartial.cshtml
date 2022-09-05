@@ -1,0 +1,21 @@
+﻿@model IEnumerable<SongModel>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.YoutubeSongName)
+            </th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var song in Model)
+        {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => song.YoutubeSongName)
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
