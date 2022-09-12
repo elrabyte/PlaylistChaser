@@ -11,6 +11,7 @@ namespace PlaylistChaser
         private const string spotifyClientId = "5b7f5711cb3441e1b9956c2b5950f552";
         private const string spotifyClientSecret = "d03839b07802470cb6a2b218ea2389de";
         private const string userId = "31eanddqkyvals63bu4teybq76ci";
+        private const string redirectUri = "https://localhost:7245/Playlist/loginToSpotify";
         internal SpotifyApiHelper(HttpContext context)
         {
             this.context = context;
@@ -20,44 +21,21 @@ namespace PlaylistChaser
 
 
             spotify = new SpotifyClient(config);
+        }
+        internal SpotifyApiHelper(string code)
+        {
+            var response = new OAuthClient().RequestToken(new AuthorizationCodeTokenRequest(spotifyClientId, spotifyClientSecret, code, new Uri(redirectUri))).Result;
 
-
-
-            //var loginRequest = new LoginRequest(new Uri("https://localhost:7245/"), spotifyClientId, LoginRequest.ResponseType.Code)
-            //{
-            //    Scope = new[] { Scopes.PlaylistReadPrivate, Scopes.PlaylistReadCollaborative }
-            //};
-            //var uri = loginRequest.ToUri();
-
-            //currentUserId = spotify.UserProfile.Current().Result.Id;
+            spotify = new SpotifyClient(response.AccessToken);
         }
 
-        private async Task<string> getAccessToken()
+        public static Uri getLoginUri()
         {
-            try
+            var loginRequest = new LoginRequest(new Uri(redirectUri), spotifyClientId, LoginRequest.ResponseType.Code)
             {
-                var accessToken = context.Session.GetString(spotifyAccessTokenKey);
-                if (accessToken != null)
-                {
-                    var request = new AuthorizationCodeRefreshRequest(spotifyClientId, spotifyClientSecret, accessToken);
-                    accessToken = (await new OAuthClient().RequestToken(request)).AccessToken;
-                }
-                else
-                {
-                    var request = new ClientCredentialsRequest(spotifyClientId, spotifyClientSecret);
-                    accessToken = (await new OAuthClient().RequestToken(request)).AccessToken;
-
-                }
-                context.Session.SetString(spotifyAccessTokenKey, accessToken);
-                return accessToken;
-            }
-            catch (Exception)
-            {
-                var request = new ClientCredentialsRequest(spotifyClientId, spotifyClientSecret);
-                var accessToken = (await new OAuthClient().RequestToken(request)).AccessToken;
-                context.Session.SetString(spotifyAccessTokenKey, accessToken);
-                return accessToken;
-            }
+                Scope = new[] { Scopes.PlaylistModifyPrivate, Scopes.PlaylistModifyPublic }
+            };
+            return loginRequest.ToUri();
         }
 
         public async Task<SearchResponse> SearchSong(SearchRequest.Types type, string songName)

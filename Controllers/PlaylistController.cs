@@ -137,5 +137,22 @@ namespace PlaylistChaser.Controllers
                 return new JsonResult(new { success = false, message = ex.InnerException });
             }
         }
+
+
+        public async Task<ActionResult> loginToSpotify(string code)
+        {
+            try
+            {
+                if (code == null)
+                    return Redirect(SpotifyApiHelper.getLoginUri().ToString());
+
+                var spotifyHelper = new SpotifyApiHelper(code);
+                return new JsonResult(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                return new JsonResult(new { success = false, message = ex.InnerException });
+            }
+        }
     }
 }
