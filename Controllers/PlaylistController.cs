@@ -139,14 +139,14 @@ namespace PlaylistChaser.Controllers
         }
 
 
-        public async Task<ActionResult> loginToSpotify(string code)
+        public ActionResult loginToSpotify(string code)
         {
             try
             {
                 if (code == null)
                     return Redirect(SpotifyApiHelper.getLoginUri().ToString());
 
-                var spotifyHelper = new SpotifyApiHelper(code);
+                var spotifyHelper = new SpotifyApiHelper(HttpContext, code);
                 return new JsonResult(new { success = true });
             }
             catch (Exception ex)
