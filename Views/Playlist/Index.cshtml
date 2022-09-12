@@ -23,13 +23,20 @@
 }
 
 <table class="table">
+    <colgroup>
+        <col sytle="width:25%"/>
+        <col sytle="width:25%"/>
+        <col sytle="width:25%"/>
+        <col sytle="width:25%"/>
+    </colgroup>
     <thead>
         <tr>
+            <th></th>
             <th>
                 @Html.DisplayNameFor(model => model.Name)
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.Description)
+                @Html.DisplayNameFor(model => model.ChannelName)
             </th>
             <th></th>
         </tr>
@@ -39,10 +46,13 @@
         {
             <tr>
                 <td>
+                    <img src="data:imgae/png;base64,@(playlist.ImageBytes64)">
+                </td>
+                <td>
                     @Html.DisplayFor(modelItem => playlist.Name)
                 </td>
                 <td>
-                    @Html.DisplayFor(modelItem => playlist.Description)
+                    @Html.DisplayFor(modelItem => playlist.ChannelName)
                 </td>
                 <td>
                     <a asp-action="Details" asp-route-id="@playlist.Id">Details</a>

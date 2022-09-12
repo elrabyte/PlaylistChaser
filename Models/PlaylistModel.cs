@@ -7,15 +7,23 @@ namespace PlaylistChaser.Models
     {
         [Key, DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int? Id { get; set; }
+        
         //youtube
         [Required]
-        public string Name { get; set; }
+        public string? YoutubeUrl { get; set; }
+        [Required]
+        public string? Name { get; set; }
+        [Required]
+        public string? ChannelName { get; set; }
+        public string? ImageBytes64 { get; set; }
+        
+        //spotify
+        public string? SpotifyUrl { get; set; }
         public string? Description { get; set; }
-        [Required]
-        public string YoutubeUrl { get; set; }
-        [Required]
-        public string UploaderName { get; set; }
+
 
         //virtual public ICollection<SongModel> Songs { get; set; }
+        [NotMapped]
+        public ICollection<SongModel> Songs { get; set; }
     }
 }

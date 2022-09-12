@@ -27,7 +27,8 @@ namespace PlaylistChaser.Controllers
         #region index
         public IActionResult Index()
         {
-            return View(db.Playlist.ToList());
+            var playlists = db.Playlist.ToList();
+            return View(playlists);
         }
         #endregion
 
@@ -36,8 +37,10 @@ namespace PlaylistChaser.Controllers
         {
             try
             {
+                var songs = db.Song.Where(s => s.PlaylistId == id).ToList();
+                db.Song.RemoveRange(songs);
+                db.SaveChanges();
                 db.Playlist.Remove(db.Playlist.Single(p => p.Id == id));
-                db.Song.RemoveRange(db.Song.Where(s => s.PlaylistId == id));
                 db.SaveChanges();
                 return RedirectToAction("Index");
             }
@@ -52,7 +55,9 @@ namespace PlaylistChaser.Controllers
         #region details
         public ActionResult Details(int id)
         {
-            return View(db.Playlist.Single(p => p.Id == id));
+            var playlist = db.Playlist.Single(p => p.Id == id);
+            playlist.Songs = db.Song.Where(s => s.PlaylistId == id).ToList();
+            return View(playlist);
         }
         #endregion
 
@@ -85,7 +90,7 @@ namespace PlaylistChaser.Controllers
                 var songs = db.Song.Where(s => s.PlaylistId == id).ToList();
                 foreach (var song in songs)
                 {
-                    await checkSong(song);
+                    await findSongSpotify(song);
                 }
                 return new JsonResult(new { success = true });
             }
@@ -94,19 +99,20 @@ namespace PlaylistChaser.Controllers
                 return new JsonResult(new { success = false, message = ex.InnerException });
             }
         }
-        private async Task<bool> checkSong(SongModel song)
+        private async Task<bool> findSongSpotify(SongModel song)
         {
             var spotifyHelper = new SpotifyApiHelper(HttpContext);
 
             var response = await spotifyHelper.SearchSong(SpotifyAPI.Web.SearchRequest.Types.Track, song.YoutubeSongName);
-            //single song found
-            if (response.Tracks.Items?.Count == 1)
+            //first song found
+            if (response.Tracks.Items?.Count > 0)
             {
-                var spotifySong = response.Tracks.Items[0];
+                var spotifySong = response.Tracks.Items.First();
                 var dbSong = db.Song.Single(s => s.Id == song.Id);
                 dbSong.FoundOnSpotify = true;
                 dbSong.SpotifyId = spotifySong.Id;
                 dbSong.ArtistName = string.Join(",", spotifySong.Artists.Select(a => a.Name).ToList());
+                dbSong.SongName = spotifySong.Name;
                 db.SaveChanges();
                 return true;
             }
@@ -114,5 +120,22 @@ namespace PlaylistChaser.Controllers
             return false;
         }
         #endregion
+
+        public async Task<ActionResult> UpdateSpotifyPlaylist(int id)
+        {
+            try
+            {
+                var playlist = db.Playlist.Single(p => p.Id == id);
+                playlist.Songs = db.Song.Where(s => s.PlaylistId == id).ToList();
+                var spotifyHelper = new SpotifyApiHelper(HttpContext);
+                var spotifyPlaylist = await spotifyHelper.CreatePlaylist(playlist);
+                playlist.SpotifyUrl = spotifyPlaylist.Id;
+                return new JsonResult(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                return new JsonResult(new { success = false, message = ex.InnerException });
+            }
+        }
     }
 }

@@ -23,8 +23,8 @@ namespace PlaylistChaser
         internal async Task<PlaylistModel> GetPlaylist(string url)
         {
             var ytPlaylist = await youtube.Playlists.GetAsync(url);
-            var playlist = addPlaylist(ytPlaylist);
-            addSongs((await youtube.Playlists.GetVideosAsync(url)).ToList(), playlist.Id.Value);
+            var playlist = await addPlaylist(ytPlaylist);
+            await addSongs((await youtube.Playlists.GetVideosAsync(url)).ToList(), playlist.Id.Value);
 
             return playlist;
         }
@@ -36,17 +36,17 @@ namespace PlaylistChaser
         }
 
         #region model
-        private PlaylistModel addPlaylist(Playlist ytPlaylist)
+        private async Task<PlaylistModel> addPlaylist(Playlist ytPlaylist)
         {
-            PlaylistModel playlist = null;
             try
             {
-                playlist = new PlaylistModel
+                var playlist = new PlaylistModel
                 {
                     Name = ytPlaylist.Title,
                     YoutubeUrl = ytPlaylist.Url,
-                    UploaderName = ytPlaylist.Author.Title,
+                    ChannelName = ytPlaylist.Author?.ChannelTitle,
                     Description = ytPlaylist.Description
+                    //,ImageBytes64 = await Helper.GetImageToBase64(ytPlaylist.Thumbnails.OrderBy(t => t.Resolution.Area).First().Url)
                 };
                 db.Playlist.Add(playlist);
                 db.SaveChanges();
@@ -55,11 +55,11 @@ namespace PlaylistChaser
             }
             catch (Exception ex)
             {
-                return playlist;
+                return null;
             }
         }
 
-        private void addSongs(List<PlaylistVideo> ytSongs, int playlistId)
+        private async Task addSongs(List<PlaylistVideo> ytSongs, int playlistId)
         {
             try
             {
@@ -72,8 +72,8 @@ namespace PlaylistChaser
                             YoutubeId = ytSong.Url,
                             FoundOnSpotify = false,
                             PlaylistId = playlistId
-
-                        }); ;
+                            //,ImageBytes64 = await Helper.GetImageToBase64(ytSong.Thumbnails.OrderBy(t => t.Resolution.Area).First().Url)
+                        });
                 }
                 db.SaveChanges();
             }

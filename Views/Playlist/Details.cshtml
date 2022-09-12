@@ -4,7 +4,6 @@
 }
 
 <h4>Playlist</h4>
-
 <div class="row">
     <div class="col-md-6">
         <div class="form-group row">
@@ -21,6 +20,62 @@
                     Check
                 </a>
             </div>
+            <div class="col">
+                <a asp-action="UpdateSpotifyPlaylist" asp-route-id="@Model.Id" class="btn btn-primary">
+                   Update spotify playlist
+                </a>
+            </div>
         </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col">
+        <h5>Songs</h5>
+        <table class="table">
+            <colgroup>
+                <col sytle="width:25%" />
+                <col sytle="width:25%" />
+                <col sytle="width:25%" />
+                <col sytle="width:25%" />
+            </colgroup>
+            <thead>
+                <tr>
+                    <th></th>
+                    <th>
+                        @Html.DisplayName("SongName")
+                    </th>
+                    <th>
+                        @Html.DisplayName("ArtistName")
+                    </th>
+                    <th>
+                        @Html.DisplayName("FoundOnSpotify")
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+
+                @foreach (var song in Model.Songs)
+                {
+
+                    <tr>
+                        <td>
+                            <img src="data:imgae/png;base64,@(song.ImageBytes64)">
+                        </td>
+                        <td>
+                            @Html.DisplayFor(m => song.SongName)
+                        </td>
+                        <td>
+                            @Html.DisplayFor(m => song.ArtistName)
+                        </td>
+                        <td>
+                            @Html.DisplayFor(m => song.FoundOnSpotify)
+                        </td>
+                        <td>
+                            <a asp-action="FindSong" asp-route-id="@song.Id">Find song</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
     </div>
 </div>
