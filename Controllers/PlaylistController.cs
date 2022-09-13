@@ -87,11 +87,9 @@ namespace PlaylistChaser.Controllers
         {
             try
             {
-                var songs = db.Song.Where(s => s.PlaylistId == id).ToList();
-                foreach (var song in songs)
-                {
-                    await findSongSpotify(song);
-                }
+                var songs = db.Song.Where(s => s.PlaylistId == id && !s.FoundOnSpotify.Value).ToList();
+                await findSongsSpotify(songs);
+
                 return new JsonResult(new { success = true });
             }
             catch (Exception ex)
@@ -119,6 +117,29 @@ namespace PlaylistChaser.Controllers
 
             return false;
         }
+
+        private async Task<bool> findSongsSpotify(List<SongModel> songs)
+        {
+            var spotifyHelper = new SpotifyApiHelper(HttpContext);
+
+            foreach (var song in songs)
+            {
+                var response = await spotifyHelper.SearchSong(SpotifyAPI.Web.SearchRequest.Types.Track, song.YoutubeSongName);
+                //first song found
+                if (response.Tracks.Items?.Count > 0)
+                {
+                    var spotifySong = response.Tracks.Items.First();
+                    var dbSong = db.Song.Single(s => s.Id == song.Id);
+                    dbSong.FoundOnSpotify = true;
+                    dbSong.SpotifyId = spotifySong.Uri;
+                    dbSong.ArtistName = string.Join(",", spotifySong.Artists.Select(a => a.Name).ToList());
+                    dbSong.SongName = spotifySong.Name;
+                    db.SaveChanges();
+                }
+            }
+            return true;
+
+        }
         #endregion
 
         public async Task<ActionResult> UpdateSpotifyPlaylist(int id)
@@ -128,8 +149,22 @@ namespace PlaylistChaser.Controllers
                 var playlist = db.Playlist.Single(p => p.Id == id);
                 playlist.Songs = db.Song.Where(s => s.PlaylistId == id).ToList();
                 var spotifyHelper = new SpotifyApiHelper(HttpContext);
-                var spotifyPlaylist = await spotifyHelper.CreatePlaylist(playlist);
-                playlist.SpotifyUrl = spotifyPlaylist.Id;
+                if (string.IsNullOrEmpty(playlist.SpotifyUrl))
+                {
+                    var spotifyPlaylist = await spotifyHelper.CreatePlaylist(playlist);
+                    playlist.SpotifyUrl = spotifyPlaylist.Id;
+                    db.SaveChanges();
+                }
+
+                if (await spotifyHelper.UpdatePlaylist(playlist))
+                {
+                    foreach (var song in db.Song.Where(s => s.PlaylistId == id && s.FoundOnSpotify.Value && !s.AddedToSpotify.Value))
+                    {
+                        song.AddedToSpotify = true;
+                        db.SaveChanges();
+                    }
+                }
+
                 return new JsonResult(new { success = true });
             }
             catch (Exception ex)

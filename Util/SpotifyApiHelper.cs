@@ -61,7 +61,7 @@ namespace PlaylistChaser
             try
             {
                 var request = new PlaylistCreateRequest(playlist.Name);
-                request.Public = false;
+                request.Public = true;
                 request.Description = string.Format("i'm a bot. This playlist is a copy of this youtube playlist: \"{0}\". " +
                                                     "\n Last updated on {1}. " +
                                                     "\n Found {2}/{3} Songs", playlist.YoutubeUrl, DateTime.Now, playlist.Songs.Where(s => s.FoundOnSpotify.Value).Count(), playlist.Songs.Count());
@@ -71,6 +71,30 @@ namespace PlaylistChaser
             catch (Exception)
             {
                 return null;
+            }
+        }
+        public async Task<bool> UpdatePlaylist(PlaylistModel playlist)
+        {
+            try
+            {
+                var request = new PlaylistChangeDetailsRequest();
+                request.Public = true;
+                request.Description = string.Format("i'm a bot. This playlist is a copy of this youtube playlist: \"{0}\". " +
+                                                    "\n Last updated on {1}. " +
+                                                    "\n Found {2}/{3} Songs", playlist.YoutubeUrl, DateTime.Now, playlist.Songs.Where(s => s.FoundOnSpotify.Value).Count(), playlist.Songs.Count());
+
+                var spotifyPlaylistId = playlist.SpotifyUrl;
+                //add songs max 100 songs per request
+                var songCount = playlist.Songs.Count;
+                var rounds = (int)Math.Floor((double)(songCount / 100)) + 1;
+                for (int i = 0; i < rounds; i++)
+                    await spotify.Playlists.AddItems(spotifyPlaylistId, new PlaylistAddItemsRequest(playlist.Songs.Where(s => s.FoundOnSpotify.Value).Select(s => s.SpotifyId).Skip(i * 100).Take(100).ToList()));
+
+                return await spotify.Playlists.ChangeDetails(spotifyPlaylistId, request);
+            }
+            catch (Exception)
+            {
+                return false;
             }
         }
 

@@ -18,6 +18,9 @@ namespace PlaylistChaser.Models
         public string? ArtistName { get; set; }
         [Required]
         public bool? FoundOnSpotify { get; set; }
+        public bool? AddedToSpotify { get; set; }
+
+
         [Required, ForeignKey("Playlist"), DatabaseGenerated(DatabaseGeneratedOption.None)]
         public int? PlaylistId { get; set; }
         public string? ImageBytes64 { get; set; }
