@@ -22,21 +22,22 @@ namespace PlaylistChaser
         /// <returns>returns null if the playlist doesnt exist</returns>
         internal async Task<PlaylistModel> GetPlaylist(string url)
         {
-            var ytPlaylist = await youtube.Playlists.GetAsync(url);
-            var playlist = await addPlaylist(ytPlaylist);
-            await addSongs((await youtube.Playlists.GetVideosAsync(url)).ToList(), playlist.Id.Value);
+            var playlist = addPlaylist(await getPlaylist(url));
+            addSongs(await getPlaylistSongs(url), playlist.Id.Value);
 
             return playlist;
         }
-        /// <param name="url">can be the url or the song id</param>
-        /// <returns></returns>
-        internal async Task<Video> GetSong(string url)
+        private async Task<Playlist> getPlaylist(string url)
         {
-            return await youtube.Videos.GetAsync(url);
+            return await youtube.Playlists.GetAsync(url);
+        }
+        private async Task<List<PlaylistVideo>> getPlaylistSongs(string playlistUrl)
+        {
+            return (await youtube.Playlists.GetVideosAsync(playlistUrl)).ToList();
         }
 
         #region model
-        private async Task<PlaylistModel> addPlaylist(Playlist ytPlaylist)
+        private PlaylistModel addPlaylist(Playlist ytPlaylist)
         {
             try
             {
@@ -59,7 +60,7 @@ namespace PlaylistChaser
             }
         }
 
-        private async Task addSongs(List<PlaylistVideo> ytSongs, int playlistId)
+        private void addSongs(List<PlaylistVideo> ytSongs, int playlistId)
         {
             try
             {
@@ -71,6 +72,7 @@ namespace PlaylistChaser
                             YoutubeSongName = ytSong.Title,
                             YoutubeId = ytSong.Url,
                             FoundOnSpotify = false,
+                            AddedToSpotify = false,
                             PlaylistId = playlistId
                             //,ImageBytes64 = await Helper.GetImageToBase64(ytSong.Thumbnails.OrderBy(t => t.Resolution.Area).First().Url)
                         });
@@ -81,35 +83,6 @@ namespace PlaylistChaser
             {
             }
         }
-        internal void AddSongs(List<Video> ytSongs, int playlistId)
-        {
-            foreach (var ytSong in ytSongs)
-            {
-                db.Song.Add(
-                    new SongModel
-                    {
-                        YoutubeSongName = ytSong.Title,
-                        YoutubeId = ytSong.Url,
-                        FoundOnSpotify = false,
-                        PlaylistId = playlistId
-                    });
-            }
-            db.SaveChanges();
-        }
-        #endregion
-
-        private string getSongFileName(SongModel song)
-        {
-            var regexAll = "[^0-9a-zA-Z]+";
-            var songName = Regex.Replace(song.YoutubeSongName, regexAll, "");
-            if (string.IsNullOrEmpty(songName))
-                songName = song.Id.ToString();
-            var author = Regex.Replace(song.ArtistName, regexAll, "");
-            if (!string.IsNullOrEmpty(author))
-                author += "-";
-
-            return string.Format("{0}{1}.mp3", author, songName);
-
-        }
+        #endregion        
     }
 }

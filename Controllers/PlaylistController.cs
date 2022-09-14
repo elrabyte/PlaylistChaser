@@ -37,11 +37,16 @@ namespace PlaylistChaser.Controllers
         {
             try
             {
-                var songs = db.Song.Where(s => s.PlaylistId == id).ToList();
-                db.Song.RemoveRange(songs);
-                db.SaveChanges();
-                db.Playlist.Remove(db.Playlist.Single(p => p.Id == id));
-                db.SaveChanges();
+                //delete spotify playlist
+                var spotifyHelper = new SpotifyApiHelper(HttpContext);
+                if (spotifyHelper.DeletePlaylist(db.Playlist.Single(p => p.Id == id)).Result)
+                {
+                    var songs = db.Song.Where(s => s.PlaylistId == id).ToList();
+                    db.Song.RemoveRange(songs);
+                    db.SaveChanges();
+                    db.Playlist.Remove(db.Playlist.Single(p => p.Id == id));
+                    db.SaveChanges();
+                }
                 return RedirectToAction("Index");
             }
             catch (Exception ex)
@@ -156,13 +161,13 @@ namespace PlaylistChaser.Controllers
                     db.SaveChanges();
                 }
 
-                if (await spotifyHelper.UpdatePlaylist(playlist))
+                if (!(await spotifyHelper.UpdatePlaylist(playlist)))
+                    return new JsonResult(new { success = false });
+                    
+                foreach (var song in db.Song.Where(s => s.PlaylistId == id && s.FoundOnSpotify.Value && !s.AddedToSpotify.Value))
                 {
-                    foreach (var song in db.Song.Where(s => s.PlaylistId == id && s.FoundOnSpotify.Value && !s.AddedToSpotify.Value))
-                    {
-                        song.AddedToSpotify = true;
-                        db.SaveChanges();
-                    }
+                    song.AddedToSpotify = true;
+                    db.SaveChanges();
                 }
 
                 return new JsonResult(new { success = true });
