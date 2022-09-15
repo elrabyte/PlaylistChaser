@@ -6,7 +6,6 @@ namespace PlaylistChaser
 {
     internal class SpotifyApiHelper
     {
-        private HttpContext context;
         private SpotifyClient spotify;
         private const string spotifyAccessTokenKey = "spotifyAccessToken";
         private const string spotifyClientId = "5b7f5711cb3441e1b9956c2b5950f552";
@@ -15,7 +14,6 @@ namespace PlaylistChaser
 
         internal SpotifyApiHelper(HttpContext context)
         {
-            this.context = context;
             var accessToken = context.Session.GetString(spotifyAccessTokenKey);
             if (accessToken != null)
             {
@@ -32,9 +30,7 @@ namespace PlaylistChaser
 
         internal SpotifyApiHelper(HttpContext context, string code)
         {
-            this.context = context;
-            var response = new OAuthClient().RequestToken(new AuthorizationCodeTokenRequest(spotifyClientId, spotifyClientSecret, code, new Uri(redirectUri))).Result;
-            var accessToken = response.AccessToken;
+            var accessToken = new OAuthClient().RequestToken(new AuthorizationCodeTokenRequest(spotifyClientId, spotifyClientSecret, code, new Uri(redirectUri))).Result.AccessToken;
             context.Session.SetString(spotifyAccessTokenKey, accessToken);
 
             spotify = new SpotifyClient(accessToken);
@@ -57,11 +53,11 @@ namespace PlaylistChaser
             return await spotify.Search.Item(searchRequest);
         }
 
-        public async Task<FullPlaylist> CreatePlaylist(PlaylistModel playlist)
+        public async Task<FullPlaylist> CreatePlaylist(string playlistName)
         {
             try
             {
-                return await createPlaylist(playlist.Name);
+                return await createPlaylist(playlistName);
             }
             catch (Exception)
             {
@@ -82,21 +78,7 @@ namespace PlaylistChaser
                 return null;
             }
         }
-        public async Task<bool> UpdatePlaylist(PlaylistModel playlist)
-        {
-            try
-            {
-                var playlistDescription = string.Format("Last updated on {1} - Found {2}/{3} Songs - This playlist is a copy of this youtube playlist: \"{0}\". ", playlist.YoutubeUrl, DateTime.Now, playlist.Songs.Where(s => s.FoundOnSpotify.Value).Count(), playlist.Songs.Count());
-
-
-                return await updatePlaylist(playlist.SpotifyUrl, playlist.Songs.Where(s => s.FoundOnSpotify.Value && !s.AddedToSpotify.Value).Select(s => s.SpotifyId).ToList(), playlistDescription);
-            }
-            catch (Exception)
-            {
-                return false;
-            }
-        }
-        private async Task<bool> updatePlaylist(string spotifyPlaylistId, List<string> spotifySongIds, string playlistDescription = "")
+        public async Task<bool> UpdatePlaylist(string spotifyPlaylistId, List<string> spotifySongIds, string playlistDescription = null)
         {
             try
             {
