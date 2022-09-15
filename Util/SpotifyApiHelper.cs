@@ -55,65 +55,36 @@ namespace PlaylistChaser
 
         public async Task<FullPlaylist> CreatePlaylist(string playlistName)
         {
-            try
-            {
-                return await createPlaylist(playlistName);
-            }
-            catch (Exception)
-            {
-                return null;
-            }
+            return await createPlaylist(playlistName);
         }
         private async Task<FullPlaylist> createPlaylist(string playlistName, bool isPublic = true)
         {
-            try
-            {
-                var request = new PlaylistCreateRequest(playlistName);
-                request.Public = isPublic;
-                var userId = (await spotify.UserProfile.Current()).Id;
-                return await spotify.Playlists.Create(userId, request);
-            }
-            catch (Exception)
-            {
-                return null;
-            }
+            var request = new PlaylistCreateRequest(playlistName);
+            request.Public = isPublic;
+            var userId = (await spotify.UserProfile.Current()).Id;
+            return await spotify.Playlists.Create(userId, request);
         }
         public async Task<bool> UpdatePlaylist(string spotifyPlaylistId, List<string> spotifySongIds, string playlistDescription = null)
         {
-            try
-            {
-                //can add max. 100 songs per request
-                var rounds = Math.Ceiling(spotifySongIds.Count / 100d);
-                for (int i = 0; i < rounds; i++)
-                    await spotify.Playlists.AddItems(spotifyPlaylistId, new PlaylistAddItemsRequest(spotifySongIds.Skip(i * 100).Take(100).ToList()));
+            //can add max. 100 songs per request
+            var rounds = Math.Ceiling(spotifySongIds.Count / 100d);
+            for (int i = 0; i < rounds; i++)
+                await spotify.Playlists.AddItems(spotifyPlaylistId, new PlaylistAddItemsRequest(spotifySongIds.Skip(i * 100).Take(100).ToList()));
 
-                //update playlistdescription
-                var request = new PlaylistChangeDetailsRequest();
-                request.Description = playlistDescription;
+            //update playlistdescription
+            var request = new PlaylistChangeDetailsRequest();
+            request.Description = playlistDescription;
 
-                return await spotify.Playlists.ChangeDetails(spotifyPlaylistId, request);
-            }
-            catch (Exception)
-            {
-                return false;
-            }
+            return await spotify.Playlists.ChangeDetails(spotifyPlaylistId, request);
         }
 
         public async Task<bool> DeletePlaylist(PlaylistModel playlist)
         {
-            //only sets private for the moment. couldnt find api
-            try
-            {
-                //update playlistdescription
-                var request = new PlaylistChangeDetailsRequest();
-                request.Public = false;
+            //only sets private for the moment. couldnt find api            
+            var request = new PlaylistChangeDetailsRequest();
+            request.Public = false;
 
-                return await spotify.Playlists.ChangeDetails(playlist.SpotifyUrl, request);
-            }
-            catch (Exception)
-            {
-                return false;
-            }
+            return await spotify.Playlists.ChangeDetails(playlist.SpotifyUrl, request);
         }
 
     }
