@@ -83,7 +83,7 @@
                             @Html.DisplayFor(m => song.ArtistName)
                         </td>
                         <td>
-                            @Html.DisplayFor(m => song.FoundOnSpotify)
+                            @Html.CheckBoxFor(m => song.FoundOnSpotify.Value, new { onclick = "return false;" })
                         </td>
                     </tr>
                 }
