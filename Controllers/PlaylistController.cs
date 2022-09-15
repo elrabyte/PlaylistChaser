@@ -138,10 +138,12 @@ namespace PlaylistChaser.Controllers
 
             //update
             var songsToAdd = playlist.Songs.Where(s => s.FoundOnSpotify.Value && !s.AddedToSpotify.Value).ToList();
-            var playlistDescription = string.Format("Last updated on {1} - Found {2}/{3} Songs - This playlist is a copy of this youtube playlist: \"{0}\". ", playlist.YoutubeUrl,
+            var playlistDescription = string.Format("Last updated on {1} - Found {2}/{3} Songs - This playlist is a copy of the youtube playlist \"{4}\" by {5}: {0}. ", await BitlyApiHelper.GetShortUrl(playlist.YoutubeUrl),
                                                                                                                                                                DateTime.Now,
                                                                                                                                                                playlist.Songs.Where(s => s.FoundOnSpotify.Value).Count(),
-                                                                                                                                                               playlist.Songs.Count());
+                                                                                                                                                               playlist.Songs.Count(),
+                                                                                                                                                               playlist.Name,
+                                                                                                                                                               playlist.ChannelName);
             if (!await spotifyHelper.UpdatePlaylist(playlist.SpotifyUrl, songsToAdd.Select(s => s.SpotifyId).ToList(), playlistDescription))
                 return new JsonResult(new { success = false });
 
