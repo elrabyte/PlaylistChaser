@@ -19,6 +19,7 @@ namespace PlaylistChaser.Models
         [Required]
         public bool? FoundOnSpotify { get; set; }
         public bool? AddedToSpotify { get; set; }
+        public bool? IsNotOnSpotify { get; set; }
 
 
         [Required, ForeignKey("Playlist"), DatabaseGenerated(DatabaseGeneratedOption.None)]

@@ -33,7 +33,7 @@ CREATE TABLE `playlist` (
   `ImageBytes64` blob,
   `spotifyUrl` varchar(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=31 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=33 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -54,10 +54,11 @@ CREATE TABLE `song` (
   `songName` varchar(255) DEFAULT NULL,
   `imageBytes64` blob,
   `addedToSpotify` bit(1) DEFAULT NULL,
+  `isNotOnSpotify` bit(1) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `Song_fk0` (`playlistId`),
   CONSTRAINT `Song_fk0` FOREIGN KEY (`playlistId`) REFERENCES `playlist` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=11304 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=14088 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -77,4 +78,4 @@ CREATE TABLE `song` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2022-09-30 12:56:58
+-- Dump completed on 2022-09-30 14:09:25

@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Org.BouncyCastle.Crypto;
 using PlaylistChaser.Database;
 using PlaylistChaser.Models;
 using System.Diagnostics;
@@ -37,7 +38,7 @@ namespace PlaylistChaser.Controllers
 
             //delete spotify playlist
             var spotifyHelper = new SpotifyApiHelper(HttpContext);
-            if(playlist.SpotifyUrl != null)
+            if (playlist.SpotifyUrl != null)
                 if (!spotifyHelper.DeletePlaylist(playlist).Result)
                     return RedirectToAction("Index");
 
@@ -78,7 +79,6 @@ namespace PlaylistChaser.Controllers
 
             return new JsonResult(new { success = true });
         }
-
         public async Task<ActionResult> CheckPlaylistYoutube(int id)
         {
             var playlist = db.Playlist.Single(p => p.Id == id);
@@ -88,7 +88,6 @@ namespace PlaylistChaser.Controllers
 
             return new JsonResult(new { success = true });
         }
-
         public async Task<ActionResult> UpdateSpotifySongLinks(int id)
         {
             var songs = db.Song.Where(s => s.PlaylistId == id && !s.FoundOnSpotify.Value).ToList();
@@ -122,7 +121,6 @@ namespace PlaylistChaser.Controllers
             return true;
 
         }
-
         public async Task<ActionResult> UpdatePlaylistSpotify(int id)
         {
             var playlist = db.Playlist.Single(p => p.Id == id);
@@ -137,13 +135,16 @@ namespace PlaylistChaser.Controllers
             }
 
             //update
-            var songsToAdd = playlist.Songs.Where(s => s.FoundOnSpotify.Value && !s.AddedToSpotify.Value).ToList();
+            var songsToAdd = playlist.Songs.Where(s => s.FoundOnSpotify.Value
+                                                    && !s.AddedToSpotify.Value
+                                                    && (!s.IsNotOnSpotify ?? true)
+                                                    ).ToList();
             var playlistDescription = string.Format("Last updated on {1} - Found {2}/{3} Songs - This playlist is a copy of the youtube playlist \"{4}\" by {5}: {0}. ", await BitlyApiHelper.GetShortUrl(playlist.YoutubeUrl),
-                                                                                                                                                               DateTime.Now,
-                                                                                                                                                               playlist.Songs.Where(s => s.FoundOnSpotify.Value).Count(),
-                                                                                                                                                               playlist.Songs.Count(),
-                                                                                                                                                               playlist.Name,
-                                                                                                                                                               playlist.ChannelName);
+                                                                                                                                                                         DateTime.Now,
+                                                                                                                                                                         playlist.Songs.Where(s => s.FoundOnSpotify.Value).Count(),
+                                                                                                                                                                         playlist.Songs.Count(),
+                                                                                                                                                                         playlist.Name,
+                                                                                                                                                                         playlist.ChannelName);
             if (!await spotifyHelper.UpdatePlaylist(playlist.SpotifyUrl, songsToAdd.Select(s => s.SpotifyId).ToList(), playlistDescription))
                 return new JsonResult(new { success = false });
 
@@ -156,7 +157,6 @@ namespace PlaylistChaser.Controllers
 
             return new JsonResult(new { success = true });
         }
-
         public async Task<ActionResult> UpdatePlaylistThumbnail(int id)
         {
             var playlist = db.Playlist.Single(p => p.Id == id);
@@ -177,6 +177,27 @@ namespace PlaylistChaser.Controllers
             }
             return new JsonResult(new { success = true });
         }
+        public async Task<ActionResult> SongIsNotOnSpotify(int playlistId, int songId)
+        {
+            var playlist = db.Playlist.Single(p => p.Id == playlistId);
+            var song = db.Song.Single(s => s.Id == songId);
+
+            var spotifyHelper = new SpotifyApiHelper(HttpContext);
+            if (await spotifyHelper.RemovePlaylistSong(playlist.SpotifyUrl, song.SpotifyId))
+            {
+                song.AddedToSpotify = false;
+                song.FoundOnSpotify = false;
+                song.IsNotOnSpotify = true;
+                song.ArtistName = null;
+                song.SongName = null;
+                song.SpotifyId = null;
+                db.SaveChanges();
+            }
+
+            db.SaveChanges();
+            return new JsonResult(new { success = true });
+        }
+
 
         public ActionResult loginToSpotify(string code)
         {

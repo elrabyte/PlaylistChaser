@@ -91,6 +91,25 @@ namespace PlaylistChaser
 
             return await spotify.Playlists.ChangeDetails(playlist.SpotifyUrl, request);
         }
+        public async Task<bool> RemovePlaylistSong(string spotifyPlaylistId, string spotifySongId)
+        {
+            return await removePlaylistSongs(spotifyPlaylistId, new List<string> { spotifySongId });
+        }
+        private async Task<bool> removePlaylistSongs(string spotifyPlaylistId, List<string> spotifySongIds)
+        {
+            //can add max. 100 songs per request
+            var rounds = Math.Ceiling(spotifySongIds.Count / 100d);
+            for (int i = 0; i < rounds; i++)
+                await spotify.Playlists.RemoveItems(spotifyPlaylistId, new PlaylistRemoveItemsRequest
+                {
+                    Tracks = spotifySongIds.Skip(i * 100)
+                                           .Take(100)
+                                           .Select(s => new PlaylistRemoveItemsRequest.Item { Uri = s })
+                                           .ToList()
+                });
+
+            return true;
+        }
 
     }
 }

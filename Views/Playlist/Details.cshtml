@@ -57,14 +57,40 @@
                 <tr>
                     <th></th>
                     <th>
-                        @Html.DisplayName("SongName")
+                        @Html.DisplayNameFor(m => m.Songs.First().SongName)
                     </th>
                     <th>
-                        @Html.DisplayName("ArtistName")
+                        @Html.DisplayNameFor(m => m.Songs.First().ArtistName)
                     </th>
                     <th>
-                        @Html.DisplayName("FoundOnSpotify")
+                        @Html.DisplayNameFor(m => m.Songs.First().YoutubeSongName)
                     </th>
+                    <th>
+                        @Html.DisplayNameFor(m => m.Songs.First().FoundOnSpotify)
+                    </th>
+                    <th>
+                        @Html.DisplayNameFor(m => m.Songs.First().AddedToSpotify)
+                    </th>
+                    <th>
+                        @Html.DisplayNameFor(m => m.Songs.First().IsNotOnSpotify)
+                    </th>
+                    <th>&nbsp;</th>
+                </tr>
+                <tr>
+                    <td colspan="3">&nbsp;</td>
+                    <td>
+                        @Model.Songs.Count
+                    </td>
+                    <td>
+                        @Model.Songs.Where(s => s.FoundOnSpotify.Value).Count()
+                    </td>
+                    <td>
+                        @Model.Songs.Where(s => s.AddedToSpotify.Value).Count()
+                    </td>
+                    <td>
+                        @*@Model.Songs.Where(s => s.IsNotOnSpotify.GetValueOrDefault()).Count()*@
+                    </td>
+                    <td>&nbsp;</td>
                 </tr>
             </thead>
             <tbody>
@@ -83,11 +109,45 @@
                             @Html.DisplayFor(m => song.ArtistName)
                         </td>
                         <td>
+                            @Html.DisplayFor(m => song.YoutubeSongName)
+                        </td>
+                        <td>
                             @Html.CheckBoxFor(m => song.FoundOnSpotify.Value, new { onclick = "return false;" })
+                        </td>
+                        <td>
+                            @Html.CheckBoxFor(m => song.AddedToSpotify.Value, new { onclick = "return false;" })
+                        </td>
+                        <td>
+                            @*@Html.CheckBoxFor(m => song.IsNotOnSpotify.GetValueOrDefault(), new { onclick = "return false;",})*@
+                        </td>
+                        <td>
+                            <div class="col">
+                                <a asp-action="SongIsNotOnSpotify" asp-route-playlistId="@Model.Id" asp-route-songId="@song.Id" class="btn btn-primary">
+                                    Song is not on spotify
+                                </a>
+                            </div>
                         </td>
                     </tr>
                 }
             </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="3">&nbsp;</td>
+                    <td>
+                        @Model.Songs.Count
+                    </td>
+                    <td>
+                        @Model.Songs.Where(s => s.FoundOnSpotify.Value).Count()
+                    </td>
+                    <td>
+                        @Model.Songs.Where(s => s.AddedToSpotify.Value).Count()
+                    </td>
+                    <td>
+                        @Model.Songs.Where(s => s.IsNotOnSpotify ?? false).Count()
+                    </td>
+                    <td>&nbsp;</td>
+                </tr>
+            </tfoot>
         </table>
     </div>
 </div>
