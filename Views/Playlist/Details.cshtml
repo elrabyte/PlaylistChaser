@@ -82,13 +82,13 @@
                         @Model.Songs.Count
                     </td>
                     <td>
-                        @Model.Songs.Where(s => s.FoundOnSpotify.Value).Count()
+                        @Model.Songs.Count(s => s.FoundOnSpotify.Value)
                     </td>
                     <td>
-                        @Model.Songs.Where(s => s.AddedToSpotify.Value).Count()
+                        @Model.Songs.Count(s => s.AddedToSpotify.Value)
                     </td>
                     <td>
-                        @*@Model.Songs.Where(s => s.IsNotOnSpotify.GetValueOrDefault()).Count()*@
+                        @Model.Songs.Count(s => s.IsNotOnSpotify ?? false)
                     </td>
                     <td>&nbsp;</td>
                 </tr>
@@ -126,6 +126,7 @@
                                     Song is not on spotify
                                 </a>
                             </div>
+                            @Html.Partial("_ChooseSong", new System.Web.Mvc.ViewDataDictionary { { "SongId", song.Id }})
                         </td>
                     </tr>
                 }
@@ -137,13 +138,13 @@
                         @Model.Songs.Count
                     </td>
                     <td>
-                        @Model.Songs.Where(s => s.FoundOnSpotify.Value).Count()
+                        @Model.Songs.Count(s => s.FoundOnSpotify.Value)
                     </td>
                     <td>
-                        @Model.Songs.Where(s => s.AddedToSpotify.Value).Count()
+                        @Model.Songs.Count(s => s.AddedToSpotify.Value)
                     </td>
                     <td>
-                        @Model.Songs.Where(s => s.IsNotOnSpotify ?? false).Count()
+                        @Model.Songs.Count(s => s.IsNotOnSpotify ?? false)
                     </td>
                     <td>&nbsp;</td>
                 </tr>

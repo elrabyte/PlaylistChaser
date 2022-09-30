@@ -1,7 +1,9 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using MySqlX.XDevAPI.CRUD;
 using Org.BouncyCastle.Crypto;
 using PlaylistChaser.Database;
 using PlaylistChaser.Models;
+using SpotifyAPI.Web;
 using System.Diagnostics;
 
 namespace PlaylistChaser.Controllers
@@ -95,6 +97,41 @@ namespace PlaylistChaser.Controllers
 
             return new JsonResult(new { success = true });
         }
+        [HttpPost]
+        public async Task<ActionResult> _ChooseSong(int songId, string newSpotifyId)
+        {
+            //get id from link
+            newSpotifyId = newSpotifyId.Replace("https://open.spotify.com/track/", "");
+            newSpotifyId = newSpotifyId.Remove(newSpotifyId.IndexOf("?"));
+
+            var song = db.Song.Single(s => s.Id == songId);
+            if (!string.IsNullOrEmpty(newSpotifyId) && song.SpotifyId != newSpotifyId)
+            {
+                var spotifyHelper = new SpotifyApiHelper(HttpContext);
+                var spotifySong = await spotifyHelper.GetSong(newSpotifyId);
+
+                song.SpotifyId = spotifySong.Uri;
+                song.AddedToSpotify = false;
+                song.IsNotOnSpotify = null;
+                song.FoundOnSpotify = true;
+                song.ArtistName = string.Join(",", spotifySong.Artists.Select(a => a.Name).ToList());
+                song.SongName = spotifySong.Name;
+                db.SaveChanges();
+
+                //add song to spotify
+                var playlist = db.Playlist.Single(p => p.Id == song.PlaylistId);
+                if (!await spotifyHelper.UpdatePlaylist(playlist.SpotifyUrl, new List<string> { song.SpotifyId }))
+                    return new JsonResult(new { success = false });
+                song.AddedToSpotify = true;
+                db.SaveChanges();
+
+                return new JsonResult(new { success = true });
+            }
+            else
+                return new JsonResult(new { success = false });
+
+
+        }
         #endregion
 
         #region spotify
@@ -105,7 +142,7 @@ namespace PlaylistChaser.Controllers
 
             foreach (var song in songs)
             {
-                var response = await spotifyHelper.SearchSong(SpotifyAPI.Web.SearchRequest.Types.Track, song.YoutubeSongName);
+                var response = await spotifyHelper.SearchSong(SearchRequest.Types.Track, song.YoutubeSongName);
                 //first song found
                 if (response.Tracks.Items?.Count > 0)
                 {

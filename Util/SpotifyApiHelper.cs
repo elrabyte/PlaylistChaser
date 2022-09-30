@@ -57,6 +57,10 @@ namespace PlaylistChaser
             var searchRequest = new SearchRequest(type, songName);
             return await spotify.Search.Item(searchRequest);
         }
+        public async Task<FullTrack> GetSong(string spotifySongId)
+        {
+            return await spotify.Tracks.Get(spotifySongId);
+        }
 
         public async Task<FullPlaylist> CreatePlaylist(string playlistName)
         {
