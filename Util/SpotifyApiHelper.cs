@@ -1,6 +1,5 @@
 ﻿using PlaylistChaser.Models;
 using SpotifyAPI.Web;
-using System.Web.Mvc;
 
 namespace PlaylistChaser
 {
@@ -8,12 +7,13 @@ namespace PlaylistChaser
     {
         private SpotifyClient spotify;
         private const string spotifyAccessTokenKey = "spotifyAccessToken";
-        private const string spotifyClientId = "5b7f5711cb3441e1b9956c2b5950f552";
-        private const string spotifyClientSecret = "d03839b07802470cb6a2b218ea2389de";
         private const string redirectUri = "https://localhost:7245/Playlist/loginToSpotify";
+        private string spotifyClientId;
+        private string spotifyClientSecret;
 
         internal SpotifyApiHelper(HttpContext context)
         {
+            setSecrets();
             var accessToken = context.Session.GetString(spotifyAccessTokenKey);
             if (accessToken != null)
             {
@@ -30,16 +30,21 @@ namespace PlaylistChaser
 
         internal SpotifyApiHelper(HttpContext context, string code)
         {
+            setSecrets();
             var accessToken = new OAuthClient().RequestToken(new AuthorizationCodeTokenRequest(spotifyClientId, spotifyClientSecret, code, new Uri(redirectUri))).Result.AccessToken;
             context.Session.SetString(spotifyAccessTokenKey, accessToken);
 
             spotify = new SpotifyClient(accessToken);
         }
-
-
+        private void setSecrets()
+        {
+            spotifyClientId = Helper.ReadSecret("Spotify", "ClientId");
+            spotifyClientSecret = Helper.ReadSecret("Spotify", "ClientSecret");
+        }
         public static Uri getLoginUri()
         {
-            var loginRequest = new LoginRequest(new Uri(redirectUri), spotifyClientId, LoginRequest.ResponseType.Code)
+            var clientId = Helper.ReadSecret("Spotify", "ClientId");
+            var loginRequest = new LoginRequest(new Uri(redirectUri), clientId, LoginRequest.ResponseType.Code)
             {
                 Scope = new[] { Scopes.PlaylistModifyPrivate, Scopes.PlaylistModifyPublic, Scopes.UserReadPrivate }
             };
