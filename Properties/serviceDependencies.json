@@ -1,5 +1,9 @@
 {
   "dependencies": {
+    "mssql1": {
+      "type": "mssql",
+      "connectionId": "ConnectionStrings:local"
+    },
     "secrets1": {
       "type": "secrets",
       "connectionId": null

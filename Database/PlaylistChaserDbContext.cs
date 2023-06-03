@@ -13,8 +13,9 @@ namespace PlaylistChaser.Database
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            var connectionString = Helper.ReadSecret("DB", "ConnectionString");
-            optionsBuilder.UseMySQL("server=localhost;database=playlistchaserdb;user=root;password=1324");
+
+            string connectionString = "Server=PC-PATRICK\\SQLEXPRESS;Database=playlistchaserdb;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=true";
+            optionsBuilder.UseSqlServer(connectionString);
         }
 
 

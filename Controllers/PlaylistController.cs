@@ -1,6 +1,4 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using MySqlX.XDevAPI.CRUD;
-using Org.BouncyCastle.Crypto;
 using PlaylistChaser.Database;
 using PlaylistChaser.Models;
 using SpotifyAPI.Web;
@@ -236,14 +234,6 @@ namespace PlaylistChaser.Controllers
         }
 
 
-        public ActionResult loginToSpotify(string code)
-        {
-            if (code == null)
-                return Redirect(SpotifyApiHelper.getLoginUri().ToString());
-
-            var spotifyHelper = new SpotifyApiHelper(HttpContext, code);
-            return new JsonResult(new { success = true });
-        }
         #endregion
     }
 }

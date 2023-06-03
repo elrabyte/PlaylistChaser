@@ -7,7 +7,7 @@ namespace PlaylistChaser
     {
         private SpotifyClient spotify;
         private const string spotifyAccessTokenKey = "spotifyAccessToken";
-        private const string redirectUri = "https://localhost:7245/Playlist/loginToSpotify";
+        private const string redirectUri = "https://localhost:44381/Login/LoginToSpotify";
         private string spotifyClientId;
         private string spotifyClientSecret;
 
@@ -51,6 +51,7 @@ namespace PlaylistChaser
             return loginRequest.ToUri();
         }
 
+        #region Queries
         public async Task<SearchResponse> SearchSong(SearchRequest.Types type, string songName)
         {
 
@@ -114,6 +115,6 @@ namespace PlaylistChaser
 
             return true;
         }
-
+        #endregion
     }
 }
