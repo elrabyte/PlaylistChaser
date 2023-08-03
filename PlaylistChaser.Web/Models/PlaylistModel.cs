@@ -3,6 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace PlaylistChaser.Models
 {
+    [Table("Playlists")]
     public class PlaylistModel
     {
         [Key, DatabaseGenerated(DatabaseGeneratedOption.Identity)]
