@@ -7,4 +7,18 @@
     <Property Name="ParentElementType" Value="SqlTable" />
     <Property Name="NewName" Value="youtubeUrl" />
   </Operation>
+  <Operation Name="Rename Refactor" Key="4f1df76d-15a6-4b4b-b38e-615d539d4d75" ChangeDateTime="08/03/2023 08:37:47">
+    <Property Name="ElementName" Value="[dbo].[Playlists].[ImageBytes64]" />
+    <Property Name="ElementType" Value="SqlSimpleColumn" />
+    <Property Name="ParentElementName" Value="[dbo].[Playlists]" />
+    <Property Name="ParentElementType" Value="SqlTable" />
+    <Property Name="NewName" Value="ImageByte64" />
+  </Operation>
+  <Operation Name="Rename Refactor" Key="3cf5d3e0-8959-4eb0-8b7c-525cddfe9d38" ChangeDateTime="08/03/2023 08:39:19">
+    <Property Name="ElementName" Value="[dbo].[Playlists].[ImageByte64]" />
+    <Property Name="ElementType" Value="SqlSimpleColumn" />
+    <Property Name="ParentElementName" Value="[dbo].[Playlists]" />
+    <Property Name="ParentElementType" Value="SqlTable" />
+    <Property Name="NewName" Value="ImageBytes64" />
+  </Operation>
 </Operations>
