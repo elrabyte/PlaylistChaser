@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using PlaylistChaser.Database;
 using PlaylistChaser.Models;
+using PlaylistChaser.Web.Util;
 using SpotifyAPI.Web;
 using System.Diagnostics;
 
@@ -68,6 +69,7 @@ namespace PlaylistChaser.Controllers
             //add playlist
             var playlist = new PlaylistModel();
             playlist.YoutubeUrl = ytPlaylistUrl;
+            playlist.PlaylistTypeId = BuiltInIds.PLaylistTypes.Simple;
             playlist = await ytHelper.UpdatePlaylist(playlist);
             db.Playlist.Add(playlist);
             db.SaveChanges();

@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using static PlaylistChaser.Web.Util.BuiltInIds;
 
 namespace PlaylistChaser.Models
 {
@@ -17,11 +18,14 @@ namespace PlaylistChaser.Models
         [Required]
         public string? ChannelName { get; set; }
         public string? ImageBytes64 { get; set; }
-        
-        //spotify
+        [Required]
+        public PLaylistTypes PlaylistTypeId { get; set; }
+
+
+        #region spotify
         public string? SpotifyUrl { get; set; }
         public string? Description { get; set; }
-
+        #endregion
 
         //virtual public ICollection<SongModel> Songs { get; set; }
         [NotMapped]

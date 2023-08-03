@@ -10,5 +10,6 @@
     [SongName] NVARCHAR(255) NULL, 
     [ImageBytes64] NVARCHAR(4000) NULL, 
     [AddedToSpotify] BIT NOT NULL, 
-    [IsNotOnSpotify] BIT NULL
+    [IsNotOnSpotify] BIT NULL, 
+    CONSTRAINT [FK_Songs_Playlists] FOREIGN KEY ([PlaylistId]) REFERENCES [Playlists]([Id])
 )

@@ -1,10 +1,7 @@
-﻿using PlaylistChaser.Database;
-using PlaylistChaser.Models;
-using System.Text.RegularExpressions;
+﻿using PlaylistChaser.Models;
 using YoutubeExplode;
 using YoutubeExplode.Common;
 using YoutubeExplode.Playlists;
-using YoutubeExplode.Videos;
 
 namespace PlaylistChaser
 {
