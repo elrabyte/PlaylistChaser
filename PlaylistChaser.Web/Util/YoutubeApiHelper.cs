@@ -1,4 +1,5 @@
-﻿using PlaylistChaser.Models;
+﻿using Google.Apis.YouTube.v3;
+using PlaylistChaser.Models;
 using YoutubeExplode;
 using YoutubeExplode.Common;
 using YoutubeExplode.Playlists;
@@ -7,14 +8,18 @@ namespace PlaylistChaser
 {
     internal class YoutubeApiHelper
     {
-        private YoutubeClient youtube;
+        private YoutubeClient youtubeReadOnly;
+        private YouTubeService ytService;
+
         internal YoutubeApiHelper()
         {
-            youtube = new YoutubeClient();
+            youtubeReadOnly = new YoutubeClient();
         }
-
-        internal async Task<PlaylistModel> UpdatePlaylist(PlaylistModel playlist)
+        internal async Task<PlaylistModel> SyncPlaylist(PlaylistModel playlist)
         {
+            var ll = ytService.Playlists.List("id");
+
+
             var ytPlaylist = toPlaylistModel(await getPlaylist(playlist.YoutubeUrl));
             playlist.Name = ytPlaylist.Name;
             playlist.ChannelName = ytPlaylist.ChannelName;
@@ -32,21 +37,20 @@ namespace PlaylistChaser
         {
             var ytPlaylist = await getPlaylist(url);
             return await Helper.GetImageToBase64(ytPlaylist.Thumbnails.OrderBy(t => t.Resolution.Area).First().Url);
-
         }
         internal async Task<string> GetSongThumbnailBase64(string songUrl)
         {
-            return await Helper.GetImageToBase64((await youtube.Videos.GetAsync(songUrl)).Thumbnails.OrderBy(t => t.Resolution.Area).First().Url);
+            return await Helper.GetImageToBase64((await youtubeReadOnly.Videos.GetAsync(songUrl)).Thumbnails.OrderBy(t => t.Resolution.Area).First().Url);
         }
-
         private async Task<Playlist> getPlaylist(string url)
         {
-            return await youtube.Playlists.GetAsync(url);
+            return await youtubeReadOnly.Playlists.GetAsync(url);
         }
         private async Task<List<PlaylistVideo>> getPlaylistSongs(string playlistUrl)
         {
-            return (await youtube.Playlists.GetVideosAsync(playlistUrl)).ToList();
+            return (await youtubeReadOnly.Playlists.GetVideosAsync(playlistUrl)).ToList();
         }
+
 
         #region model
         private PlaylistModel toPlaylistModel(Playlist ytPlaylist)
@@ -73,6 +77,6 @@ namespace PlaylistChaser
             }).ToList();
 
         }
-        #endregion        
+        #endregion
     }
 }

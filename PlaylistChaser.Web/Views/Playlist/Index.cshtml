@@ -7,56 +7,56 @@
 
 @using (Html.BeginForm("SeachYTPlaylist", "Playlist", null, Microsoft.AspNetCore.Mvc.Rendering.FormMethod.Post, null, null))
 {
-            <div class="col-6">
-                <div class="form-group row">
-                    @Html.Label("YT-Playlist url")
-                    @Html.TextBox("ytPlaylistUrl")
-                </div>
-            </div>
-            <div class="form-group row">
-                <div class="col">
-                    <input type="submit" value="Search" class="btn btn-primary" />
-                </div>
-            </div>
+    <div class="col-6">
+        <div class="form-group row">
+            @Html.Label("YT-Playlist url")
+            @Html.TextBox("ytPlaylistUrl")
+        </div>
+    </div>
+    <div class="form-group row">
+        <div class="col">
+            <input type="submit" value="Search" class="btn btn-primary" />
+        </div>
+    </div>
 }
 
-    <table class="table">
-        <colgroup>
-            <col sytle="width:25%" />
-            <col sytle="width:25%" />
-            <col sytle="width:25%" />
-            <col sytle="width:25%" />
-        </colgroup>
-        <thead>
-            <tr>
-                <th></th>
-                <th>
+<table class="table">
+    <colgroup>
+        <col sytle="width:25%" />
+        <col sytle="width:25%" />
+        <col sytle="width:25%" />
+        <col sytle="width:25%" />
+    </colgroup>
+    <thead>
+        <tr>
+            <th></th>
+            <th>
                 @Html.DisplayNameFor(model => model.Name)
-                </th>
-                <th>
+            </th>
+            <th>
                 @Html.DisplayNameFor(model => model.ChannelName)
-                </th>
-                <th></th>
-            </tr>
-        </thead>
-        <tbody>
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
         @foreach (var playlist in Model)
         {
-                <tr>
-                    <td>
-                        <img src="data:imgae/png;base64,@(playlist.ImageBytes64)">
-                    </td>
-                    <td>
+            <tr>
+                <td>
+                    <img src="data:imgae/png;base64,@(playlist.ImageBytes64)">
+                </td>
+                <td>
                     @Html.DisplayFor(modelItem => playlist.Name)
-                    </td>
-                    <td>
+                </td>
+                <td>
                     @Html.DisplayFor(modelItem => playlist.ChannelName)
-                    </td>
-                    <td>
-                        <a asp-action="Details" asp-route-id="@playlist.Id">Details</a>
-                        <a asp-action="Edit_Delete" asp-route-id="@playlist.Id">Delete</a>
-                    </td>
-                </tr>
+                </td>
+                <td>
+                    <a asp-action="Details" asp-route-id="@playlist.Id">Details</a>
+                    <a asp-action="Edit_Delete" asp-route-id="@playlist.Id">Delete</a>
+                </td>
+            </tr>
         }
-        </tbody>
-    </table>
+    </tbody>
+</table>

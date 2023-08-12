@@ -16,7 +16,7 @@
         </div>
         <div class="form-group row">
             <div class="col">
-                <a asp-action="CheckPlaylistYoutube" asp-route-id="@Model.Id" class="btn btn-primary">
+                <a asp-action="SyncPlaylistYoutube" asp-route-id="@Model.Id" class="btn btn-primary">
                     check playlist youtube side
                 </a>
             </div>
@@ -31,12 +31,12 @@
                 </a>
             </div>
             <div class="col">
-                <a asp-action="UpdatePlaylistThumbnail" asp-route-id="@Model.Id" class="btn btn-primary">
+                <a asp-action="SyncPlaylistThumbnail" asp-route-id="@Model.Id" class="btn btn-primary">
                     Update Playlist Thumbnail
                 </a>
             </div>
             <div class="col">
-                <a asp-action="UpdateSongsThumbnail" asp-route-id="@Model.Id" class="btn btn-primary">
+                <a asp-action="SyncSongsThumbnail" asp-route-id="@Model.Id" class="btn btn-primary">
                     Update Songs Thumbnail
                 </a>
             </div>

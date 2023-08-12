@@ -70,7 +70,7 @@ namespace PlaylistChaser.Controllers
             var playlist = new PlaylistModel();
             playlist.YoutubeUrl = ytPlaylistUrl;
             playlist.PlaylistTypeId = BuiltInIds.PLaylistTypes.Simple;
-            playlist = await ytHelper.UpdatePlaylist(playlist);
+            playlist = await ytHelper.SyncPlaylist(playlist);
             db.Playlist.Add(playlist);
             db.SaveChanges();
 
@@ -81,7 +81,7 @@ namespace PlaylistChaser.Controllers
 
             return new JsonResult(new { success = true });
         }
-        public async Task<ActionResult> CheckPlaylistYoutube(int id)
+        public async Task<ActionResult> SyncPlaylistYoutube(int id)
         {
             var playlist = db.Playlist.Single(p => p.Id == id);
             playlist.Songs = db.Song.Where(s => s.PlaylistId == id).ToList();
@@ -194,14 +194,14 @@ namespace PlaylistChaser.Controllers
 
             return new JsonResult(new { success = true });
         }
-        public async Task<ActionResult> UpdatePlaylistThumbnail(int id)
+        public async Task<ActionResult> SyncPlaylistThumbnail(int id)
         {
             var playlist = db.Playlist.Single(p => p.Id == id);
             playlist.ImageBytes64 = await new YoutubeApiHelper().GetPlaylistThumbnailBase64(playlist.YoutubeUrl);
             db.SaveChanges();
             return new JsonResult(new { success = true });
         }
-        public async Task<ActionResult> UpdateSongsThumbnail(int id, bool onlyWithNoThumbnails = true)
+        public async Task<ActionResult> SyncSongsThumbnail(int id, bool onlyWithNoThumbnails = true)
         {
             var songs = db.Song.Where(p => p.PlaylistId == id);
             if (onlyWithNoThumbnails)
