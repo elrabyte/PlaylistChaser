@@ -20,6 +20,13 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
+app.UseStaticFiles(new StaticFileOptions
+{
+	FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
+		Path.Combine(app.Environment.ContentRootPath, "node_modules")
+	),
+	RequestPath = "/node_modules"
+});
 
 app.UseRouting();
 
