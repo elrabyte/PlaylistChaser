@@ -56,7 +56,14 @@ namespace PlaylistChaser
 		{
 			var ytPlaylist = getPlaylist(id);
 
-			return await Helper.GetImageToBase64(ytPlaylist.Snippet.Thumbnails.Maxres.Url);
+			var thumbnail = ytPlaylist.Snippet.Thumbnails.Maxres
+							?? ytPlaylist.Snippet.Thumbnails.High
+							?? ytPlaylist.Snippet.Thumbnails.Medium
+							?? ytPlaylist.Snippet.Thumbnails.Standard
+							?? ytPlaylist.Snippet.Thumbnails.Default__;
+
+
+			return thumbnail != null ? await Helper.GetImageToBase64(thumbnail.Url) : null;
 		}
 		internal async Task<string> GetSongThumbnailBase64(string id)
 		{
@@ -74,7 +81,7 @@ namespace PlaylistChaser
 			foreach (var ytSong in ytSongs)
 			{
 				if (!songThumbnails.ContainsKey(ytSong.ResourceId.VideoId))
-					songThumbnails.Add(ytSong.ResourceId.VideoId, await Helper.GetImageToBase64(ytSong.Thumbnails.Default__.Url));
+					songThumbnails.Add(ytSong.ResourceId.VideoId, ytSong.Thumbnails.Default__ == null ? null : await Helper.GetImageToBase64(ytSong.Thumbnails.Default__.Url));
 			}
 			return songThumbnails;
 		}
@@ -109,7 +116,7 @@ namespace PlaylistChaser
 		}
 		#endregion
 
-		#region Create Stuff
+		#region Edit Stuff
 		/// <summary>
 		/// Creates the Playlist on Youtube
 		/// </summary>
@@ -177,8 +184,8 @@ namespace PlaylistChaser
 		{
 			var pattern = @"(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^""&?\/\s]{11})";
 			Regex rg = new Regex(pattern);
-			var matches = rg.Matches(url);
-			return matches[1].Value;
+			var match = rg.Match(url);
+			return match.Groups[1].Value;
 		}
 		internal string GetPlaylistIdFromUrl(string url)
 		{

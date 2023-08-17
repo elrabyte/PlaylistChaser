@@ -7,6 +7,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PlaylistChaser.Web", "Playl
 EndProject
 Project("{00D1A9C2-B5F0-4AF3-8072-F6C62B433612}") = "PlaylistChaser.DB", "PlaylistChaser.DB\PlaylistChaser.DB.sqlproj", "{7ACE1663-1ACE-4385-82A9-34B636134A50}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PlaylistChaser.Test", "PlaylistChaser.Test\PlaylistChaser.Test.csproj", "{211FDDFF-6DFA-4D47-93F8-40EE90053DB0}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -23,6 +25,10 @@ Global
 		{7ACE1663-1ACE-4385-82A9-34B636134A50}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7ACE1663-1ACE-4385-82A9-34B636134A50}.Release|Any CPU.Build.0 = Release|Any CPU
 		{7ACE1663-1ACE-4385-82A9-34B636134A50}.Release|Any CPU.Deploy.0 = Release|Any CPU
+		{211FDDFF-6DFA-4D47-93F8-40EE90053DB0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{211FDDFF-6DFA-4D47-93F8-40EE90053DB0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{211FDDFF-6DFA-4D47-93F8-40EE90053DB0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{211FDDFF-6DFA-4D47-93F8-40EE90053DB0}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

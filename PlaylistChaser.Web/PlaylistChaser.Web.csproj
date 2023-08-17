@@ -21,5 +21,8 @@
     </PackageReference>
     <PackageReference Include="SpotifyAPI.Web" Version="7.0.0" />
   </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="PlaylistChaser.Test" />
+  </ItemGroup>
 
 </Project>
