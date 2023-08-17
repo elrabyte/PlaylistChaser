@@ -13,7 +13,9 @@ namespace PlaylistChaser.Models
         //youtube
         [Required]
         public string? YoutubeUrl { get; set; }
-        [Required]
+		[Required]
+		public string? YoutubeId { get; set; }
+		[Required]
         public string? Name { get; set; }
         [Required]
         public string? ChannelName { get; set; }

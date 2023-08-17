@@ -72,5 +72,6 @@
   <ItemGroup>
     <None Include="publish\local_playlistchaserdb.publish.xml" />
     <None Include="NewDbScripts\Insert_All.sql" />
+    <None Include="PreDeployment.sql" />
   </ItemGroup>
 </Project>

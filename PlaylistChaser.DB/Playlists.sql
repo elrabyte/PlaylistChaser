@@ -4,6 +4,7 @@
     [Name] NVARCHAR(255) NOT NULL, 
     [Description] NVARCHAR(255) NULL, 
     [YoutubeUrl] NVARCHAR(255) NOT NULL, 
+    [YoutubeId] NVARCHAR(255) NOT NULL, 
     [ChannelName] NVARCHAR(255) NOT NULL, 
     [ImageBytes64] NVARCHAR(MAX) NULL, 
     [SpotifyUrl] NVARCHAR(255) NULL, 
