@@ -14,7 +14,8 @@ namespace PlaylistChaser.Database
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
 
-            string connectionString = "Server=(localdb)\\MSSQLLocalDB;Database=playlistchaserdb;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=true";
+            //string connectionString = "Server=(localdb)\\MSSQLLocalDB;Database=playlistchaserdb;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=true";
+            string connectionString = "Server=DESKTOP-AUKQ7J7\\SQLEXPRESS;Database=playlistchaserdb;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=true";
             optionsBuilder.UseSqlServer(connectionString);
         }
 

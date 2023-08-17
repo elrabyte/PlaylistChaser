@@ -9,7 +9,16 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Content Remove="compilerconfig.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="compilerconfig.json" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="BitlyAPI" Version="4.0.1" />
+    <PackageReference Include="BuildWebCompiler2022" Version="1.14.10" />
     <PackageReference Include="Google.Apis.Auth" Version="1.61.0" />
     <PackageReference Include="Google.Apis.YouTube.v3" Version="1.61.0.3141" />
     <PackageReference Include="Microsoft.AspNet.Mvc" Version="5.2.9" />

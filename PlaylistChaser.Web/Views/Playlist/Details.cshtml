@@ -1,154 +1,145 @@
 ﻿@model PlaylistModel
 @{
-    ViewData["Title"] = "Details";
+	ViewData["Title"] = "Details";
 }
 
 <h4>Playlist</h4>
 <div class="row">
-    <div class="col-md-6">
-        <div class="form-group row">
-            @Html.LabelFor(m => m.Name)
-            @Html.DisplayFor(m => m.Name)
-        </div>
-        <div class="form-group row">
-            @Html.LabelFor(m => m.Description)
-            @Html.DisplayFor(m => m.Description)
-        </div>
-        <div class="form-group row">
-            <div class="col">
-                <a asp-action="SyncPlaylistYoutube" asp-route-id="@Model.Id" class="btn btn-primary">
-                    check playlist youtube side
-                </a>
-            </div>
-            <div class="col">
-                <a asp-action="UpdateSpotifySongLinks" asp-route-id="@Model.Id" class="btn btn-primary">
-                    update spotify song links
-                </a>
-            </div>
-            <div class="col">
-                <a asp-action="UpdatePlaylistSpotify" asp-route-id="@Model.Id" class="btn btn-primary">
-                    update spotify-playlist
-                </a>
-            </div>
-            <div class="col">
-                <a asp-action="SyncPlaylistThumbnail" asp-route-id="@Model.Id" class="btn btn-primary">
-                    Update Playlist Thumbnail
-                </a>
-            </div>
-            <div class="col">
-                <a asp-action="SyncSongsThumbnail" asp-route-id="@Model.Id" class="btn btn-primary">
-                    Update Songs Thumbnail
-                </a>
-            </div>
-        </div>
-    </div>
+	<div class="col-md-6">
+		<div class="form-group row">
+			@Html.LabelFor(m => m.Name)
+			@Html.DisplayFor(m => m.Name)
+		</div>
+		<div class="form-group row">
+			@Html.LabelFor(m => m.Description)
+			@Html.DisplayFor(m => m.Description)
+		</div>
+
+		<div class="btn-group btn-group-lg" role="group" aria-label="Control group">
+			<a asp-action="SyncPlaylistYoutube" asp-route-id="@Model.Id" class="btn btn-primary">
+				check playlist youtube side
+			</a>
+			<a asp-action="UpdateSpotifySongLinks" asp-route-id="@Model.Id" class="btn btn-primary">
+				update spotify song links
+			</a>
+			<a asp-action="UpdatePlaylistSpotify" asp-route-id="@Model.Id" class="btn btn-primary">
+				update spotify-playlist
+			</a>
+			<a asp-action="SyncSongsThumbnail" asp-route-id="@Model.Id" class="btn btn-primary">
+				Update Songs Thumbnail
+			</a>
+			<a asp-action="Edit_Delete" asp-route-id="@Model.Id" class="btn btn-danger">
+				<i class="bi bi-trash-fill"></i> Delete playlist
+			</a>
+		</div>
+	</div>
 </div>
 <div class="row">
-    <div class="col">
-        <h5>Songs</h5>
-        <table class="table">
-            <colgroup>
-                <col sytle="width:25%" />
-                <col sytle="width:25%" />
-                <col sytle="width:25%" />
-                <col sytle="width:25%" />
-            </colgroup>
-            <thead>
-                <tr>
-                    <th></th>
-                    <th>
-                        @Html.DisplayNameFor(m => m.Songs.First().SongName)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(m => m.Songs.First().ArtistName)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(m => m.Songs.First().YoutubeSongName)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(m => m.Songs.First().FoundOnSpotify)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(m => m.Songs.First().AddedToSpotify)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(m => m.Songs.First().IsNotOnSpotify)
-                    </th>
-                    <th>&nbsp;</th>
-                </tr>
-                <tr>
-                    <td colspan="3">&nbsp;</td>
-                    <td>
-                        @Model.Songs.Count
-                    </td>
-                    <td>
-                        @Model.Songs.Count(s => s.FoundOnSpotify.Value)
-                    </td>
-                    <td>
-                        @Model.Songs.Count(s => s.AddedToSpotify.Value)
-                    </td>
-                    <td>
-                        @Model.Songs.Count(s => s.IsNotOnSpotify ?? false)
-                    </td>
-                    <td>&nbsp;</td>
-                </tr>
-            </thead>
-            <tbody>
+	<div class="col">
+		<h5>Songs</h5>
+		<table class="table">
+			<colgroup>
+				<col sytle="width:25%" />
+				<col sytle="width:25%" />
+				<col sytle="width:25%" />
+				<col sytle="width:25%" />
+			</colgroup>
+			<thead>
+				<tr>
+					<th></th>
+					<th>
+						@Html.DisplayNameFor(m => m.Songs.First().SongName)
+					</th>
+					<th>
+						@Html.DisplayNameFor(m => m.Songs.First().ArtistName)
+					</th>
+					<th>
+						@Html.DisplayNameFor(m => m.Songs.First().YoutubeSongName)
+					</th>
+					<th>
+						@Html.DisplayNameFor(m => m.Songs.First().FoundOnSpotify)
+					</th>
+					<th>
+						@Html.DisplayNameFor(m => m.Songs.First().AddedToSpotify)
+					</th>
+					<th>
+						@Html.DisplayNameFor(m => m.Songs.First().IsNotOnSpotify)
+					</th>
+					<th>&nbsp;</th>
+				</tr>
+				<tr>
+					<td colspan="3">&nbsp;</td>
+					<td>
+						@Model.Songs.Count
+					</td>
+					<td>
+						@Model.Songs.Count(s => s.FoundOnSpotify.Value)
+					</td>
+					<td>
+						@Model.Songs.Count(s => s.AddedToSpotify.Value)
+					</td>
+					<td>
+						@Model.Songs.Count(s => s.IsNotOnSpotify ?? false)
+					</td>
+					<td>&nbsp;</td>
+				</tr>
+			</thead>
+			<tbody>
 
-                @foreach (var song in Model.Songs)
-                {
+				@foreach (var song in Model.Songs)
+				{
 
-                    <tr>
-                        <td>
-                            <img src="data:imgae/png;base64,@(song.ImageBytes64)">
-                        </td>
-                        <td>
-                            @Html.DisplayFor(m => song.SongName)
-                        </td>
-                        <td>
-                            @Html.DisplayFor(m => song.ArtistName)
-                        </td>
-                        <td>
-                            @Html.DisplayFor(m => song.YoutubeSongName)
-                        </td>
-                        <td>
-                            @Html.CheckBoxFor(m => song.FoundOnSpotify.Value, new { onclick = "return false;" })
-                        </td>
-                        <td>
-                            @Html.CheckBoxFor(m => song.AddedToSpotify.Value, new { onclick = "return false;" })
-                        </td>
-                        <td>
-                            @*@Html.CheckBoxFor(m => song.IsNotOnSpotify.GetValueOrDefault(), new { onclick = "return false;",})*@
-                        </td>
-                        <td>
-                            <div class="col">
-                                <a asp-action="SongIsNotOnSpotify" asp-route-playlistId="@Model.Id" asp-route-songId="@song.Id" class="btn btn-primary">
-                                    Song is not on spotify
-                                </a>
-                            </div>
-                            @Html.Partial("_ChooseSong", new System.Web.Mvc.ViewDataDictionary { { "SongId", song.Id }})
-                        </td>
-                    </tr>
-                }
-            </tbody>
-            <tfoot>
-                <tr>
-                    <td colspan="3">&nbsp;</td>
-                    <td>
-                        @Model.Songs.Count
-                    </td>
-                    <td>
-                        @Model.Songs.Count(s => s.FoundOnSpotify.Value)
-                    </td>
-                    <td>
-                        @Model.Songs.Count(s => s.AddedToSpotify.Value)
-                    </td>
-                    <td>
-                        @Model.Songs.Count(s => s.IsNotOnSpotify ?? false)
-                    </td>
-                    <td>&nbsp;</td>
-                </tr>
-            </tfoot>
-        </table>
-    </div>
+					<tr>
+						<td>
+							<img src="data:imgae/png;base64,@(song.ImageBytes64)">
+						</td>
+						<td>
+							@Html.DisplayFor(m => song.SongName)
+						</td>
+						<td>
+							@Html.DisplayFor(m => song.ArtistName)
+						</td>
+						<td>
+							@Html.DisplayFor(m => song.YoutubeSongName)
+						</td>
+						<td>
+							@Html.CheckBoxFor(m => song.FoundOnSpotify.Value, new { onclick = "return false;" })
+						</td>
+						<td>
+							@Html.CheckBoxFor(m => song.AddedToSpotify.Value, new { onclick = "return false;" })
+						</td>
+						<td>
+							@*@Html.CheckBoxFor(m => song.IsNotOnSpotify.GetValueOrDefault(), new { onclick = "return false;",})*@
+						</td>
+						<td>
+							<div class="col">
+								<a asp-action="SongIsNotOnSpotify" asp-route-playlistId="@Model.Id" asp-route-songId="@song.Id" class="btn btn-primary">
+									Song is not on spotify
+								</a>
+							</div>
+							@Html.Partial("_ChooseSong", new System.Web.Mvc.ViewDataDictionary { { "SongId", song.Id }})
+						</td>
+					</tr>
+				}
+			</tbody>
+			<tfoot>
+				<tr>
+					<td colspan="3">&nbsp;</td>
+					<td>
+						@Model.Songs.Count
+					</td>
+					<td>
+						@Model.Songs.Count(s => s.FoundOnSpotify.Value)
+					</td>
+					<td>
+						@Model.Songs.Count(s => s.AddedToSpotify.Value)
+					</td>
+					<td>
+						@Model.Songs.Count(s => s.IsNotOnSpotify ?? false)
+					</td>
+					<td>&nbsp;</td>
+				</tr>
+			</tfoot>
+		</table>
+	</div>
 </div>

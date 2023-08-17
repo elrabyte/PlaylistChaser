@@ -73,24 +73,27 @@ namespace PlaylistChaser.Controllers
 
 		#region Index
 		#region Search
-		public ActionResult SeachYTPlaylist(string ytPlaylistUrl)
+		public async Task<ActionResult> SearchYTPlaylistAsync(string ytPlaylistUrl)
 		{
 			var ytHelper = new YoutubeApiHelper();
 			//add playlist
 			var playlist = new PlaylistModel();
-			playlist.YoutubeId = ytHelper.GetPlaylistIdFromUrl(ytPlaylistUrl);
+			var playlistID = ytHelper.GetPlaylistIdFromUrl(ytPlaylistUrl);
+			playlist.YoutubeId = playlistID;
 			playlist.YoutubeUrl = ytPlaylistUrl;
 			playlist.PlaylistTypeId = BuiltInIds.PLaylistTypes.Simple;
 			playlist = ytHelper.SyncPlaylist(playlist);
+			// get its thumbnail
+			playlist.ImageBytes64 = await new YoutubeApiHelper().GetPlaylistThumbnailBase64(playlistID);
+			//
 			db.Playlist.Add(playlist);
 			db.SaveChanges();
-
 			//add songs
 			playlist.Songs = new List<SongModel>();
 			db.Song.AddRange(ytHelper.GetPlaylistSongs(playlist));
 			db.SaveChanges();
 
-			return new JsonResult(new { success = true });
+			return RedirectToAction("Index");
 		}
 		public ActionResult SyncPlaylistYoutube(int id)
 		{
@@ -207,6 +210,16 @@ namespace PlaylistChaser.Controllers
 			}
 
 			return new JsonResult(new { success = true });
+		}
+		public async Task<ActionResult> SyncPlaylistThumbnails(int id)
+		{
+			var playlists = db.Playlist;
+			foreach (var playlist in playlists.ToList())
+			{
+				playlist.ImageBytes64 = await new YoutubeApiHelper().GetPlaylistThumbnailBase64(playlist.YoutubeId);
+			}
+			db.SaveChanges();
+			return RedirectToAction("Index");
 		}
 		public async Task<ActionResult> SyncPlaylistThumbnail(int id)
 		{
