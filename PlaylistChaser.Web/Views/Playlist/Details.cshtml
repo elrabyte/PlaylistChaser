@@ -113,8 +113,8 @@
 						</td>
 						<td>
 							<div class="col">
-								<a asp-action="SongIsNotOnSpotify" asp-route-playlistId="@Model.Id" asp-route-songId="@song.Id" class="btn btn-primary">
-									Song is not on spotify
+								<a asp-action="SongIsNotOnSpotify" asp-route-playlistId="@Model.Id" asp-route-songId="@song.Id" class="btn btn-sptf-green">
+									<i class="bi bi-spotify"></i> Song is not on spotify
 								</a>
 							</div>
 							@Html.Partial("_ChooseSong", new System.Web.Mvc.ViewDataDictionary { { "SongId", song.Id }})
