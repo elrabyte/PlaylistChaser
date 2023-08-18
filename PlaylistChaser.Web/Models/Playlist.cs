@@ -8,17 +8,17 @@ namespace PlaylistChaser.Models
     {
         [Key, DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int? Id { get; set; }
-        
+
         //youtube
         [Required]
         public string? YoutubeUrl { get; set; }
-		[Required]
-		public string? YoutubeId { get; set; }
-		[Required]
+        [Required]
+        public string? YoutubeId { get; set; }
+        [Required]
         public string? Name { get; set; }
         [Required]
         public string? ChannelName { get; set; }
-        public string? ImageBytes64 { get; set; }
+        public int? ThumbnailId { get; set; }
         [Required]
         public PLaylistTypes PlaylistTypeId { get; set; }
 

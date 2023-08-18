@@ -24,6 +24,6 @@ namespace PlaylistChaser.Models
 
         [Required, ForeignKey("Playlist"), DatabaseGenerated(DatabaseGeneratedOption.None)]
         public int? PlaylistId { get; set; }
-        public string? ImageBytes64 { get; set; }
+        public int? ThumbnailId { get; set; }
     }
 }

@@ -52,6 +52,7 @@ namespace PlaylistChaser
 			return ytSongs.Where(yt => !playlist.Songs.Select(s => s.YoutubeId).Contains(yt.YoutubeId)).ToList();
 
 		}
+
 		internal async Task<string> GetPlaylistThumbnailBase64(string id)
 		{
 			var ytPlaylist = getPlaylist(id);

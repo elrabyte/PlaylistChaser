@@ -1,9 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Google.Apis.YouTube.v3.Data;
+using Microsoft.AspNetCore.Mvc;
 using PlaylistChaser.Database;
 using PlaylistChaser.Models;
 using PlaylistChaser.Web.Models.ViewModel;
 using PlaylistChaser.Web.Util;
 using SpotifyAPI.Web;
+using Playlist = PlaylistChaser.Models.Playlist;
+using Thumbnail = PlaylistChaser.Models.Thumbnail;
 
 namespace PlaylistChaser.Controllers
 {
@@ -26,10 +29,10 @@ namespace PlaylistChaser.Controllers
 		}
 		#endregion
 
-		#region views
-		public IActionResult Index()
+		#region Views
+		public async Task<ActionResult> Index()
 		{
-			var playlists = db.Playlist.ToList();
+			var playlists = await db.GetPlaylists();
 			return View(playlists);
 		}
 
@@ -61,32 +64,36 @@ namespace PlaylistChaser.Controllers
 			return RedirectToAction("Index");
 		}
 
-
-		public ActionResult Details(int id)
+		public async Task<ActionResult> Details(int id)
 		{
-			var playlist = db.Playlist.Single(p => p.Id == id);
-			playlist.Songs = db.Song.Where(s => s.PlaylistId == id).ToList();
+			var playlist = (await db.GetPlaylists()).Single();
+			playlist.Songs = await db.GetSongs(playlist.PlaylistId);
 			return View(playlist);
 		}
 		#endregion
 
-		#region Index
+		#region Index Functions
 		#region Search
 		public async Task<ActionResult> SearchYTPlaylistAsync(string ytPlaylistUrl)
 		{
 			var ytHelper = new YoutubeApiHelper();
 			//add playlist
-			var playlist = new Models.Playlist();
+			var playlist = new Playlist();
 			var playlistID = ytHelper.GetPlaylistIdFromUrl(ytPlaylistUrl);
 			playlist.YoutubeId = playlistID;
 			playlist.YoutubeUrl = ytPlaylistUrl;
 			playlist.PlaylistTypeId = BuiltInIds.PLaylistTypes.Simple;
 			playlist = ytHelper.SyncPlaylist(playlist);
-			// get its thumbnail
-			playlist.ImageBytes64 = await new YoutubeApiHelper().GetPlaylistThumbnailBase64(playlistID);
-			//
+
+			//add thumbnail
+			var thumbnail = new Thumbnail { Base64String = await new YoutubeApiHelper().GetPlaylistThumbnailBase64(playlistID) };
+			db.Thumbnail.Add(thumbnail);
+			db.SaveChanges();
+			playlist.ThumbnailId = thumbnail.Id;
+
 			db.Playlist.Add(playlist);
 			db.SaveChanges();
+
 			//add songs
 			playlist.Songs = new List<Song>();
 			db.Song.AddRange(ytHelper.GetPlaylistSongs(playlist));
@@ -164,7 +171,7 @@ namespace PlaylistChaser.Controllers
 		#endregion
 		#endregion
 
-		#region Details
+		#region Details Functions
 		#region spotify
 
 		private async Task<bool> findSongsSpotify(List<Song> songs)
@@ -230,7 +237,18 @@ namespace PlaylistChaser.Controllers
 			var playlists = db.Playlist;
 			foreach (var playlist in playlists.ToList())
 			{
-				playlist.ImageBytes64 = await new YoutubeApiHelper().GetPlaylistThumbnailBase64(playlist.YoutubeId);
+				var base64 = await new YoutubeApiHelper().GetPlaylistThumbnailBase64(playlist.YoutubeId);
+
+				var thumbnail = db.Thumbnail.SingleOrDefault(t => t.Id == playlist.ThumbnailId);
+				if (thumbnail == null)
+				{
+					thumbnail = new Thumbnail { Base64String = base64 };
+					db.Thumbnail.Add(thumbnail);
+					db.SaveChanges();
+					playlist.ThumbnailId = thumbnail.Id;
+				}
+				else
+					thumbnail.Base64String = base64;
 			}
 			db.SaveChanges();
 			return RedirectToAction("Index");
@@ -238,7 +256,15 @@ namespace PlaylistChaser.Controllers
 		public async Task<ActionResult> SyncPlaylistThumbnail(int id)
 		{
 			var playlist = db.Playlist.Single(p => p.Id == id);
-			playlist.ImageBytes64 = await new YoutubeApiHelper().GetPlaylistThumbnailBase64(playlist.YoutubeId);
+			var thumbnail = db.Thumbnail.SingleOrDefault(t => t.Id == playlist.ThumbnailId);
+			if (thumbnail == null)
+			{
+				thumbnail = new Thumbnail();
+				db.Thumbnail.Add(thumbnail);
+				playlist.ThumbnailId = thumbnail.Id;
+			}
+
+			thumbnail.Base64String = await new YoutubeApiHelper().GetPlaylistThumbnailBase64(playlist.YoutubeId);
 			db.SaveChanges();
 			return new JsonResult(new { success = true });
 		}
@@ -247,14 +273,26 @@ namespace PlaylistChaser.Controllers
 			var playlistYoutubeId = db.Playlist.Single(p => p.Id == id).YoutubeId;
 			var songs = db.Song.Where(p => p.PlaylistId == id);
 			if (onlyWithNoThumbnails)
-				songs = songs.Where(s => s.ImageBytes64 == null);
+				songs = songs.Where(s => s.ThumbnailId == null);
+
 
 			var thumbnails = await new YoutubeApiHelper().GetSongsThumbnailBase64ByPlaylist(playlistYoutubeId);
 
 			foreach (var song in songs.ToList())
 			{
-				if (thumbnails.TryGetValue(song.YoutubeId, out var imageBytes64))
-					song.ImageBytes64 = imageBytes64;
+				if (!thumbnails.TryGetValue(song.YoutubeId.ToString(), out var base64))
+					continue;
+
+				var thumbnail = db.Thumbnail.SingleOrDefault(t => t.Id == song.ThumbnailId);
+				if (thumbnail == null)
+				{
+					thumbnail = new Thumbnail { Base64String = base64 };
+					db.Thumbnail.Add(thumbnail);
+					db.SaveChanges();
+					song.ThumbnailId = thumbnail.Id;
+				}
+				else
+					thumbnail.Base64String = base64;
 			}
 			db.SaveChanges();
 			return new JsonResult(new { success = true });

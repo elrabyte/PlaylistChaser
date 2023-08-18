@@ -1,5 +1,7 @@
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using PlaylistChaser.Models;
+using PlaylistChaser.Models.ViewModel;
 
 namespace PlaylistChaser.Database
 {
@@ -8,8 +10,13 @@ namespace PlaylistChaser.Database
         #region 1:1 Views
         public DbSet<Playlist> Playlist { get; set; }
         public DbSet<Song> Song { get; set; }
+        public DbSet<Thumbnail> Thumbnail{ get; set; }
         #endregion
 
+        #region SP ViewModels
+        private DbSet<PlaylistViewModel> PlaylistViewModel { get; set; }
+        private DbSet<SongViewModel> SongViewModel { get; set; }
+        #endregion
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
@@ -19,6 +26,16 @@ namespace PlaylistChaser.Database
             optionsBuilder.UseSqlServer(connectionString);
         }
 
+        public async Task<List<PlaylistViewModel>> GetPlaylists(int? playlistId = null)
+        {
+            var sql = "exec dbo.GetPlaylists @playlistId";
+            return await PlaylistViewModel.FromSqlRaw(sql, new SqlParameter("playlistId", playlistId.HasValue ? playlistId.Value : DBNull.Value)).ToListAsync();
+        }
 
-    }
+		public async Task<List<SongViewModel>> GetSongs(int playlistId)
+		{
+			var sql = "exec dbo.GetSongs @playlistId";
+			return await SongViewModel.FromSqlRaw(sql, new SqlParameter("playlistId", playlistId)).ToListAsync();
+		}
+	}
 }

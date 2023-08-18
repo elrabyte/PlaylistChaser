@@ -8,8 +8,9 @@
     [YoutubeId] NVARCHAR(255) NOT NULL, 
     [SpotifyId] NVARCHAR(255) NULL, 
     [SongName] NVARCHAR(MAX) NULL, 
-    [ImageBytes64] NVARCHAR(MAX) NULL, 
     [AddedToSpotify] BIT NOT NULL, 
     [IsNotOnSpotify] BIT NULL, 
-    CONSTRAINT [FK_Song_Playlist] FOREIGN KEY ([PlaylistId]) REFERENCES [Playlist]([Id])
+    [ThumbnailId] INT NULL, 
+    CONSTRAINT [FK_Song_Playlist] FOREIGN KEY ([PlaylistId]) REFERENCES [Playlist]([Id]), 
+    CONSTRAINT [FK_Song_Thumbnail] FOREIGN KEY ([ThumbnailId]) REFERENCES [Thumbnail]([Id])
 )

@@ -1,6 +1,7 @@
-﻿@model IEnumerable<Playlist>
+﻿@using PlaylistChaser.Models.ViewModel
+@model IEnumerable<PlaylistViewModel>
 @{
-	ViewData["Title"] = "Home Page";
+    ViewData["Title"] = "Home Page";
 }
 
 <!-- Custom Site CSS -->
@@ -8,42 +9,42 @@
 <!-- -->
 
 <div class="container mt-4">
-	<div class="row align-items-center">
-		@using (Html.BeginForm("SearchYTPlaylist", "Playlist", null, Microsoft.AspNetCore.Mvc.Rendering.FormMethod.Post, null, new { @class = "row align-items-center" }))
-		{
-			<div class="col-lg-8 col-sm-12">
-				<label class="visually-hidden" for="ytPlaylistUrl">Username</label>
-				<div class="input-group">
-					<div class="input-group-text text-yt-red"><i class="bi bi-youtube"></i></div>
-					<input type="url" name="ytPlaylistUrl" class="form-control form-control-lg" id="ytPlaylistUrl" placeholder="YouTube URL" required>
-				</div>
-			</div>
+    <div class="row align-items-center">
+        @using (Html.BeginForm("SearchYTPlaylist", "Playlist", null, Microsoft.AspNetCore.Mvc.Rendering.FormMethod.Post, null, new { @class = "row align-items-center" }))
+        {
+            <div class="col-lg-8 col-sm-12">
+                <label class="visually-hidden" for="ytPlaylistUrl">Username</label>
+                <div class="input-group">
+                    <div class="input-group-text text-yt-red"><i class="bi bi-youtube"></i></div>
+                    <input type="url" name="ytPlaylistUrl" class="form-control form-control-lg" id="ytPlaylistUrl" placeholder="YouTube URL" required>
+                </div>
+            </div>
 
-			<div class="col-lg-4 col-sm-12">
-				<button type="submit" class="btn btn-lg btn-outline-primary"><i class="bi bi-plus-circle"></i> Add Playlist</button>
-			</div>
-		}
-	</div>
+            <div class="col-lg-4 col-sm-12">
+                <button type="submit" class="btn btn-lg btn-outline-primary"><i class="bi bi-plus-circle"></i> Add Playlist</button>
+            </div>
+        }
+    </div>
 </div>
 
 <div class="container mt-4">
-	<a asp-action="SyncPlaylistThumbnails" class="btn btn-primary">
-		<i class="bi bi-arrow-repeat"></i>
-		Thumbnails
-	</a>
+    <a asp-action="SyncPlaylistThumbnails" class="btn btn-primary">
+        <i class="bi bi-arrow-repeat"></i>
+        Thumbnails
+    </a>
 
-	<section class="hero-section">
-		<div class="card-grid">
-			@foreach (var playlist in Model)
-			{
-				<a class="pl_card" asp-action="Details" asp-route-id="@playlist.Id">
-					<div class="card__background" style="background-image: url(data:image/png;base64,@(playlist.ImageBytes64))"></div>
-					<div class="card__content">
-						<p class="card__category">@Html.DisplayFor(modelItem => playlist.ChannelName)</p>
-						<h3 class="card__heading">@Html.DisplayFor(modelItem => playlist.Name)</h3>
-					</div>
-				</a>
-			}
-		</div>
-	</section>
+    <section class="hero-section">
+        <div class="card-grid">
+            @foreach (var playlist in Model)
+            {
+                <a class="pl_card" asp-action="Details" asp-route-id="@playlist.PlaylistId">
+                    <div class="card__background" style="background-image: url(data:image/png;base64,@(playlist.ThumbnailBase64String))"></div>
+                    <div class="card__content">
+                        <p class="card__category">@Html.DisplayFor(modelItem => playlist.AuthorName)</p>
+                        <h3 class="card__heading">@Html.DisplayFor(modelItem => playlist.Name)</h3>
+                    </div>
+                </a>
+            }
+        </div>
+    </section>
 </div>

@@ -6,9 +6,10 @@
     [YoutubeUrl] NVARCHAR(255) NOT NULL, 
     [YoutubeId] NVARCHAR(255) NOT NULL, 
     [ChannelName] NVARCHAR(255) NOT NULL, 
-    [ImageBytes64] NVARCHAR(MAX) NULL, 
     [SpotifyUrl] NVARCHAR(255) NULL, 
     [PlaylistTypeId] INT NOT NULL, 
-    CONSTRAINT [FK_Playlist_PlaylistType] FOREIGN KEY ([PlaylistTypeId]) REFERENCES [PlaylistType]([Id])
+    [ThumbnailId] INT NULL, 
+    CONSTRAINT [FK_Playlist_PlaylistType] FOREIGN KEY ([PlaylistTypeId]) REFERENCES [PlaylistType]([Id]), 
+    CONSTRAINT [FK_Playlist_Thumbnail] FOREIGN KEY ([ThumbnailId]) REFERENCES [Thumbnail]([Id])
 )
 

@@ -1,0 +1,5 @@
+﻿CREATE TABLE [dbo].[Thumbnail]
+(
+	[Id] INT NOT NULL PRIMARY KEY IDENTITY, 
+    [Base64String] NVARCHAR(MAX) NOT NULL
+)

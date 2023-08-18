@@ -60,14 +60,18 @@
     <Folder Include="publish\" />
     <Folder Include="NewDbScripts" />
     <Folder Include="NewDbScripts\InBuiltValues" />
+    <Folder Include="SP" />
   </ItemGroup>
   <ItemGroup>
     <Build Include="Playlist.sql" />
     <Build Include="Song.sql" />
     <Build Include="PlaylistType.sql" />
-    <Build Include="CombinedPlaylist.sql" />
+    <Build Include="CombinedPlaylistEntry.sql" />
     <None Include="NewDbScripts\InBuiltValues\Insert_All.sql" />
     <Build Include="NewDbScripts\InBuiltValues\InsertPlaylistTypes.sql" />
+    <Build Include="Thumbnail.sql" />
+    <Build Include="SP\GetPlaylists.sql" />
+    <Build Include="SP\GetSongs.sql" />
   </ItemGroup>
   <ItemGroup>
     <RefactorLog Include="PlaylistChaser.DB.refactorlog" />
