@@ -1,10 +1,9 @@
-﻿using Google.Apis.YouTube.v3.Data;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using PlaylistChaser.Database;
 using PlaylistChaser.Models;
+using PlaylistChaser.Web.Models.ViewModel;
 using PlaylistChaser.Web.Util;
 using SpotifyAPI.Web;
-using System.Diagnostics;
 
 namespace PlaylistChaser.Controllers
 {
@@ -77,7 +76,7 @@ namespace PlaylistChaser.Controllers
 		{
 			var ytHelper = new YoutubeApiHelper();
 			//add playlist
-			var playlist = new PlaylistModel();
+			var playlist = new Models.Playlist();
 			var playlistID = ytHelper.GetPlaylistIdFromUrl(ytPlaylistUrl);
 			playlist.YoutubeId = playlistID;
 			playlist.YoutubeUrl = ytPlaylistUrl;
@@ -89,7 +88,7 @@ namespace PlaylistChaser.Controllers
 			db.Playlist.Add(playlist);
 			db.SaveChanges();
 			//add songs
-			playlist.Songs = new List<SongModel>();
+			playlist.Songs = new List<Song>();
 			db.Song.AddRange(ytHelper.GetPlaylistSongs(playlist));
 			db.SaveChanges();
 
@@ -148,12 +147,27 @@ namespace PlaylistChaser.Controllers
 		}
 		#endregion
 
+		#region Create Playlist
+		public async Task<ActionResult> CreateCombinedPlaylist(string playlistName)
+		{
+
+			//add playlist to YT
+			var ytHelper = new YoutubeApiHelper();
+			var playlist = await ytHelper.CreatePlaylist(playlistName);
+			playlist.PlaylistTypeId = BuiltInIds.PLaylistTypes.Combined;
+
+			db.Playlist.Add(playlist);
+			db.SaveChanges();
+
+			return new JsonResult(new { success = true });
+		}
+		#endregion
 		#endregion
 
 		#region Details
 		#region spotify
 
-		private async Task<bool> findSongsSpotify(List<SongModel> songs)
+		private async Task<bool> findSongsSpotify(List<Song> songs)
 		{
 			var spotifyHelper = new SpotifyApiHelper(HttpContext);
 

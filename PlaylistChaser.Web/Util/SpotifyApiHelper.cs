@@ -88,7 +88,7 @@ namespace PlaylistChaser
             return await spotify.Playlists.ChangeDetails(spotifyPlaylistId, request);
         }
 
-        public async Task<bool> DeletePlaylist(PlaylistModel playlist)
+        public async Task<bool> DeletePlaylist(Playlist playlist)
         {
             //only sets private for the moment. couldnt find api            
             var request = new PlaylistChangeDetailsRequest();

@@ -36,7 +36,7 @@ namespace PlaylistChaser
 			return userCredential;
 
 		}
-		internal PlaylistModel SyncPlaylist(PlaylistModel playlist)
+		internal Models.Playlist SyncPlaylist(Models.Playlist playlist)
 		{
 			var ytPlaylist = toPlaylistModel(getPlaylist(playlist.YoutubeId));
 			playlist.Name = ytPlaylist.Name;
@@ -46,7 +46,7 @@ namespace PlaylistChaser
 		}
 
 		#region Get Stuff
-		internal List<SongModel> GetPlaylistSongs(PlaylistModel playlist)
+		internal List<Song> GetPlaylistSongs(Models.Playlist playlist)
 		{
 			var ytSongs = toSongModels(getPlaylistSongs(playlist.YoutubeId), playlist.Id.Value);
 			return ytSongs.Where(yt => !playlist.Songs.Select(s => s.YoutubeId).Contains(yt.YoutubeId)).ToList();
@@ -122,7 +122,7 @@ namespace PlaylistChaser
 		/// </summary>
 		/// <param name="playlistName">Name of the Playlist</param>
 		/// <returns>returns the YT-Playlist in local Model</returns>
-		internal async Task<PlaylistModel> CreatePlaylist(string playlistName, string? description = null, string privacyStatus = "private")
+		internal async Task<Models.Playlist> CreatePlaylist(string playlistName, string? description = null, string privacyStatus = "private")
 		{
 			// Create a new, private playlist in the authorized user's channel.
 			var newPlaylist = new Playlist();
@@ -153,9 +153,9 @@ namespace PlaylistChaser
 		#endregion
 
 		#region model
-		private PlaylistModel toPlaylistModel(Playlist ytPlaylist)
+		private Models.Playlist toPlaylistModel(Playlist ytPlaylist)
 		{
-			var playlist = new PlaylistModel
+			var playlist = new Models.Playlist
 			{
 				Name = ytPlaylist.Snippet.Title,
 				YoutubeUrl = ytPlaylist.Id,
@@ -165,9 +165,9 @@ namespace PlaylistChaser
 			return playlist;
 		}
 
-		private List<SongModel> toSongModels(List<PlaylistItemSnippet> ytSongs, int playlistId)
+		private List<Song> toSongModels(List<PlaylistItemSnippet> ytSongs, int playlistId)
 		{
-			return ytSongs.Select(s => new SongModel
+			return ytSongs.Select(s => new Song
 			{
 				YoutubeSongName = s.Title,
 				YoutubeId = s.ResourceId.VideoId,

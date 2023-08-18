@@ -1,4 +1,4 @@
-namespace PlaylistChaser.Models
+namespace PlaylistChaser.Web.Models.ViewModel
 {
     public class ErrorViewModel
     {

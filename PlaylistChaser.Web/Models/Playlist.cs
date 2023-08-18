@@ -4,8 +4,7 @@ using static PlaylistChaser.Web.Util.BuiltInIds;
 
 namespace PlaylistChaser.Models
 {
-    [Table("Playlists")]
-    public class PlaylistModel
+    public class Playlist
     {
         [Key, DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int? Id { get; set; }
@@ -31,6 +30,6 @@ namespace PlaylistChaser.Models
 
         //virtual public ICollection<SongModel> Songs { get; set; }
         [NotMapped]
-        public ICollection<SongModel> Songs { get; set; }
+        public ICollection<Song> Songs { get; set; }
     }
 }

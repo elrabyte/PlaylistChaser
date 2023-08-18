@@ -59,19 +59,21 @@
     <Folder Include="Properties" />
     <Folder Include="publish\" />
     <Folder Include="NewDbScripts" />
+    <Folder Include="NewDbScripts\InBuiltValues" />
   </ItemGroup>
   <ItemGroup>
-    <Build Include="Playlists.sql" />
-    <Build Include="Songs.sql" />
-    <Build Include="PlaylistTypes.sql" />
-    <Build Include="NewDbScripts\InsertPlaylistTypes.sql" />
+    <Build Include="Playlist.sql" />
+    <Build Include="Song.sql" />
+    <Build Include="PlaylistType.sql" />
+    <Build Include="CombinedPlaylist.sql" />
+    <None Include="NewDbScripts\InBuiltValues\Insert_All.sql" />
+    <Build Include="NewDbScripts\InBuiltValues\InsertPlaylistTypes.sql" />
   </ItemGroup>
   <ItemGroup>
     <RefactorLog Include="PlaylistChaser.DB.refactorlog" />
   </ItemGroup>
   <ItemGroup>
     <None Include="publish\local_playlistchaserdb.publish.xml" />
-    <None Include="NewDbScripts\Insert_All.sql" />
     <None Include="PreDeployment.sql" />
   </ItemGroup>
 </Project>

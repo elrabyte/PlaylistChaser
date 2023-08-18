@@ -1,4 +1,4 @@
-﻿CREATE TABLE [dbo].[Playlists]
+﻿CREATE TABLE [dbo].[Playlist]
 (
 	[Id] INT NOT NULL PRIMARY KEY IDENTITY, 
     [Name] NVARCHAR(MAX) NOT NULL, 
@@ -9,6 +9,6 @@
     [ImageBytes64] NVARCHAR(MAX) NULL, 
     [SpotifyUrl] NVARCHAR(255) NULL, 
     [PlaylistTypeId] INT NOT NULL, 
-    CONSTRAINT [FK_Playlists_PlaylistTypes] FOREIGN KEY ([PlaylistTypeId]) REFERENCES [PlaylistTypes]([Id])
+    CONSTRAINT [FK_Playlist_PlaylistType] FOREIGN KEY ([PlaylistTypeId]) REFERENCES [PlaylistType]([Id])
 )
 

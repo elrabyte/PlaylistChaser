@@ -6,8 +6,8 @@ namespace PlaylistChaser.Database
     public class PlaylistChaserDbContext : DbContext
     {
         #region 1:1 Views
-        public DbSet<PlaylistModel> Playlist { get; set; }
-        public DbSet<SongModel> Song { get; set; }
+        public DbSet<Playlist> Playlist { get; set; }
+        public DbSet<Song> Song { get; set; }
         #endregion
 
 

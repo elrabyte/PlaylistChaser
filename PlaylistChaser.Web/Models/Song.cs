@@ -3,8 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace PlaylistChaser.Models
 {
-    [Table("Songs")]
-    public class SongModel
+    public class Song
     {
         [Key, DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int Id { get; set; }

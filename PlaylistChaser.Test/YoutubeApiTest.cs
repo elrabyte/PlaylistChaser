@@ -17,16 +17,16 @@ namespace PlaylistChaser.Test
 		{
 			youtubeApiHelper = new YoutubeApiHelper();
 		}
-		PlaylistModel TestPlaylist = new PlaylistModel
+		Models.Playlist TestPlaylist = new Models.Playlist
 		{
 			Id = 1,
 			YoutubeUrl = PLAYLIST_URL,
 			YoutubeId = PLAYLIST_ID,
-			Songs = new List<SongModel>(),
+			Songs = new List<Song>(),
 		};
 		#endregion
 		#region Test Results
-		PlaylistModel ExpectedPlaylist = new PlaylistModel
+		Models.Playlist ExpectedPlaylist = new Models.Playlist
 		{
 			Id = 1,
 			YoutubeUrl = PLAYLIST_URL,
@@ -34,7 +34,7 @@ namespace PlaylistChaser.Test
 			Name = "Rick Astley Videos",
 			ChannelName = "RickAstleyVEVO",
 			Description = "Videos from the dapper British pop-soul singer.\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nrick astley, never gonna give you up, together forever",
-			Songs = new List<SongModel>(),
+			Songs = new List<Song>(),
 		};
 		#endregion
 		[Fact]

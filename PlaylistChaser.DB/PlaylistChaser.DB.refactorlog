@@ -28,4 +28,32 @@
     <Property Name="ParentElementType" Value="SqlTable" />
     <Property Name="NewName" Value="PlaylistTypeId" />
   </Operation>
+  <Operation Name="Rename Refactor" Key="2da57d59-f00e-4bb8-b884-f5eb52879ab2" ChangeDateTime="08/15/2023 17:04:50">
+    <Property Name="ElementName" Value="[dbo].[CombinedPlaylists].[combinedPLaylistID]" />
+    <Property Name="ElementType" Value="SqlSimpleColumn" />
+    <Property Name="ParentElementName" Value="[dbo].[CombinedPlaylists]" />
+    <Property Name="ParentElementType" Value="SqlTable" />
+    <Property Name="NewName" Value="combinedPLaylistId" />
+  </Operation>
+  <Operation Name="Rename Refactor" Key="bb063b30-69c1-447d-bab0-d201f29e36c7" ChangeDateTime="08/15/2023 17:05:48">
+    <Property Name="ElementName" Value="[dbo].[CombinedPlaylists].[combinedPLaylistId]" />
+    <Property Name="ElementType" Value="SqlSimpleColumn" />
+    <Property Name="ParentElementName" Value="[dbo].[CombinedPlaylists]" />
+    <Property Name="ParentElementType" Value="SqlTable" />
+    <Property Name="NewName" Value="VombinedPLaylistId" />
+  </Operation>
+  <Operation Name="Rename Refactor" Key="7bd9fcea-b0f3-4c03-a8f1-d5df371d0734" ChangeDateTime="08/15/2023 17:05:53">
+    <Property Name="ElementName" Value="[dbo].[CombinedPlaylists].[VombinedPLaylistId]" />
+    <Property Name="ElementType" Value="SqlSimpleColumn" />
+    <Property Name="ParentElementName" Value="[dbo].[CombinedPlaylists]" />
+    <Property Name="ParentElementType" Value="SqlTable" />
+    <Property Name="NewName" Value="CombinedPLaylistId" />
+  </Operation>
+  <Operation Name="Rename Refactor" Key="22cbdcc4-5480-49d3-97fc-746e06e313a7" ChangeDateTime="08/15/2023 17:05:57">
+    <Property Name="ElementName" Value="[dbo].[CombinedPlaylists].[playlistId]" />
+    <Property Name="ElementType" Value="SqlSimpleColumn" />
+    <Property Name="ParentElementName" Value="[dbo].[CombinedPlaylists]" />
+    <Property Name="ParentElementType" Value="SqlTable" />
+    <Property Name="NewName" Value="PlaylistId" />
+  </Operation>
 </Operations>
