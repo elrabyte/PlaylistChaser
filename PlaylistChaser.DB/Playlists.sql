@@ -1,8 +1,8 @@
 ﻿CREATE TABLE [dbo].[Playlists]
 (
 	[Id] INT NOT NULL PRIMARY KEY IDENTITY, 
-    [Name] NVARCHAR(255) NOT NULL, 
-    [Description] NVARCHAR(255) NULL, 
+    [Name] NVARCHAR(MAX) NOT NULL, 
+    [Description] NVARCHAR(MAX) NULL, 
     [YoutubeUrl] NVARCHAR(255) NOT NULL, 
     [YoutubeId] NVARCHAR(255) NOT NULL, 
     [ChannelName] NVARCHAR(255) NOT NULL, 

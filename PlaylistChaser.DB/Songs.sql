@@ -1,13 +1,13 @@
 ﻿CREATE TABLE [dbo].[Songs]
 (
 	[Id] INT NOT NULL PRIMARY KEY IDENTITY, 
-    [YoutubeSongName] NVARCHAR(255) NULL, 
+    [YoutubeSongName] NVARCHAR(MAX) NULL, 
     [FoundOnSpotify] BIT NOT NULL, 
     [PlaylistId] INT NOT NULL, 
-    [ArtistName] NVARCHAR(255) NULL, 
+    [ArtistName] NVARCHAR(MAX) NULL, 
     [YoutubeId] NVARCHAR(255) NOT NULL, 
     [SpotifyId] NVARCHAR(255) NULL, 
-    [SongName] NVARCHAR(255) NULL, 
+    [SongName] NVARCHAR(MAX) NULL, 
     [ImageBytes64] NVARCHAR(MAX) NULL, 
     [AddedToSpotify] BIT NOT NULL, 
     [IsNotOnSpotify] BIT NULL, 
