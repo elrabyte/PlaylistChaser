@@ -8,8 +8,10 @@ BEGIN
 
 	insert into #song (Id, SongName, ArtistName, Downloaded, ThumbnailId)
 		 select s.Id, isnull(s.SongName, s.YoutubeSongName), s.ArtistName, 0, s.ThumbnailId
-		   from Song s		  
-		  where s.PlaylistId = @playlistId
+		   from Song s
+		   inner join PlaylistSong ps
+		   on ps.SongId = s.Id
+		  where ps.PlaylistId = @playlistId
 
 	update tmp
 	   set ThumbnailBase64String = t.Base64String

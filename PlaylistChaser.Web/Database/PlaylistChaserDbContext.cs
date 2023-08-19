@@ -10,6 +10,7 @@ namespace PlaylistChaser.Database
         #region 1:1 Views
         public DbSet<Playlist> Playlist { get; set; }
         public DbSet<Song> Song { get; set; }
+        public DbSet<PlaylistSong> PlaylistSong { get; set; }
         public DbSet<Thumbnail> Thumbnail{ get; set; }
         #endregion
 
@@ -21,8 +22,8 @@ namespace PlaylistChaser.Database
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
 
-            //string connectionString = "Server=(localdb)\\MSSQLLocalDB;Database=playlistchaserdb;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=true";
-            string connectionString = "Server=DESKTOP-AUKQ7J7\\SQLEXPRESS;Database=playlistchaserdb;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=true";
+            string connectionString = "Server=(localdb)\\MSSQLLocalDB;Database=playlistchaserdb;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=true";
+            //string connectionString = "Server=DESKTOP-AUKQ7J7\\SQLEXPRESS;Database=playlistchaserdb;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=true";
             optionsBuilder.UseSqlServer(connectionString);
         }
 

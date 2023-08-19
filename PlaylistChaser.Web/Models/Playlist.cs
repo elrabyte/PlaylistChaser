@@ -27,9 +27,5 @@ namespace PlaylistChaser.Models
         public string? SpotifyUrl { get; set; }
         public string? Description { get; set; }
         #endregion
-
-        //virtual public ICollection<SongModel> Songs { get; set; }
-        [NotMapped]
-        public ICollection<Song> Songs { get; set; }
     }
 }
