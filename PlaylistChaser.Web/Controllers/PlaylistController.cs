@@ -1,14 +1,15 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using PlaylistChaser.Database;
-using PlaylistChaser.Models;
+using PlaylistChaser.Web.Database;
+using PlaylistChaser.Web.Models;
 using PlaylistChaser.Web.Models.ViewModel;
 using PlaylistChaser.Web.Util;
+using PlaylistChaser.Web.Util.API;
 using SpotifyAPI.Web;
 using static PlaylistChaser.Web.Util.BuiltInIds;
-using Playlist = PlaylistChaser.Models.Playlist;
-using Thumbnail = PlaylistChaser.Models.Thumbnail;
+using Playlist = PlaylistChaser.Web.Models.Playlist;
+using Thumbnail = PlaylistChaser.Web.Models.Thumbnail;
 
-namespace PlaylistChaser.Controllers
+namespace PlaylistChaser.Web.Controllers
 {
     public class PlaylistController : Controller
     {
@@ -99,7 +100,7 @@ namespace PlaylistChaser.Controllers
             var playlistID = ytHelper.GetPlaylistIdFromUrl(ytPlaylistUrl);
             playlist.YoutubeId = playlistID;
             playlist.YoutubeUrl = ytPlaylistUrl;
-            playlist.PlaylistTypeId = BuiltInIds.PLaylistTypes.Simple;
+            playlist.PlaylistTypeId = PLaylistTypes.Simple;
             playlist = ytHelper.SyncPlaylist(playlist);
 
             //add thumbnail

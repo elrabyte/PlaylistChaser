@@ -1,7 +1,7 @@
-﻿using PlaylistChaser.Models;
+﻿using PlaylistChaser.Web.Models;
 using SpotifyAPI.Web;
 
-namespace PlaylistChaser
+namespace PlaylistChaser.Web.Util.API
 {
     internal class SpotifyApiHelper
     {

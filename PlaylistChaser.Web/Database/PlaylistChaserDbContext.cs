@@ -1,9 +1,9 @@
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
-using PlaylistChaser.Models;
-using PlaylistChaser.Models.ViewModel;
+using PlaylistChaser.Web.Models;
+using PlaylistChaser.Web.Models.ViewModel;
 
-namespace PlaylistChaser.Database
+namespace PlaylistChaser.Web.Database
 {
     public class PlaylistChaserDbContext : DbContext
     {

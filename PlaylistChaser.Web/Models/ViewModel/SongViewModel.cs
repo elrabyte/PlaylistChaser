@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace PlaylistChaser.Models.ViewModel
+namespace PlaylistChaser.Web.Models.ViewModel
 {
 	public class SongViewModel
 	{

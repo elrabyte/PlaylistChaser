@@ -3,12 +3,11 @@ using Google.Apis.Services;
 using Google.Apis.Util;
 using Google.Apis.YouTube.v3;
 using Google.Apis.YouTube.v3.Data;
-using PlaylistChaser.Models;
-using System.ComponentModel.DataAnnotations;
+using PlaylistChaser.Web.Models;
 using System.Text.RegularExpressions;
 using Playlist = Google.Apis.YouTube.v3.Data.Playlist;
 
-namespace PlaylistChaser
+namespace PlaylistChaser.Web.Util.API
 {
     internal class YoutubeApiHelper
     {
@@ -183,7 +182,7 @@ namespace PlaylistChaser
                 var separatedSongIds = songIds.GetRange(i, rangeCount);
                 var listRequest = ytService.Videos.List("snippet");
                 listRequest.MaxResults = maxResults;
-                listRequest.Id = String.Join(',', separatedSongIds);
+                listRequest.Id = string.Join(',', separatedSongIds);
                 var resp = listRequest.Execute();
 
                 songs.AddRange(resp.Items);

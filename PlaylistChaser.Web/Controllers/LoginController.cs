@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using PlaylistChaser.Web.Util.API;
 
-namespace PlaylistChaser.Controllers
+namespace PlaylistChaser.Web.Controllers
 {
     public class LoginController : Controller
     {

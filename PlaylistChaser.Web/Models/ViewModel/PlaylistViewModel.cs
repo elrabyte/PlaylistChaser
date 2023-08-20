@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using static PlaylistChaser.Web.Util.BuiltInIds;
 
-namespace PlaylistChaser.Models.ViewModel
+namespace PlaylistChaser.Web.Models.ViewModel
 {
     public class PlaylistViewModel
     {

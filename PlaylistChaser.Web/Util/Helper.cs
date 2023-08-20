@@ -1,4 +1,4 @@
-﻿namespace PlaylistChaser
+﻿namespace PlaylistChaser.Web.Util
 {
     internal static class Helper
     {

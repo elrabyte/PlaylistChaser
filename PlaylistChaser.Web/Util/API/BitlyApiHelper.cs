@@ -1,6 +1,6 @@
 ﻿using BitlyAPI;
 
-namespace PlaylistChaser
+namespace PlaylistChaser.Web.Util.API
 {
     internal static class BitlyApiHelper
     {
