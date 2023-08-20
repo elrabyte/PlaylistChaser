@@ -47,6 +47,8 @@
 .pl_card {
     list-style: none;
     position: relative;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
     .pl_card:before {

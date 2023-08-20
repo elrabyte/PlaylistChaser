@@ -1,0 +1,40 @@
+﻿<!-- Add YouTube Playlist Modal -->
+<div class="modal fade" id="addYtPlModal" tabindex="-1" aria-labelledby="addYtModalLabel" aria-hidden="true">
+	<div class="modal-dialog" role="document">
+		<div class="modal-content rounded-4 shadow">
+			<div class="modal-header p-5 pb-4 border-bottom-0">
+				<h1 class="fw-bold mb-0 fs-2">Add your YouTube Playlist</h1>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body p-5 pt-0">
+				@using (Html.BeginForm(
+						"SearchYTPlaylist",
+						"Playlist",
+						null,
+						Microsoft.AspNetCore.Mvc.Rendering.FormMethod.Post,
+						null,
+						null)
+						)
+				{
+					<div class="form-floating mb-3">
+						<label class="visually-hidden" for="ytPlaylistUrl">Username</label>
+						<div class="input-group">
+							<div class="input-group-text text-yt-red"><i class="bi bi-youtube"></i></div>
+							<input type="url"
+								   name="ytPlaylistUrl"
+								   class="form-control form-control-lg"
+								   id="ytPlaylistUrl"
+								   placeholder="youtu.be/playlist?list=...."
+								   required>
+						</div>
+					</div>
+
+					<button class="w-100 mb-2 btn btn-lg rounded-3 btn-primary" type="submit">
+						<i class="bi bi-patch-plus"></i> Add Playlist
+					</button>
+				}
+			</div>
+		</div>
+	</div>
+</div>
+<!-- END -->
