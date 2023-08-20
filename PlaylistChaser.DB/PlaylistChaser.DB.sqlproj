@@ -73,6 +73,11 @@
     <Build Include="SP\GetPlaylists.sql" />
     <Build Include="SP\GetSongs.sql" />
     <Build Include="PlaylistSong.sql" />
+    <Build Include="Source.sql" />
+    <Build Include="NewDbScripts\InBuiltValues\InsertSources.sql" />
+    <Build Include="State.sql" />
+    <Build Include="NewDbScripts\InBuiltValues\InsertStates.sql" />
+    <Build Include="PlaylistSongState.sql" />
   </ItemGroup>
   <ItemGroup>
     <RefactorLog Include="PlaylistChaser.DB.refactorlog" />

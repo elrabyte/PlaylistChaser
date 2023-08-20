@@ -1,8 +1,27 @@
-﻿@using PlaylistChaser.Models.ViewModel
+﻿@using PlaylistChaser.Models.ViewModel;
+@using static PlaylistChaser.Web.Util.BuiltInIds;
 @model PlaylistViewModel
 @{
     ViewData["Title"] = "Details";
 }
+
+<script type="text/javascript">
+    function syncSongsThumbnail(source) {
+        let url = "/Playlist/SyncSongsThumbnail/@Model.PlaylistId";
+        $.ajax({
+            type: "POST",
+            url: url,
+            data: { source: source, onlyWithNoThumbnails: true },
+            success: function (data) {
+                if (!data.success)
+                    return console.error(data.message);
+
+                location.reload();
+            },
+            dataType: "json"
+        });
+    }
+</script>
 
 <h4>Playlist</h4>
 <div class="row">
@@ -20,7 +39,7 @@
             <a asp-action="SyncPlaylistYoutube" asp-route-id="@Model.PlaylistId" class="btn btn-primary">
                 check playlist youtube side
             </a>
-            <a asp-action="SyncSongsThumbnail" asp-route-id="@Model.PlaylistId" class="btn btn-primary">
+            <a href="javascript:;" onclick="syncSongsThumbnail('@Sources.Youtube')" class="btn btn-primary">
                 Update Songs Thumbnail
             </a>
             <a asp-action="Edit_Delete" asp-route-id="@Model.PlaylistId" class="btn btn-danger">

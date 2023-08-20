@@ -1,10 +1,10 @@
-﻿using Google.Apis.YouTube.v3.Data;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using PlaylistChaser.Database;
 using PlaylistChaser.Models;
 using PlaylistChaser.Web.Models.ViewModel;
 using PlaylistChaser.Web.Util;
 using SpotifyAPI.Web;
+using static PlaylistChaser.Web.Util.BuiltInIds;
 using Playlist = PlaylistChaser.Models.Playlist;
 using Thumbnail = PlaylistChaser.Models.Thumbnail;
 
@@ -33,6 +33,7 @@ namespace PlaylistChaser.Controllers
         public async Task<ActionResult> Index()
         {
             var playlists = await db.GetPlaylists();
+            var ytHelper = new YoutubeApiHelper(); //initial Auth
             return View(playlists);
         }
 
@@ -110,9 +111,6 @@ namespace PlaylistChaser.Controllers
             db.Playlist.Add(playlist);
             db.SaveChanges();
 
-            //add songs
-            addSongsToPlaylist(playlist.Id.Value, ytHelper.GetPlaylistSongs(playlist.YoutubeId));
-
             return RedirectToAction("Index");
         }
 
@@ -121,23 +119,38 @@ namespace PlaylistChaser.Controllers
         /// </summary>
         /// <param name="playlistId"></param>
         /// <param name="songs"></param>
-        private void addSongsToPlaylist(int playlistId, List<Song> songs)
+        private void addSongsToPlaylist(int playlistId, List<Song> songs, Sources source)
         {
-            //add new Songs to Song
-            //  check new songs by name and artist
-            var newSongs = songs.Where(s => !db.Song.Any(dbSong => dbSong.SongName == s.SongName && dbSong.ArtistName == s.ArtistName));
-            db.Song.AddRange(newSongs);
-            db.SaveChanges();
+            switch (source)
+            {
+                case Sources.Youtube:
+                    {
+                        //add new Songs to Song
+                        //  check new songs by name and artist
+                        var newSongs = songs.Where(s => !db.Song.Any(dbSong => dbSong.YoutubeId == s.YoutubeId));
+                        db.Song.AddRange(newSongs);
+                        db.SaveChanges();
 
-            //add new songs to PlaylistSong
-            var songsPopulated = db.Song.AsEnumerable() // Switch to client-side evaluation
-                                        .Where(dbSong => songs.Any(s => s.SongName == dbSong.SongName && s.ArtistName == dbSong.ArtistName))
-                                        .ToList();
-            var curPlaylistSongIds = db.PlaylistSong.Where(ps => ps.PlaylistId == playlistId).Select(ps => ps.SongId).ToList();
+                        //add new songs to PlaylistSong
+                        var songsPopulated = db.Song.AsEnumerable() // Switch to client-side evaluation
+                                                    .Where(dbSong => songs.Any(s => s.YoutubeId == dbSong.YoutubeId))
+                                                    .ToList();
+                        var curPlaylistSongIds = db.PlaylistSong.Where(ps => ps.PlaylistId == playlistId).Select(ps => ps.SongId).ToList();
 
-            var newPLaylistSongIds = songsPopulated.Where(s => !curPlaylistSongIds.Contains(s.Id)).Select(s => s.Id).ToList();
-            db.PlaylistSong.AddRange(newPLaylistSongIds.Select(i => new PlaylistSong { PlaylistId = playlistId, SongId = i }));
-            db.SaveChanges();
+                        var newPLaylistSongIds = songsPopulated.Where(s => !curPlaylistSongIds.Contains(s.Id)).Select(s => s.Id).ToList();
+
+                        var newPlaylistSongs = newPLaylistSongIds.Select(i => new PlaylistSong { PlaylistId = playlistId, SongId = i }).ToList();
+                        db.PlaylistSong.AddRange(newPlaylistSongs);
+                        db.SaveChanges();
+
+                        //add PlaylistSongState
+                        db.PlaylistSongState.AddRange(newPlaylistSongs.Select(ps => new PlaylistSongState { PlaylistSongId = ps.Id, SourceId = Sources.Youtube, StateId = States.Added, LastChecked = DateTime.Now }));
+                        db.SaveChanges();
+                        break;
+                    }
+
+            }
+
         }
 
         /// <summary>
@@ -151,7 +164,7 @@ namespace PlaylistChaser.Controllers
 
             //get songs from youtube
             var songs = new YoutubeApiHelper().GetPlaylistSongs(playlist.YoutubeId);
-            addSongsToPlaylist(id, songs);
+            addSongsToPlaylist(id, songs, Sources.Youtube);
 
             return new JsonResult(new { success = true });
         }
@@ -322,35 +335,47 @@ namespace PlaylistChaser.Controllers
         /// <param name="id"></param>
         /// <param name="onlyWithNoThumbnails"></param>
         /// <returns></returns>
-        public async Task<ActionResult> SyncSongsThumbnail(int id, bool onlyWithNoThumbnails = true)
+        public async Task<ActionResult> SyncSongsThumbnail(int id, Sources source, bool onlyWithNoThumbnails = true)
         {
-            var playlistYoutubeId = db.Playlist.Single(p => p.Id == id).YoutubeId;
-            var songIds = db.PlaylistSong.Where(ps => ps.PlaylistId == id).Select(ps => ps.SongId);
-            var songs = db.Song.Where(p => songIds.Contains(p.Id));
-            if (onlyWithNoThumbnails)
-                songs = songs.Where(s => s.ThumbnailId == null);
-
-
-            var thumbnails = await new YoutubeApiHelper().GetSongsThumbnailBase64ByPlaylist(playlistYoutubeId);
-
-            foreach (var song in songs.ToList())
+            try
             {
-                if (!thumbnails.TryGetValue(song.YoutubeId.ToString(), out var base64))
-                    continue;
-
-                var thumbnail = db.Thumbnail.SingleOrDefault(t => t.Id == song.ThumbnailId);
-                if (thumbnail == null)
+                switch (source)
                 {
-                    thumbnail = new Thumbnail { Base64String = base64 };
-                    db.Thumbnail.Add(thumbnail);
-                    db.SaveChanges();
-                    song.ThumbnailId = thumbnail.Id;
+                    case Sources.Youtube:
+                        var playlistYoutubeId = db.Playlist.Single(p => p.Id == id).YoutubeId;
+                        var songIds = db.PlaylistSong.Where(ps => ps.PlaylistId == id).Select(ps => ps.SongId);
+                        var songs = db.Song.Where(p => songIds.Contains(p.Id));
+                        if (onlyWithNoThumbnails)
+                            songs = songs.Where(s => s.ThumbnailId == null);
+
+
+                        var thumbnails = await new YoutubeApiHelper().GetSongsThumbnailBase64BySongIds(songs.Select(s => s.YoutubeId).ToList());
+
+                        foreach (var ytThumbnail in thumbnails)
+                        {
+                            var song = songs.Single(s => s.YoutubeId == ytThumbnail.Key);
+
+                            var thumbnail = db.Thumbnail.SingleOrDefault(t => t.Id == song.ThumbnailId);
+                            if (thumbnail == null)
+                            {
+                                thumbnail = new Thumbnail { Base64String = ytThumbnail.Value };
+                                db.Thumbnail.Add(thumbnail);
+                                db.SaveChanges();
+                                song.ThumbnailId = thumbnail.Id;
+                            }
+                            else
+                                thumbnail.Base64String = ytThumbnail.Value;
+                        }
+                        db.SaveChanges();
+                        return new JsonResult(new { success = true });
+                    default:
+                        throw new NotImplementedException();
                 }
-                else
-                    thumbnail.Base64String = base64;
             }
-            db.SaveChanges();
-            return new JsonResult(new { success = true });
+            catch (Exception ex)
+            {
+                return new JsonResult(new { success = false, message = ex.Message });
+            }
         }
         public async Task<ActionResult> SongIsNotOnSpotify(int playlistId, int songId)
         {

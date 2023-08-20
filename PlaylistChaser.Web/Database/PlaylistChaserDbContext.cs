@@ -12,6 +12,7 @@ namespace PlaylistChaser.Database
         public DbSet<Song> Song { get; set; }
         public DbSet<PlaylistSong> PlaylistSong { get; set; }
         public DbSet<Thumbnail> Thumbnail{ get; set; }
+        public DbSet<PlaylistSongState> PlaylistSongState { get; set; }
         #endregion
 
         #region SP ViewModels

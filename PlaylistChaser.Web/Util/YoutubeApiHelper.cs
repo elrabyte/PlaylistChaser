@@ -4,6 +4,7 @@ using Google.Apis.Util;
 using Google.Apis.YouTube.v3;
 using Google.Apis.YouTube.v3.Data;
 using PlaylistChaser.Models;
+using System.ComponentModel.DataAnnotations;
 using System.Text.RegularExpressions;
 using Playlist = Google.Apis.YouTube.v3.Data.Playlist;
 
@@ -103,10 +104,23 @@ namespace PlaylistChaser
         {
             var ytSongs = getPlaylistSongs(playlistId);
             var songThumbnails = new Dictionary<string, string>();
+
             foreach (var ytSong in ytSongs)
             {
                 if (!songThumbnails.ContainsKey(ytSong.ResourceId.VideoId))
                     songThumbnails.Add(ytSong.ResourceId.VideoId, ytSong.Thumbnails.Default__ == null ? null : await Helper.GetImageToBase64(ytSong.Thumbnails.Default__.Url));
+            }
+            return songThumbnails;
+        }
+        internal async Task<Dictionary<string, string>> GetSongsThumbnailBase64BySongIds(List<string> songIds)
+        {
+            var ytSongs = getSongs(songIds);
+            var songThumbnails = new Dictionary<string, string>();
+
+            foreach (var ytSong in ytSongs)
+            {
+                if (!songThumbnails.ContainsKey(ytSong.Id))
+                    songThumbnails.Add(ytSong.Id, ytSong.Snippet.Thumbnails.Default__ == null ? null : await Helper.GetImageToBase64(ytSong.Snippet.Thumbnails.Default__.Url));
             }
             return songThumbnails;
         }
@@ -140,12 +154,39 @@ namespace PlaylistChaser
             var totalResults = resp.PageInfo.TotalResults;
 
             var songs = resp.Items.Select(i => i.Snippet).ToList();
+            if (totalResults == 0)
+                return songs;
+
             while (resultsShown <= totalResults)
             {
                 listRequest.PageToken = resp.NextPageToken;
                 resp = listRequest.Execute();
                 resultsShown += resp.PageInfo.ResultsPerPage;
                 songs.AddRange(resp.Items.Select(i => i.Snippet).ToList());
+            }
+            return songs;
+        }
+
+        private List<Video> getSongs(List<string> songIds)
+        {
+            var songs = new List<Video>();
+
+            //seperate songIds into multiple requests
+            const int maxResults = 50;
+            for (var i = 0; i <= songIds.Count; i += maxResults)
+            {
+                var rangeCount = maxResults;
+                //if rangeCount exceeds maxResults, calc rest count
+                if (i + maxResults > songIds.Count)
+                    rangeCount = songIds.Count - i;
+
+                var separatedSongIds = songIds.GetRange(i, rangeCount);
+                var listRequest = ytService.Videos.List("snippet");
+                listRequest.MaxResults = maxResults;
+                listRequest.Id = String.Join(',', separatedSongIds);
+                var resp = listRequest.Execute();
+
+                songs.AddRange(resp.Items);
             }
             return songs;
         }
