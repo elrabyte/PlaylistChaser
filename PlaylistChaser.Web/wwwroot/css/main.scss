@@ -2,7 +2,15 @@
 @import '../../node_modules/bootstrap/scss/functions';
 @import '../../node_modules/bootstrap/scss/variables';
 
-$custom-colors: ( "yt-red": #FF0000, "sptf-green": #1DB954, "primary": #313866, "secondary": #504099, "tertiary": #974EC3, "quaternary": #FE7BE5);
+/* color palette: https://colorhunt.co/palette/313866504099974ec3fe7be5 */
+$custom-colors: ( 
+    "yt-red": #FF0000, 
+    "sptf-green": #1DB954, 
+    "primary": #313866, 
+    "secondary": #504099, 
+    "tertiary": #974EC3, 
+    "quaternary": #FE7BE5
+);
 $theme-colors: map-merge($theme-colors, $custom-colors);
 
 // include Bootstrap
