@@ -2,8 +2,27 @@
 @model IEnumerable<PlaylistViewModel>
 @{
 	ViewData["Title"] = "Home Page";
+    ViewData["Title"] = "Home Page";
 }
 
+<script type="text/javascript">
+    //createCombinedPlaylist('testName', '1,5,8', 'Youtube') {
+    function createCombinedPlaylist(playlistName, playlistIds, source) {
+        let url = "/Playlist/CreateCombinedPlaylist";
+        $.ajax({
+            type: "POST",
+            url: url,
+            data: { playlistName: playlistName, playlistIds: playlistIds, source: source },
+            success: function (data) {
+                if (!data.success)
+                    return console.error(data.message);
+
+                location.reload();
+            },
+            dataType: "json"
+        });
+    }
+</script>
 <!-- Custom Site CSS -->
 <link rel="stylesheet" href="~/css/card.css" asp-append-version="true" />
 <!-- END -->

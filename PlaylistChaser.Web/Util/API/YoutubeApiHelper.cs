@@ -20,6 +20,12 @@ namespace PlaylistChaser.Web.Util.API
             ytService = new YouTubeService(new BaseClientService.Initializer() { HttpClientInitializer = authenticate() });
         }
 
+        public enum PrivateStatus
+        {
+            Public,
+            Private
+        }
+
         private UserCredential authenticate()
         {
 
@@ -197,7 +203,7 @@ namespace PlaylistChaser.Web.Util.API
         /// </summary>
         /// <param name="playlistName">Name of the Playlist</param>
         /// <returns>returns the YT-Playlist in local Model</returns>
-        internal async Task<Models.Playlist> CreatePlaylist(string playlistName, string? description = null, string privacyStatus = "private")
+        internal async Task<Models.Playlist> CreatePlaylist(string playlistName, string? description = null, PrivateStatus privacyStatus = PrivateStatus.Public)
         {
             // Create a new, private playlist in the authorized user's channel.
             var newPlaylist = new Playlist();
@@ -205,12 +211,43 @@ namespace PlaylistChaser.Web.Util.API
             newPlaylist.Snippet.Title = playlistName;
             newPlaylist.Snippet.Description = description;
             newPlaylist.Status = new PlaylistStatus();
-            newPlaylist.Status.PrivacyStatus = privacyStatus;
+            newPlaylist.Status.PrivacyStatus = privacyStatus.ToString().ToLower();
             newPlaylist = await ytService.Playlists.Insert(newPlaylist, "snippet,status").ExecuteAsync();
 
             return toPlaylistModel(newPlaylist);
         }
 
+        internal async Task<List<string>> AddSongsToPlaylist(string playlistId, List<string> songIds)
+        {
+            var uploadedSongs = new List<string>();
+            if (songIds.Count == 0) return uploadedSongs;
+
+            try
+            {
+                foreach (var songId in songIds)
+                {
+                    var playlistItem = new PlaylistItem();
+                    playlistItem.Snippet = new PlaylistItemSnippet();
+                    playlistItem.Snippet.PlaylistId = playlistId;
+                    playlistItem.Snippet.ResourceId = new ResourceId();
+                    playlistItem.Snippet.ResourceId.Kind = "youtube#video";
+                    playlistItem.Snippet.ResourceId.VideoId = songId;
+                    playlistItem = await ytService.PlaylistItems.Insert(playlistItem, "snippet").ExecuteAsync();
+                    uploadedSongs.Add(songId);
+                }
+                return uploadedSongs;
+            }
+            catch (Google.GoogleApiException ex)
+            {
+                if (ex.Message == "The service youtube has thrown an exception. HttpStatusCode is Forbidden. The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.")
+                {
+                    //exceeded daily? requests limit 
+                    var a = 1;
+                }
+
+                return uploadedSongs;
+            }
+        }
         internal async Task<bool> DeletePlaylist(string youtubePlaylistId)
         {
             try
@@ -234,6 +271,7 @@ namespace PlaylistChaser.Web.Util.API
             {
                 Name = ytPlaylist.Snippet.Title,
                 YoutubeUrl = ytPlaylist.Id,
+                YoutubeId = ytPlaylist.Id,
                 ChannelName = ytPlaylist.Snippet.ChannelTitle,
                 Description = ytPlaylist.Snippet.Description
             };

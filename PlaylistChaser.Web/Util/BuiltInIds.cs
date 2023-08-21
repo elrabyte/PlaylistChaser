@@ -16,7 +16,9 @@
         {
             NotChecked = 1,
             Added = 2,
-            NotAvailable = 3
+            NotAvailable = 3,
+            NotAdded = 4,
+
         }
     }
 }
