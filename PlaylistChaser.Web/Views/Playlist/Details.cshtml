@@ -7,6 +7,8 @@
 
 <script type="text/javascript">
     function syncSongsThumbnail(source) {
+        disableButtonRow();
+        disableButton($("#syncSongsThumbnailBtn"));
         let url = "/Playlist/SyncSongsThumbnail/@Model.PlaylistId";
         $.ajax({
             type: "POST",
@@ -15,13 +17,14 @@
             success: function (data) {
                 if (!data.success)
                     return console.error(data.message);
-
                 location.reload();
             },
             dataType: "json"
         });
     }
     function syncPlaylistFrom(source) {
+        disableButtonRow();
+        disableButton($("#syncPlaylistFromBtn"));
         let url = "/Playlist/SyncPlaylistFrom/@Model.PlaylistId";
         $.ajax({
             type: "POST",
@@ -30,13 +33,14 @@
             success: function (data) {
                 if (!data.success)
                     return console.error(data.message);
-
                 location.reload();
             },
             dataType: "json"
         });
     }
     function syncPlaylistTo(source) {
+        disableButtonRow();
+        disableButton($("#syncPlaylistToBtn"));
         let url = "/Playlist/SyncPlaylistTo/@Model.PlaylistId";
         $.ajax({
             type: "POST",
@@ -45,11 +49,23 @@
             success: function (data) {
                 if (!data.success)
                     return console.error(data.message);
-
                 location.reload();
             },
             dataType: "json"
         });
+    }
+
+    function disableButtonRow() {
+        $("#btn-header-row .btn").addClass("disabled");
+    }
+
+    function disableButton(btn) {
+        $(btn).addClass("disabled");
+        btn.append('<div class="loading-spinner spinner-border ml-auto" role="status" aria-hidden="true"></div>');
+    }
+    function enableButton(btn) {
+        btn.removeClass("disabled");
+        btn.find(".loading-spinner").remove();
     }
 </script>
 
@@ -65,14 +81,14 @@
             @Html.DisplayFor(m => m.Description)
         </div>
 
-        <div class="btn-group btn-group-lg" role="group" aria-label="Control group">
-            <a href="javascript:;" onclick="syncPlaylistFrom('@Sources.Youtube')" class="btn btn-primary">
+        <div id="btn-header-row" class="btn-group btn-group-lg" role="group" aria-label="Control group">
+            <a id="syncPlaylistFromBtn" href="javascript:;" onclick="syncPlaylistFrom('@Sources.Youtube')" class="btn btn-primary">
                 Sync Playlist From (Youtube)
             </a>
-            <a href="javascript:;" onclick="syncPlaylistTo('@Sources.Youtube')" class="btn btn-primary">
+            <a id="syncPlaylistToBtn" href="javascript:;" onclick="syncPlaylistTo('@Sources.Youtube')" class="btn btn-primary">
                 Sync Playlist To (Youtube)
             </a>
-            <a href="javascript:;" onclick="syncSongsThumbnail('@Sources.Youtube')" class="btn btn-primary">
+            <a id="syncSongsThumbnailBtn" href="javascript:;" onclick="syncSongsThumbnail('@Sources.Youtube')" class="btn btn-primary">
                 Sync Songs-Thumbnail From (Youtube)
             </a>
             <a asp-action="Edit_Delete" asp-route-id="@Model.PlaylistId" class="btn btn-danger">

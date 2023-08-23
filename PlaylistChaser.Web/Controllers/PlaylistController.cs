@@ -187,13 +187,15 @@ namespace PlaylistChaser.Web.Controllers
                 switch (source)
                 {
                     case Sources.Youtube:
-                        var ytHelper = new YoutubeApiHelper();
+                        //get missing songs
                         var states = new List<States> { States.NotChecked, States.NotAdded };
                         var notAddedPlaylistSongs = playlistSongs.Where(ps => states.Contains(db.PlaylistSongState.Single(pss => pss.PlaylistSongId == ps.Id).StateId)).ToList();
                         var notAddedPlaylistSongIds = notAddedPlaylistSongs.Select(pss => pss.SongId).ToList();
                         var notAddedSongs = db.Song.Where(s => notAddedPlaylistSongIds.Contains(s.Id));
 
-                        var uploadedSongs = await ytHelper.AddSongsToPlaylist(playlist.YoutubeId, notAddedSongs.Select(s => s.YoutubeId).ToList());
+                        //add to playlist on youtube 
+                        var ytHelper = new YoutubeApiHelper();
+                        var uploadedSongs = ytHelper.AddSongsToPlaylist(playlist.YoutubeId, notAddedSongs.Select(s => s.YoutubeId).ToList());
                         var uploadedSongIds = notAddedSongs.Where(s => uploadedSongs.Contains(s.YoutubeId)).Select(s => s.Id);
                         var uploadedPlaylistSongIds = notAddedPlaylistSongs.Where(ps => uploadedSongIds.Contains(ps.SongId)).Select(i => i.Id);
 
