@@ -104,7 +104,7 @@ namespace PlaylistChaser.Web.Controllers
                     db.SaveChanges();
 
                     //add PlaylistSongState
-                    db.PlaylistSongState.AddRange(newPlaylistSongs.Select(ps => new PlaylistSongState { PlaylistSongId = ps.Id, SourceId = Sources.Youtube, StateId = States.Added, LastChecked = DateTime.Now }));
+                    db.PlaylistSongState.AddRange(newPlaylistSongs.Select(ps => new PlaylistSongState { PlaylistSongId = ps.Id, SourceId = Sources.Youtube, StateId = PlaylistSongStates.Added, LastChecked = DateTime.Now }));
                     db.SaveChanges();
                     break;
                 default: throw new NotImplementedException();
@@ -195,7 +195,7 @@ namespace PlaylistChaser.Web.Controllers
                 {
                     case Sources.Youtube:
                         //get missing songs
-                        var states = new List<States> { States.NotChecked, States.NotAdded };
+                        var states = new List<PlaylistSongStates> { PlaylistSongStates.NotAdded };
                         var notAddedPlaylistSongs = playlistSongs.Where(ps => states.Contains(db.PlaylistSongState.Single(pss => pss.PlaylistSongId == ps.Id).StateId)).ToList();
                         var notAddedPlaylistSongIds = notAddedPlaylistSongs.Select(pss => pss.SongId).ToList();
                         var notAddedSongs = db.Song.Where(s => notAddedPlaylistSongIds.Contains(s.Id));
@@ -208,7 +208,7 @@ namespace PlaylistChaser.Web.Controllers
 
                         //update states
                         var changedPlaylistSongStates = db.PlaylistSongState.Where(pss => uploadedPlaylistSongIds.Contains(pss.PlaylistSongId));
-                        await changedPlaylistSongStates.ForEachAsync(pss => { pss.StateId = States.Added; pss.LastChecked = DateTime.Now; });
+                        await changedPlaylistSongStates.ForEachAsync(pss => { pss.StateId = PlaylistSongStates.Added; pss.LastChecked = DateTime.Now; });
                         db.SaveChanges();
 
                         if (uploadedSongs.Count() != notAddedPlaylistSongIds.Count())
@@ -270,7 +270,7 @@ namespace PlaylistChaser.Web.Controllers
             var newPlaylistSongs = availSongIds.Where(s => !curSongIds.Contains(s)).Select(i => new PlaylistSong { PlaylistId = playlistId, SongId = i }).ToList();
             db.PlaylistSong.AddRange(newPlaylistSongs);
             db.SaveChanges();
-            db.PlaylistSongState.AddRange(newPlaylistSongs.Select(ps => new PlaylistSongState { PlaylistSongId = ps.Id, SourceId = source, StateId = States.NotAdded, LastChecked = DateTime.Now }));
+            db.PlaylistSongState.AddRange(newPlaylistSongs.Select(ps => new PlaylistSongState { PlaylistSongId = ps.Id, SourceId = source, StateId = PlaylistSongStates.NotAdded, LastChecked = DateTime.Now }));
             db.SaveChanges();
         }
         #endregion

@@ -12,13 +12,22 @@
             Youtube = 1,
             Spotify = 2
         }
-        public enum States
-        {
-            NotChecked = 1,
-            Added = 2,
-            NotAvailable = 3,
-            NotAdded = 4,
 
+        public enum SongStates
+        {
+            NotChecked = 100,
+            NotAvailable = 101
+        }
+        public enum PlaylistSongStates
+        {
+            Added = 210,
+            NotAdded = 200,
+        }
+        public enum Entity
+        {
+            PlaylistSong,
+            Playlist,
+            Song
         }
     }
 }

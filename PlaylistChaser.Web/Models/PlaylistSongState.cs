@@ -13,7 +13,7 @@ namespace PlaylistChaser.Web.Models
         [Required]
         public Sources SourceId { get; set; }
         [Required]
-        public States StateId { get; set; }
+        public PlaylistSongStates StateId { get; set; }
         [Required]
         public DateTime LastChecked { get; set; }
     }

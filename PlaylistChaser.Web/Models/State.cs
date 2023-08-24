@@ -9,5 +9,7 @@ namespace PlaylistChaser.Web.Models
         public int Id { get; set; }
         [Required]
         public string Name { get; set; }
+        [Required]
+        public string Entity { get; set; }
     }
 }

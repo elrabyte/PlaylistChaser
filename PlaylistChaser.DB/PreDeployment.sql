@@ -14,4 +14,34 @@ update Song
 set ThumbnailId = null
 
 delete from Thumbnail
+
+--change state tabledefinition
+alter TABLE [dbo].[State]
+add [Entity] VARCHAR(50) NULL
+
+update State 
+set Entity = '';
+
+set identity_insert dbo.State on;
+
+insert into dbo.State (id, name, Entity) 
+	 values (100, 'NotChecked', 'Song'),
+			(101, 'NotAvailable', 'Song'),
+			(200, 'NotAdded', 'PlaylistSong'),
+			(210, 'Added', 'PlaylistSong')
+
+set identity_insert dbo.State off;
+
+update PlaylistSongState
+set StateId = 200
+where StateId = 4
+
+update PlaylistSongState
+set StateId = 210
+where StateId = 2
+
+delete from State where id <= 4
+
+alter TABLE [dbo].[State]
+alter column [Entity] VARCHAR(50) NULL
 --24.08.23

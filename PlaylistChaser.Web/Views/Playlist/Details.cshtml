@@ -85,9 +85,12 @@
             <a id="syncPlaylistFromBtn" href="javascript:;" onclick="syncPlaylistFrom('@Sources.Youtube')" class="btn btn-primary">
                 Sync Playlist From (Youtube)
             </a>
-            <a id="syncPlaylistToBtn" href="javascript:;" onclick="syncPlaylistTo('@Sources.Youtube')" class="btn btn-primary">
-                Sync Playlist To (Youtube)
-            </a>
+            @if (Model.PlaylistTypeId == PLaylistTypes.Combined) //TODO: switch to a ownership check, isMine
+            {
+                <a id="syncPlaylistToBtn" href="javascript:;" onclick="syncPlaylistTo('@Sources.Youtube')" class="btn btn-primary">
+                    Sync Playlist To (Youtube)
+                </a>
+            }
             <a id="syncSongsThumbnailBtn" href="javascript:;" onclick="syncSongsThumbnail('@Sources.Youtube')" class="btn btn-primary">
                 Sync Songs-Thumbnail From (Youtube)
             </a>
