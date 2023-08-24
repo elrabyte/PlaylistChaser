@@ -15,8 +15,9 @@
 
         public enum SongStates
         {
-            NotChecked = 100,
-            NotAvailable = 101
+            NotAvailable = 100,
+            NotChecked = 101,
+            Available = 110
         }
         public enum PlaylistSongStates
         {

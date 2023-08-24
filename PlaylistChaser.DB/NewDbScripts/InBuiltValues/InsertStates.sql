@@ -3,8 +3,9 @@ AS
 set identity_insert dbo.State on;
 
 insert into dbo.State (id, name, Entity) 
-	 values (100, 'NotChecked', 'Song'),
-			(101, 'NotAvailable', 'Song'),
+	 values (100, 'NotAvailable', 'Song'),
+			(101, 'NotChecked', 'Song'),
+			(110, 'Available', 'Song'),
 			(200, 'NotAdded', 'PlaylistSong'),
 			(210, 'Added', 'PlaylistSong')
 

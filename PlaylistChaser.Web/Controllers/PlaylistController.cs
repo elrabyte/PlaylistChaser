@@ -5,6 +5,7 @@ using PlaylistChaser.Web.Models;
 using PlaylistChaser.Web.Models.ViewModel;
 using PlaylistChaser.Web.Util.API;
 using SpotifyAPI.Web;
+using static PlaylistChaser.Web.Util.API.YoutubeApiHelper;
 using static PlaylistChaser.Web.Util.BuiltInIds;
 using Playlist = PlaylistChaser.Web.Models.Playlist;
 using Thumbnail = PlaylistChaser.Web.Models.Thumbnail;
@@ -92,6 +93,11 @@ namespace PlaylistChaser.Web.Controllers
                     var newSongs = songs.Where(s => !db.Song.Any(dbSong => dbSong.YoutubeId == s.YoutubeId));
                     db.Song.AddRange(newSongs);
                     db.SaveChanges();
+
+                    //add SongState
+                    db.SongState.AddRange(newSongs.Select(ps => new SongState { SongId = ps.Id, SourceId = Sources.Youtube, StateId = SongStates.Available, LastChecked = DateTime.Now }));
+                    db.SaveChanges();
+
 
                     //add new songs to PlaylistSong
                     var songsPopulated = db.Song.AsEnumerable() // Switch to client-side evaluation
@@ -241,7 +247,7 @@ namespace PlaylistChaser.Web.Controllers
                 case Sources.Youtube:
                     //add playlist to YT
                     var playlistdescription = string.Format("songs by: {0}", string.Join(',', db.Playlist.Where(p => playlistIdsList.Contains(p.Id.Value)).Select(p => p.ChannelName)));
-                    playlist = await ytHelper.CreatePlaylist(playlistName, playlistdescription);
+                    playlist = await ytHelper.CreatePlaylist(playlistName, playlistdescription, PrivateStatus.Public);
                     playlist.PlaylistTypeId = PLaylistTypes.Combined;
                     break;
                 default:

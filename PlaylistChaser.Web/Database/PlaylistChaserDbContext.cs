@@ -11,9 +11,10 @@ namespace PlaylistChaser.Web.Database
         #region 1:1 Views
         public DbSet<Playlist> Playlist { get; set; }
         public DbSet<Song> Song { get; set; }
+        public DbSet<SongState> SongState { get; set; }
         public DbSet<PlaylistSong> PlaylistSong { get; set; }
-        public DbSet<Thumbnail> Thumbnail { get; set; }
         public DbSet<PlaylistSongState> PlaylistSongState { get; set; }
+        public DbSet<Thumbnail> Thumbnail { get; set; }
         public DbSet<CombinedPlaylistEntry> CombinedPlaylistEntry { get; set; }
         #endregion
 
@@ -42,7 +43,10 @@ namespace PlaylistChaser.Web.Database
             var playlistSongs = await SongViewModel.FromSqlRaw(sql, new SqlParameter("playlistId", playlistId)).ToListAsync();
 
             if (addStates)
+            {
                 playlistSongs.ForEach(ps => ps.PlaylistSongStates = PlaylistSongState.Where(pss => pss.PlaylistSongId == ps.PlaylistSongId).ToList());
+                playlistSongs.ForEach(ps => ps.SongStates = SongState.Where(ss => ss.SongId == ps.SongId).ToList());
+            }
 
             return playlistSongs;
 

@@ -108,7 +108,8 @@
                 <col sytle="width:25%" />
                 <col sytle="width:25%" />
                 <col sytle="width:25%" />
-                <col sytle="width:25%" />
+                <col sytle="width:13%" />
+                <col sytle="width:12%" />
             </colgroup>
             <thead>
                 <tr>
@@ -120,12 +121,13 @@
                         @Html.DisplayNameFor(m => m.Songs.First().ArtistName)
                     </th>
                     <th>@Html.DisplayNameFor(m => m.Songs.First().PlaylistSongStates)</th>
+                    <th>@Html.DisplayNameFor(m => m.Songs.First().SongStates)</th>
                 </tr>
                 <tr>
                     <td>
                         @Model.Songs.Count
                     </td>
-                    <td colspan="3">&nbsp;</td>
+                    <td colspan="4">&nbsp;</td>
                 </tr>
             </thead>
             <tbody>
@@ -149,6 +151,12 @@
                                 <div>@(state.SourceId.ToString() + ": " + state.StateId.ToString())</div>
                             }
                         </td>
+                        <td>
+                            @foreach (var state in song.SongStates)
+                            {
+                                <div>@(state.SourceId.ToString() + ": " + state.StateId.ToString())</div>
+                            }
+                        </td>
                     </tr>
                 }
             </tbody>
@@ -157,7 +165,7 @@
                     <td>
                         @Model.Songs.Count
                     </td>
-                    <td colspan="3">&nbsp;</td>
+                    <td colspan="4">&nbsp;</td>
                 </tr>
             </tfoot>
         </table>
