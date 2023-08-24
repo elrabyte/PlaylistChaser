@@ -1,5 +1,6 @@
 ﻿using Google.Apis.Auth.OAuth2;
 using Google.Apis.Services;
+using Google.Apis.Util;
 using Google.Apis.YouTube.v3;
 using Google.Apis.YouTube.v3.Data;
 using PlaylistChaser.Web.Models;
@@ -35,8 +36,8 @@ namespace PlaylistChaser.Web.Util.API
                 new ClientSecrets { ClientId = clientId, ClientSecret = clientSecret },
                 scopes, "user", CancellationToken.None).Result;
 
-            //if (userCredential.Token.IsExpired(SystemClock.Default))
-            userCredential.RefreshTokenAsync(CancellationToken.None);
+            if (userCredential.Token.IsExpired(SystemClock.Default))
+                userCredential.RefreshTokenAsync(CancellationToken.None);
 
             return userCredential;
 
@@ -249,7 +250,7 @@ namespace PlaylistChaser.Web.Util.API
                 return uploadedSongs;
             }
         }
-        
+
         public async Task<bool> DeletePlaylist(string youtubePlaylistId)
         {
             try
