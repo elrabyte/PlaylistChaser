@@ -4,7 +4,7 @@ AS
 BEGIN
 	set nocount on;
 
-	create table #song (Id int, SongName nvarchar(255), ArtistName nvarchar(255), Downloaded bit, ThumbnailId int, ThumbnailBase64String nvarchar(max), YoutubeId nvarchar(255));
+	create table #song (Id int, SongName nvarchar(255), ArtistName nvarchar(255), Downloaded bit, ThumbnailId int, YoutubeId nvarchar(255));
 
 	insert into #song (Id, SongName, ArtistName, Downloaded, ThumbnailId, YoutubeId)
 		 select s.Id, isnull(s.SongName, s.YoutubeSongName), s.ArtistName, 0, s.ThumbnailId, s.YoutubeId
@@ -12,12 +12,6 @@ BEGIN
 		  inner join PlaylistSong ps
 			 on ps.SongId = s.Id
 		  where ps.PlaylistId = @playlistId
-
-	update tmp
-	   set ThumbnailBase64String = t.Base64String
-	  from #song tmp
-	 inner join dbo.Thumbnail t
-		on t.Id = tmp.ThumbnailId
 
 	select * from #song
 END;

@@ -2,14 +2,14 @@
 {
     internal static class Helper
     {
-        public static async Task<string> GetImageToBase64(string url)
+        public static async Task<byte[]> GetImageByUrl(string url)
         {
             using (var c = new HttpClient())
             using (var s = await c.GetStreamAsync(url))
             using (var ms = new MemoryStream())
             {
                 await s.CopyToAsync(ms);
-                return Convert.ToBase64String(ms.ToArray());
+                return ms.ToArray();
             }
         }
         public static string ReadSecret(string sectionName, string key)

@@ -14,7 +14,6 @@ namespace PlaylistChaser.Web.Models.ViewModel
         public PLaylistTypes PlaylistTypeId { get; set; }
         public string PlaylistTypeName { get; set; }
         public int? ThumbnailId { get; set; }
-        public string? ThumbnailBase64String { get; set; }
 
 
          [NotMapped]

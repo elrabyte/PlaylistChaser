@@ -71,7 +71,7 @@ namespace PlaylistChaser.Web.Util.API
         /// </summary>
         /// <param name="id">local playlist </param>
         /// <returns></returns>
-        internal async Task<string> GetPlaylistThumbnailBase64(string id)
+        internal async Task<byte[]> GetPlaylistThumbnail(string id)
         {
             var ytPlaylist = getPlaylist(id);
 
@@ -82,7 +82,7 @@ namespace PlaylistChaser.Web.Util.API
                             ?? ytPlaylist.Snippet.Thumbnails.Default__;
 
 
-            return thumbnail != null ? await Helper.GetImageToBase64(thumbnail.Url) : null;
+            return thumbnail != null ? await Helper.GetImageByUrl(thumbnail.Url) : null;
         }
 
         /// <summary>
@@ -90,14 +90,14 @@ namespace PlaylistChaser.Web.Util.API
         /// </summary>
         /// <param name="id">youtube song id</param>
         /// <returns></returns>
-        internal async Task<string> GetSongThumbnailBase64(string id)
+        internal async Task<byte[]> GetSongThumbnail(string id)
         {
             var listRequest = ytService.Videos.List("snippet");
             listRequest.Id = id;
             var resp = listRequest.Execute();
             var song = resp.Items.Single().Snippet;
 
-            return await Helper.GetImageToBase64(song.Thumbnails.Standard.Url);
+            return await Helper.GetImageByUrl(song.Thumbnails.Standard.Url);
         }
 
         /// <summary>
@@ -105,7 +105,7 @@ namespace PlaylistChaser.Web.Util.API
         /// </summary>
         /// <param name="playlistId">youtube playlist id</param>
         /// <returns></returns>
-        internal async Task<Dictionary<string, string>> GetSongsThumbnailBase64ByPlaylist(string playlistId)
+        internal async Task<Dictionary<string, byte[]>> GetSongsThumbnailByPlaylist(string playlistId)
         {
             var ytSongs = getPlaylistSongs(playlistId);
             var songThumbnails = new Dictionary<string, string>();
@@ -113,19 +113,19 @@ namespace PlaylistChaser.Web.Util.API
             foreach (var ytSong in ytSongs)
             {
                 if (!songThumbnails.ContainsKey(ytSong.ResourceId.VideoId))
-                    songThumbnails.Add(ytSong.ResourceId.VideoId, ytSong.Thumbnails.Default__ == null ? null : await Helper.GetImageToBase64(ytSong.Thumbnails.Default__.Url));
+                    songThumbnails.Add(ytSong.ResourceId.VideoId, ytSong.Thumbnails.Default__ == null ? null : await Helper.GetImageByUrl(ytSong.Thumbnails.Default__.Url));
             }
             return songThumbnails;
         }
-        internal async Task<Dictionary<string, string>> GetSongsThumbnailBase64BySongIds(List<string> songIds)
+        internal async Task<Dictionary<string, byte[]>> GetSongsThumbnailBySongIds(List<string> songIds)
         {
             var ytSongs = getSongs(songIds);
-            var songThumbnails = new Dictionary<string, string>();
+            var songThumbnails = new Dictionary<string, byte[]>();
 
             foreach (var ytSong in ytSongs)
             {
                 if (!songThumbnails.ContainsKey(ytSong.Id))
-                    songThumbnails.Add(ytSong.Id, ytSong.Snippet.Thumbnails.Default__ == null ? null : await Helper.GetImageToBase64(ytSong.Snippet.Thumbnails.Default__.Url));
+                    songThumbnails.Add(ytSong.Id, ytSong.Snippet.Thumbnails.Default__ == null ? null : await Helper.GetImageByUrl(ytSong.Snippet.Thumbnails.Default__.Url));
             }
             return songThumbnails;
         }

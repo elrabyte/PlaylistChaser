@@ -154,7 +154,7 @@
 
                     <tr>
                         <td>
-                            <img src="data:imgae/png;base64,@(song.ThumbnailBase64String)">
+                            <img src="/Playlist/GetThumbnail?thumbnailId=@song.ThumbnailId">
                         </td>
                         <td>
                             @Html.DisplayFor(m => song.SongName)

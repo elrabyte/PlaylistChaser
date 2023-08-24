@@ -56,4 +56,11 @@
     <Property Name="ParentElementType" Value="SqlTable" />
     <Property Name="NewName" Value="PlaylistId" />
   </Operation>
+  <Operation Name="Rename Refactor" Key="ab29e926-e2d5-43e4-8aaf-ccea037341d0" ChangeDateTime="08/24/2023 07:15:48">
+    <Property Name="ElementName" Value="[dbo].[Thumbnail].[Base64String]" />
+    <Property Name="ElementType" Value="SqlSimpleColumn" />
+    <Property Name="ParentElementName" Value="[dbo].[Thumbnail]" />
+    <Property Name="ParentElementType" Value="SqlTable" />
+    <Property Name="NewName" Value="FileContents" />
+  </Operation>
 </Operations>

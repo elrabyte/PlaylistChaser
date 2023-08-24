@@ -61,13 +61,13 @@ namespace PlaylistChaser.Test
 		[Fact]
 		public async void GetPlaylistThumbnailBase64()
 		{
-			var actualPlaylistThumbnail = await youtubeApiHelper.GetPlaylistThumbnailBase64(TestPlaylist.YoutubeId);
+			var actualPlaylistThumbnail = await youtubeApiHelper.GetPlaylistThumbnail(TestPlaylist.YoutubeId);
 			Assert.True(!string.IsNullOrEmpty(actualPlaylistThumbnail));
 		}
 		[Fact]
 		public async void GetSongsThumbnailBase64ByPlaylist()
 		{
-			var actualThumbnails = await youtubeApiHelper.GetSongsThumbnailBase64ByPlaylist(TestPlaylist.YoutubeId);
+			var actualThumbnails = await youtubeApiHelper.GetSongsThumbnailByPlaylist(TestPlaylist.YoutubeId);
 			Assert.True(actualThumbnails.Any());
 		}
 		#endregion

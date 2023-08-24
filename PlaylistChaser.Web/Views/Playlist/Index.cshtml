@@ -1,7 +1,7 @@
 ﻿@using PlaylistChaser.Web.Models.ViewModel;
 @model IEnumerable<PlaylistViewModel>
 @{
-	ViewData["Title"] = "Home Page";
+    ViewData["Title"] = "Home Page";
     ViewData["Title"] = "Home Page";
 }
 
@@ -30,45 +30,45 @@
 <partial name="_AddYouTubePlaylistModal" />
 
 <div class="container mt-4">
-	<div class="row">
-		<div class="btn-group btn-group-lg" role="group" aria-label="Control group">
-			<span class="btn btn-primary" data-bs-toggle="tooltip" data-bs-title="Add a simple YT-Playlist">
-				<a data-bs-toggle="modal" data-bs-target="#addYtPlModal">
-					<i class="bi bi-plus-circle btn-icon"></i>
-					Simple <i class="bi bi-youtube"></i> Playlist
-				</a>
-			</span>
-			<span class="btn btn-secondary" data-bs-toggle="tooltip" data-bs-title="Create a combined YT-Playlist">
-				<a data-bs-toggle="modal" data-bs-target="#addYtModal">
-					<i class="bi bi-grid-fill btn-icon"></i>
-					Combined <i class="bi bi-youtube"></i> Playlist
-				</a>
-			</span>
-			<a asp-action="SyncPlaylistThumbnails"
-			   class="btn btn-tertiary"
-			   data-bs-toggle="tooltip"
-			   data-bs-title="Sync all Playlist Thumbnails">
-				<i class="bi bi-file-image btn-icon"></i>
-				Sync Thumbnails
-			</a>
-		</div>
-	</div>
+    <div class="row">
+        <div class="btn-group btn-group-lg" role="group" aria-label="Control group">
+            <span class="btn btn-primary" data-bs-toggle="tooltip" data-bs-title="Add a simple YT-Playlist">
+                <a data-bs-toggle="modal" data-bs-target="#addYtPlModal">
+                    <i class="bi bi-plus-circle btn-icon"></i>
+                    Simple <i class="bi bi-youtube"></i> Playlist
+                </a>
+            </span>
+            <span class="btn btn-secondary" data-bs-toggle="tooltip" data-bs-title="Create a combined YT-Playlist">
+                <a data-bs-toggle="modal" data-bs-target="#addYtModal">
+                    <i class="bi bi-grid-fill btn-icon"></i>
+                    Combined <i class="bi bi-youtube"></i> Playlist
+                </a>
+            </span>
+            <a asp-action="SyncPlaylistThumbnails"
+               class="btn btn-tertiary"
+               data-bs-toggle="tooltip"
+               data-bs-title="Sync all Playlist Thumbnails">
+                <i class="bi bi-file-image btn-icon"></i>
+                Sync Thumbnails
+            </a>
+        </div>
+    </div>
 </div>
 
 <div class="container mt-4">
-	<section class="hero-section mt-4">
-		<div class="card-grid">
-			@foreach (var playlist in Model)
-			{
-				<a class="pl_card" asp-action="Details" asp-route-id="@playlist.PlaylistId">
-					<div class="card__background"
-						 style="background-image: url(data:image/png;base64,@(playlist.ThumbnailBase64String))"></div>
-					<div class="card__content">
-						<p class="card__category">@Html.DisplayFor(modelItem => playlist.AuthorName)</p>
-						<h3 class="card__heading">@Html.DisplayFor(modelItem => playlist.Name)</h3>
-					</div>
-				</a>
-			}
-		</div>
-	</section>
+    <section class="hero-section mt-4">
+        <div class="card-grid">
+            @foreach (var playlist in Model)
+            {
+                <a class="pl_card" asp-action="Details" asp-route-id="@playlist.PlaylistId">
+                    <div class="card__background"
+                         style="background-image: url('/Playlist/GetThumbnail?thumbnailId=@playlist.ThumbnailId')"></div>
+                    <div class="card__content">
+                        <p class="card__category">@Html.DisplayFor(modelItem => playlist.AuthorName)</p>
+                        <h3 class="card__heading">@Html.DisplayFor(modelItem => playlist.Name)</h3>
+                    </div>
+                </a>
+            }
+        </div>
+    </section>
 </div>
