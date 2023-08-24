@@ -1,6 +1,5 @@
 ﻿using Google.Apis.Auth.OAuth2;
 using Google.Apis.Services;
-using Google.Apis.Util;
 using Google.Apis.YouTube.v3;
 using Google.Apis.YouTube.v3.Data;
 using PlaylistChaser.Web.Models;
@@ -9,7 +8,7 @@ using Playlist = Google.Apis.YouTube.v3.Data.Playlist;
 
 namespace PlaylistChaser.Web.Util.API
 {
-    internal class YoutubeApiHelper
+    internal class YoutubeApiHelper : ISource
     {
         private YouTubeService ytService;
 
@@ -31,13 +30,16 @@ namespace PlaylistChaser.Web.Util.API
 
             var clientId = Helper.ReadSecret("Youtube", "ClientId");
             var clientSecret = Helper.ReadSecret("Youtube", "ClientSecret");
+            var clientId = Helper.ReadSecret("Youtube3", "ClientId");
+            var clientSecret = Helper.ReadSecret("Youtube3", "ClientSecret");
+
 
             var userCredential = GoogleWebAuthorizationBroker.AuthorizeAsync(
                 new ClientSecrets { ClientId = clientId, ClientSecret = clientSecret },
                 scopes, "user", CancellationToken.None).Result;
 
-            if (userCredential.Token.IsExpired(SystemClock.Default))
-                userCredential.RefreshTokenAsync(CancellationToken.None);
+            //if (userCredential.Token.IsExpired(SystemClock.Default))
+            userCredential.RefreshTokenAsync(CancellationToken.None);
 
             return userCredential;
 
@@ -48,7 +50,7 @@ namespace PlaylistChaser.Web.Util.API
         /// </summary>
         /// <param name="playlist">local playlist</param>
         /// <returns>returns the same playlist</returns>
-        internal Models.Playlist SyncPlaylist(Models.Playlist playlist)
+        public Models.Playlist SyncPlaylist(Models.Playlist playlist)
         {
             var ytPlaylist = toPlaylistModel(getPlaylist(playlist.YoutubeId));
             playlist.Name = ytPlaylist.Name;
@@ -63,7 +65,7 @@ namespace PlaylistChaser.Web.Util.API
         /// </summary>
         /// <param name="playlist">local playlist</param>
         /// <returns></returns>
-        internal List<Song> GetPlaylistSongs(string playlistId)
+        public List<Song> GetPlaylistSongs(string playlistId)
             => toSongModels(getPlaylistSongs(playlistId));
 
         /// <summary>
@@ -71,7 +73,7 @@ namespace PlaylistChaser.Web.Util.API
         /// </summary>
         /// <param name="id">local playlist </param>
         /// <returns></returns>
-        internal async Task<byte[]> GetPlaylistThumbnail(string id)
+        public async Task<byte[]> GetPlaylistThumbnail(string id)
         {
             var ytPlaylist = getPlaylist(id);
 
@@ -117,7 +119,7 @@ namespace PlaylistChaser.Web.Util.API
             }
             return songThumbnails;
         }
-        internal async Task<Dictionary<string, byte[]>> GetSongsThumbnailBySongIds(List<string> songIds)
+        public async Task<Dictionary<string, byte[]>> GetSongsThumbnailBySongIds(List<string> songIds)
         {
             var ytSongs = getSongs(songIds);
             var songThumbnails = new Dictionary<string, byte[]>();
@@ -198,12 +200,14 @@ namespace PlaylistChaser.Web.Util.API
         #endregion
 
         #region Edit Stuff
-        /// <summary>
+        public async Task<Models.Playlist> CreatePlaylist(string playlistName, string? description = null, PrivateStatus privacyStatus = PrivateStatus.Public)
+            => await CreatePlaylist(playlistName, description, privacyStatus.ToString().ToLower());
+        /// <summary>   
         /// Creates the Playlist on Youtube
         /// </summary>
         /// <param name="playlistName">Name of the Playlist</param>
         /// <returns>returns the YT-Playlist in local Model</returns>
-        internal async Task<Models.Playlist> CreatePlaylist(string playlistName, string? description = null, PrivateStatus privacyStatus = PrivateStatus.Public)
+        public async Task<Models.Playlist> CreatePlaylist(string playlistName, string? description = null, string privacyStatus = "public")
         {
             // Create a new, private playlist in the authorized user's channel.
             var newPlaylist = new Playlist();
@@ -211,13 +215,12 @@ namespace PlaylistChaser.Web.Util.API
             newPlaylist.Snippet.Title = playlistName;
             newPlaylist.Snippet.Description = description;
             newPlaylist.Status = new PlaylistStatus();
-            newPlaylist.Status.PrivacyStatus = privacyStatus.ToString().ToLower();
+            newPlaylist.Status.PrivacyStatus = privacyStatus;
             newPlaylist = await ytService.Playlists.Insert(newPlaylist, "snippet,status").ExecuteAsync();
 
             return toPlaylistModel(newPlaylist);
         }
-
-        internal async Task<List<string>> AddSongsToPlaylist(string playlistId, List<string> songIds)
+        public List<string> AddSongsToPlaylist(string playlistId, List<string> songIds)
         {
             var uploadedSongs = new List<string>();
             if (songIds.Count == 0) return uploadedSongs;
@@ -232,7 +235,8 @@ namespace PlaylistChaser.Web.Util.API
                     playlistItem.Snippet.ResourceId = new ResourceId();
                     playlistItem.Snippet.ResourceId.Kind = "youtube#video";
                     playlistItem.Snippet.ResourceId.VideoId = songId;
-                    playlistItem = await ytService.PlaylistItems.Insert(playlistItem, "snippet").ExecuteAsync();
+
+                    var response = ytService.PlaylistItems.Insert(playlistItem, "snippet").Execute();
                     uploadedSongs.Add(songId);
                 }
                 return uploadedSongs;
@@ -248,7 +252,8 @@ namespace PlaylistChaser.Web.Util.API
                 return uploadedSongs;
             }
         }
-        internal async Task<bool> DeletePlaylist(string youtubePlaylistId)
+        
+        public async Task<bool> DeletePlaylist(string youtubePlaylistId)
         {
             try
             {
