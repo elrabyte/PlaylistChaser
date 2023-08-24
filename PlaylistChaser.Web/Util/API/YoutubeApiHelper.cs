@@ -30,9 +30,6 @@ namespace PlaylistChaser.Web.Util.API
 
             var clientId = Helper.ReadSecret("Youtube", "ClientId");
             var clientSecret = Helper.ReadSecret("Youtube", "ClientSecret");
-            var clientId = Helper.ReadSecret("Youtube3", "ClientId");
-            var clientSecret = Helper.ReadSecret("Youtube3", "ClientSecret");
-
 
             var userCredential = GoogleWebAuthorizationBroker.AuthorizeAsync(
                 new ClientSecrets { ClientId = clientId, ClientSecret = clientSecret },
