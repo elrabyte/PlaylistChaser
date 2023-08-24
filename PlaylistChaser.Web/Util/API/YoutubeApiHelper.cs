@@ -108,7 +108,7 @@ namespace PlaylistChaser.Web.Util.API
         internal async Task<Dictionary<string, byte[]>> GetSongsThumbnailByPlaylist(string playlistId)
         {
             var ytSongs = getPlaylistSongs(playlistId);
-            var songThumbnails = new Dictionary<string, string>();
+            var songThumbnails = new Dictionary<string, byte[]>();
 
             foreach (var ytSong in ytSongs)
             {
