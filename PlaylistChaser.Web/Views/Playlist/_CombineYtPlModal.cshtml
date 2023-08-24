@@ -1,0 +1,33 @@
+﻿<!-- Combine YouTube Playlist Modal -->
+<div class="modal fade" id="combineYtPlModal" tabindex="-1" aria-labelledby="addYtModalLabel" aria-hidden="true">
+	<div class="modal-dialog" role="document">
+		<div class="modal-content rounded-4 shadow">
+			<div class="modal-header p-5 pb-4 border-bottom-0">
+				<h1 class="fw-bold mb-0 fs-2">Your Combined YouTube Playlist Name</h1>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body p-5 pt-0">
+				<div class="form-floating mb-3">
+					<label class="visually-hidden" for="combinedYtPlName">Name</label>
+					<div class="input-group">
+						<div class="input-group-text text-yt-red"><i class="bi bi-youtube"></i></div>
+						<input type="text"
+							   name="combinedYtPlName"
+							   class="form-control form-control-lg"
+							   id="combinedYtPlName"
+							   placeholder="Wow Big Tree"
+							   required>
+					</div>
+				</div>
+
+				<button id="create-combined-yt-btn"
+					class="w-100 mb-2 btn btn-lg rounded-3 btn-primary"
+						type="button"
+						data-bs-dismiss="modal">
+					<i class="bi bi-file-plus btn-icon"></i> Create Combined Playlist
+				</button>
+			</div>
+		</div>
+	</div>
+</div>
+<!-- END -->

@@ -1,74 +1,128 @@
 ﻿@using PlaylistChaser.Web.Models.ViewModel;
 @model IEnumerable<PlaylistViewModel>
 @{
-    ViewData["Title"] = "Home Page";
-    ViewData["Title"] = "Home Page";
+	ViewData["Title"] = "Home Page";
+	ViewData["Title"] = "Home Page";
 }
 
-<script type="text/javascript">
-    //createCombinedPlaylist('testName', '1,5,8', 'Youtube') {
-    function createCombinedPlaylist(playlistName, playlistIds, source) {
-        let url = "/Playlist/CreateCombinedPlaylist";
-        $.ajax({
-            type: "POST",
-            url: url,
-            data: { playlistName: playlistName, playlistIds: playlistIds, source: source },
-            success: function (data) {
-                if (!data.success)
-                    return console.error(data.message);
-
-                location.reload();
-            },
-            dataType: "json"
-        });
-    }
-</script>
 <!-- Custom Site CSS -->
 <link rel="stylesheet" href="~/css/card.css" asp-append-version="true" />
 <!-- END -->
 
-<partial name="_AddYouTubePlaylistModal" />
+<partial name="_AddYtPlModal" />
+<partial name="_CombineYtPlModal" />
 
 <div class="container mt-4">
-    <div class="row">
-        <div class="btn-group btn-group-lg" role="group" aria-label="Control group">
-            <span class="btn btn-primary" data-bs-toggle="tooltip" data-bs-title="Add a simple YT-Playlist">
-                <a data-bs-toggle="modal" data-bs-target="#addYtPlModal">
-                    <i class="bi bi-plus-circle btn-icon"></i>
-                    Simple <i class="bi bi-youtube"></i> Playlist
-                </a>
-            </span>
-            <span class="btn btn-secondary" data-bs-toggle="tooltip" data-bs-title="Create a combined YT-Playlist">
-                <a data-bs-toggle="modal" data-bs-target="#addYtModal">
-                    <i class="bi bi-grid-fill btn-icon"></i>
-                    Combined <i class="bi bi-youtube"></i> Playlist
-                </a>
-            </span>
-            <a asp-action="SyncPlaylistThumbnails"
-               class="btn btn-tertiary"
-               data-bs-toggle="tooltip"
-               data-bs-title="Sync all Playlist Thumbnails">
-                <i class="bi bi-file-image btn-icon"></i>
-                Sync Thumbnails
-            </a>
-        </div>
-    </div>
+	<div class="row">
+		<div class="btn-group btn-group-lg" role="group" aria-label="Control group">
+			<a class="btn btn-primary"
+			   data-bs-toggle="modal"
+			   data-bs-target="#addYtPlModal">
+				<i class="bi bi-plus-circle btn-icon"></i>
+				Simple <i class="bi bi-youtube"></i> Playlist
+			</a>
+			<a id="select-mode-btn"
+			   class="btn btn-secondary">
+				<i class="bi bi-grid-fill btn-icon"></i>
+				Combine <i class="bi bi-youtube"></i> Playlist
+			</a>
+			<a id="accept-select-btn"
+			   class="btn btn-success d-none"
+			   data-bs-toggle="modal"
+			   data-bs-target="#combineYtPlModal">
+				<i class="bi bi-check-square btn-icon"></i>
+				Combine Selection
+			</a>
+			<a id="exit-select-mode-btn"
+			   class="btn btn-danger d-none">
+				<i class="bi bi-x-square btn-icon"></i>
+				Exit Combine Mode
+			</a>
+			<a asp-action="SyncPlaylistThumbnails"
+			   class="btn btn-tertiary"
+			   data-bs-toggle="tooltip"
+			   data-bs-title="Sync all Playlist Thumbnails">
+				<i class="bi bi-file-image btn-icon"></i>
+				Sync Thumbnails
+			</a>
+		</div>
+	</div>
 </div>
 
 <div class="container mt-4">
-    <section class="hero-section mt-4">
-        <div class="card-grid">
-            @foreach (var playlist in Model)
-            {
-                <a class="pl_card" asp-action="Details" asp-route-id="@playlist.PlaylistId">
-                    <div class="card__background"
-                         style="background-image: url('/Playlist/GetThumbnail?thumbnailId=@playlist.ThumbnailId')"></div>
-                    <div class="card__content">
-                        <p class="card__category">@Html.DisplayFor(modelItem => playlist.AuthorName)</p>
-                        <h3 class="card__heading">@Html.DisplayFor(modelItem => playlist.Name)</h3>
-                    </div>
-                </a>
-            }
-        </div>
-    </section>
+	<section class="hero-section mt-4">
+		<div class="card-grid">
+			@foreach (var playlist in Model)
+			{
+				<a class="pl_card" asp-action="Details" asp-route-id="@playlist.PlaylistId" data-pl-id="@playlist.PlaylistId">
+					<div class="card__background"
+						 style="background-image: url('/Playlist/GetThumbnail?thumbnailId=@playlist.ThumbnailId')"></div>
+					<div class="card__content">
+						<p class="card__category">@Html.DisplayFor(modelItem => playlist.AuthorName)</p>
+						<h3 class="card__heading">@Html.DisplayFor(modelItem => playlist.Name)</h3>
+					</div>
+				</a>
+			}
+		</div>
+	</section>
 </div>
+
+<!-- Custom Site JS -->
+<script type="text/javascript">
+	$(document).ready(function () {
+		let selectMode = false;
+		$(".pl_card").click(function (event) {
+			if (selectMode) {
+				// Prevent the default click behavior (navigating to another page)
+				event.preventDefault();
+				$(this).toggleClass("selected");
+			}
+		});
+		$("#select-mode-btn").click(function () {
+			selectMode = true;
+			$("#exit-select-mode-btn").removeClass('d-none')
+			$("#accept-select-btn").removeClass('d-none')
+			$("#select-mode-btn").addClass('d-none')
+		});
+		$("#exit-select-mode-btn").click(function () {
+			selectMode = false;
+			$("#exit-select-mode-btn").addClass('d-none')
+			$("#accept-select-btn").addClass('d-none')
+			$("#select-mode-btn").removeClass('d-none')
+			// Clear any selected cards when exiting select mode
+			$(".pl_card.selected").removeClass("selected");
+		});
+		$("#create-combined-yt-btn").click(function () {
+			let name = $("#combinedYtPlName").val()
+			let selectedIds = getSelectedPlaylistIds();
+			createCombinedPlaylist(name, selectedIds, 'Youtube')
+		});
+	});
+
+	function getSelectedPlaylistIds() {
+		var selectedIds = [];
+		$(".pl_card.selected").each(function () {
+			var playlistId = $(this).data("pl-id");
+			selectedIds.push(playlistId);
+		});
+		return selectedIds;
+	}
+
+	//createCombinedPlaylist('testName', '1,5,8', 'Youtube') {
+	function createCombinedPlaylist(playlistName, playlistIds, source) {
+		let url = "/Playlist/CreateCombinedPlaylist";
+		$.ajax({
+			type: "POST",
+			url: url,
+			data: { playlistName: playlistName, playlistIds: playlistIds, source: source },
+			success: function (data) {
+				if (!data.success)
+					return console.error(data.message);
+
+				location.reload();
+			},
+			dataType: "json"
+		});
+	}
+</script>
+<!-- END -->
