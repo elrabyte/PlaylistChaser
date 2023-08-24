@@ -287,8 +287,6 @@ namespace PlaylistChaser.Web.Util.API
             {
                 YoutubeSongName = s.Title,
                 YoutubeId = s.ResourceId.VideoId,
-                FoundOnSpotify = false,
-                AddedToSpotify = false,
                 SongName = s.Title,
                 ArtistName = s.VideoOwnerChannelTitle
             }).ToList();

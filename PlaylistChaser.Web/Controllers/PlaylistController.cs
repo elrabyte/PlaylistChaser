@@ -282,49 +282,49 @@ namespace PlaylistChaser.Web.Controllers
         #endregion
 
         #region Spotify
-        public async Task<ActionResult> UpdateSpotifySongLinks(int id)
-        {
-            var songIds = db.PlaylistSong.Where(ps => ps.PlaylistId == id).Select(ps => ps.SongId);
-            var songs = db.Song.Where(s => songIds.Contains(s.Id) && !s.FoundOnSpotify.Value).ToList();
-            await findSongsSpotify(songs);
+        //public async Task<ActionResult> UpdateSpotifySongLinks(int id)
+        //{
+        //    var songIds = db.PlaylistSong.Where(ps => ps.PlaylistId == id).Select(ps => ps.SongId);
+        //    var songs = db.Song.Where(s => songIds.Contains(s.Id) && !s.FoundOnSpotify.Value).ToList();
+        //    await findSongsSpotify(songs);
 
-            return new JsonResult(new { success = true });
-        }
-        [HttpPost]
-        public async Task<ActionResult> _ChooseSong(int songId, string newSpotifyId)
-        {
-            //get id from link
-            newSpotifyId = newSpotifyId.Replace("https://open.spotify.com/track/", "");
-            newSpotifyId = newSpotifyId.Remove(newSpotifyId.IndexOf("?"));
+        //    return new JsonResult(new { success = true });
+        //}
+        //[HttpPost]
+        //public async Task<ActionResult> _ChooseSong(int songId, string newSpotifyId)
+        //{
+        //    //get id from link
+        //    newSpotifyId = newSpotifyId.Replace("https://open.spotify.com/track/", "");
+        //    newSpotifyId = newSpotifyId.Remove(newSpotifyId.IndexOf("?"));
 
-            var song = db.Song.Single(s => s.Id == songId);
-            if (!string.IsNullOrEmpty(newSpotifyId) && song.SpotifyId != newSpotifyId)
-            {
-                var spotifyHelper = new SpotifyApiHelper(HttpContext);
-                var spotifySong = await spotifyHelper.GetSong(newSpotifyId);
+        //    var song = db.Song.Single(s => s.Id == songId);
+        //    if (!string.IsNullOrEmpty(newSpotifyId) && song.SpotifyId != newSpotifyId)
+        //    {
+        //        var spotifyHelper = new SpotifyApiHelper(HttpContext);
+        //        var spotifySong = await spotifyHelper.GetSong(newSpotifyId);
 
-                song.SpotifyId = spotifySong.Uri;
-                song.AddedToSpotify = false;
-                song.IsNotOnSpotify = null;
-                song.FoundOnSpotify = true;
-                song.ArtistName = string.Join(",", spotifySong.Artists.Select(a => a.Name).ToList());
-                song.SongName = spotifySong.Name;
-                db.SaveChanges();
+        //        song.SpotifyId = spotifySong.Uri;
+        //        song.AddedToSpotify = false;
+        //        song.IsNotOnSpotify = null;
+        //        song.FoundOnSpotify = true;
+        //        song.ArtistName = string.Join(",", spotifySong.Artists.Select(a => a.Name).ToList());
+        //        song.SongName = spotifySong.Name;
+        //        db.SaveChanges();
 
-                ////add song to spotify
-                //var playlist = db.Playlist.Single(p => p.Id == song.PlaylistId);
-                //if (!await spotifyHelper.UpdatePlaylist(playlist.SpotifyUrl, new List<string> { song.SpotifyId }))
-                //    return new JsonResult(new { success = false });
-                //song.AddedToSpotify = true;
-                //db.SaveChanges();
+        //        ////add song to spotify
+        //        //var playlist = db.Playlist.Single(p => p.Id == song.PlaylistId);
+        //        //if (!await spotifyHelper.UpdatePlaylist(playlist.SpotifyUrl, new List<string> { song.SpotifyId }))
+        //        //    return new JsonResult(new { success = false });
+        //        //song.AddedToSpotify = true;
+        //        //db.SaveChanges();
 
-                return new JsonResult(new { success = true });
-            }
-            else
-                return new JsonResult(new { success = false });
+        //        return new JsonResult(new { success = true });
+        //    }
+        //    else
+        //        return new JsonResult(new { success = false });
 
 
-        }
+        //}
         #endregion
 
         #endregion
@@ -455,6 +455,7 @@ namespace PlaylistChaser.Web.Controllers
         #region spotify
         private async Task<bool> findSongsSpotify(List<Song> songs)
         {
+            throw new NotImplementedException();
             var spotifyHelper = new SpotifyApiHelper(HttpContext);
 
             foreach (var song in songs)
@@ -465,7 +466,6 @@ namespace PlaylistChaser.Web.Controllers
                 {
                     var spotifySong = response.Tracks.Items.First();
                     var dbSong = db.Song.Single(s => s.Id == song.Id);
-                    dbSong.FoundOnSpotify = true;
                     dbSong.SpotifyId = spotifySong.Uri;
                     dbSong.ArtistName = string.Join(",", spotifySong.Artists.Select(a => a.Name).ToList());
                     dbSong.SongName = spotifySong.Name;
@@ -520,9 +520,6 @@ namespace PlaylistChaser.Web.Controllers
             var spotifyHelper = new SpotifyApiHelper(HttpContext);
             if (await spotifyHelper.RemovePlaylistSong(playlist.SpotifyUrl, song.SpotifyId))
             {
-                song.AddedToSpotify = false;
-                song.FoundOnSpotify = false;
-                song.IsNotOnSpotify = true;
                 song.ArtistName = null;
                 song.SongName = null;
                 song.SpotifyId = null;

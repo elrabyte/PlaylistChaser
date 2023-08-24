@@ -54,4 +54,10 @@ insert into dbo.State (id, name, Entity)
 insert into SongState (SongId, SourceId, StateId, LastChecked)
 select id, 1, 110,getdate() from song
 
+
+--remove spotify properties on song
+alter table Song drop column foundonspotify
+alter table Song drop column addedtospotify
+ALTER TABLE [dbo].[Song] DROP COLUMN [IsNotOnSpotify];
+
 --24.08.23

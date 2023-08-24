@@ -16,10 +16,6 @@ namespace PlaylistChaser.Web.Models
         public string? SpotifyId { get; set; }
         public string? SongName { get; set; }
         public string? ArtistName { get; set; }
-        [Required]
-        public bool? FoundOnSpotify { get; set; }
-        public bool? AddedToSpotify { get; set; }
-        public bool? IsNotOnSpotify { get; set; }
         public int? ThumbnailId { get; set; }
     }
 }

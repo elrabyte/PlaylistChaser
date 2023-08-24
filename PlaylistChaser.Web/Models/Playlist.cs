@@ -21,11 +21,10 @@ namespace PlaylistChaser.Web.Models
         public int? ThumbnailId { get; set; }
         [Required]
         public PLaylistTypes PlaylistTypeId { get; set; }
-
+        public string? Description { get; set; }
 
         #region spotify
         public string? SpotifyUrl { get; set; }
-        public string? Description { get; set; }
         #endregion
     }
 }
