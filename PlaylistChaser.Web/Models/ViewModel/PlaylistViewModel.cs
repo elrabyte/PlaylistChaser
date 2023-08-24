@@ -17,6 +17,6 @@ namespace PlaylistChaser.Web.Models.ViewModel
 
 
          [NotMapped]
-        public List<SongViewModel> Songs { get; set; }
+        public List<PlaylistSongViewModel> Songs { get; set; }
     }
 }

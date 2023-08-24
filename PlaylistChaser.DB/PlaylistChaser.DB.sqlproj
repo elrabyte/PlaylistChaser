@@ -71,7 +71,7 @@
     <Build Include="NewDbScripts\InBuiltValues\InsertPlaylistTypes.sql" />
     <Build Include="Thumbnail.sql" />
     <Build Include="SP\GetPlaylists.sql" />
-    <Build Include="SP\GetSongs.sql" />
+    <Build Include="SP\GetPlaylistSongs.sql" />
     <Build Include="PlaylistSong.sql" />
     <Build Include="Source.sql" />
     <Build Include="NewDbScripts\InBuiltValues\InsertSources.sql" />

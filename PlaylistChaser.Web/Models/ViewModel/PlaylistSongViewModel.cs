@@ -1,14 +1,20 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace PlaylistChaser.Web.Models.ViewModel
 {
-    public class SongViewModel
+    public class PlaylistSongViewModel
     {
         [Key]
-        public int Id { get; set; }
+        public int PlaylistSongId { get; set; }
+        public int SongId { get; set; }
         public string SongName { get; set; }
         public string? ArtistName { get; set; }
         public int? ThumbnailId { get; set; }
         public string? YoutubeId { get; set; }
+
+        [NotMapped]
+        public List<PlaylistSongState> PlaylistSongStates { get; set; }
+
     }
 }
