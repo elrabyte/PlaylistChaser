@@ -15,8 +15,11 @@
             url: url,
             data: { source: source, onlyWithNoThumbnails: true },
             success: function (data) {
-                if (!data.success)
-                    return console.error(data.message);
+                if (data.message) {
+                    enableButtonRow();
+                    enableButton($("#syncPlaylistToBtn"));
+                    return alert(data.message)
+                }
                 location.reload();
             },
             dataType: "json"
@@ -31,8 +34,11 @@
             url: url,
             data: { source: source },
             success: function (data) {
-                if (!data.success)
-                    return console.error(data.message);
+                if (!data.success) {
+                    enableButtonRow();
+                    enableButton($("#syncPlaylistToBtn"));
+                    return alert(data.message)
+                }
                 location.reload();
             },
             dataType: "json"
@@ -47,8 +53,11 @@
             url: url,
             data: { source: source },
             success: function (data) {
-                if (!data.success)
-                    return console.error(data.message);
+                if (!data.success) {
+                    enableButtonRow();
+                    enableButton($("#syncPlaylistToBtn"));
+                    return alert(data.message)
+                }
                 location.reload();
             },
             dataType: "json"
@@ -57,6 +66,10 @@
 
     function disableButtonRow() {
         $("#btn-header-row .btn").addClass("disabled");
+    }
+
+    function enableButtonRow() {
+        $("#btn-header-row .btn").removeClass("disabled");
     }
 
     function disableButton(btn) {
@@ -91,6 +104,9 @@
                     Sync Playlist To (Youtube)
                 </a>
             }
+            <a id="syncPlaylistToBtn" href="javascript:;" onclick="syncPlaylistTo('@Sources.Spotify')" class="btn btn-primary">
+                Sync Playlist To (Spotify)
+            </a>
             <a id="syncSongsThumbnailBtn" href="javascript:;" onclick="syncSongsThumbnail('@Sources.Youtube')" class="btn btn-primary">
                 Sync Songs-Thumbnail From (Youtube)
             </a>

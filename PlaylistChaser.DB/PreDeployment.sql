@@ -60,4 +60,38 @@ alter table Song drop column foundonspotify
 alter table Song drop column addedtospotify
 ALTER TABLE [dbo].[Song] DROP COLUMN [IsNotOnSpotify];
 
+
+--SpotifyUrl to SpotifyId
+ALTER TABLE [dbo].[Playlist] DROP COLUMN [SpotifyUrl];
+
 --24.08.23
+
+insert into PlaylistAdditionalInfo ([PlaylistId],[SourceId],[PlaylistIdSource],[Name],[CreatorName],[Description],[Url], isMine)
+select id, 1, YoutubeId, Name, ChannelName,Description, YoutubeUrl,iif(ChannelName = 'Tatsu',1,0) from Playlist
+
+alter table playlist 
+drop column YoutubeUrl
+alter table playlist 
+drop column YoutubeId
+
+insert into PlaylistAdditionalInfo ([PlaylistId],[SourceId],[PlaylistIdSource],[Name],[CreatorName],[Description], isMine)
+select id, 2, SpotifyId, Name, ChannelName,Description,1 from Playlist WHERE SpotifyId IS NOT NULL
+
+alter table playlist 
+drop column SpotifyId
+
+--songs info
+----youtube
+insert into SongAdditionalInfo ([SongId],[SourceId],[SongIdSource],[Name],[ArtistName])
+select id, 1, YoutubeId, YoutubeSongName, isnull(ArtistName,YoutubeSongName)  from Song where YoutubeId is not null
+
+alter table Song 
+drop column YoutubeId
+alter table Song 
+drop column YoutubeSongName
+----spotify
+insert into SongAdditionalInfo ([SongId],[SourceId],[SongIdSource],[Name],[ArtistName])
+select id, 2, SpotifyId, SongName, isnull(ArtistName,SongName) from Song where SpotifyId is not null
+
+alter table Song 
+drop column SpotifyId

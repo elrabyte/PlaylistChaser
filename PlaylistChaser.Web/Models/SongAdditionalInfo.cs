@@ -4,17 +4,21 @@ using static PlaylistChaser.Web.Util.BuiltInIds;
 
 namespace PlaylistChaser.Web.Models
 {
-    public class Playlist
+    public class SongAdditionalInfo
     {
         [Key, DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int Id { get; set; }
         [Required]
-        public string? Name { get; set; }
+        public int SongId { get; set; }
         [Required]
-        public string? ChannelName { get; set; }
-        public int? ThumbnailId { get; set; }
+        public Sources SourceId { get; set; }
         [Required]
-        public PLaylistTypes PlaylistTypeId { get; set; }
-        public string? Description { get; set; }
+        public string SongIdSource { get; set; }
+        [Required]
+        public string Name { get; set; }
+        [Required]
+        public string ArtistName { get; set; }
+        public string? Url{ get; set; }
+
     }
 }

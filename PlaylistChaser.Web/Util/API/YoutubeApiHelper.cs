@@ -4,6 +4,7 @@ using Google.Apis.Util;
 using Google.Apis.YouTube.v3;
 using Google.Apis.YouTube.v3.Data;
 using PlaylistChaser.Web.Models;
+using SpotifyAPI.Web;
 using System.Text.RegularExpressions;
 using Playlist = Google.Apis.YouTube.v3.Data.Playlist;
 
@@ -19,25 +20,18 @@ namespace PlaylistChaser.Web.Util.API
         {
             ytService = new YouTubeService(new BaseClientService.Initializer() { HttpClientInitializer = authenticate() });
         }
-
-        public enum PrivateStatus
-        {
-            Public,
-            Private
-        }
-
         private UserCredential authenticate()
         {
 
-            var clientId = Helper.ReadSecret("Youtube", "ClientId");
-            var clientSecret = Helper.ReadSecret("Youtube", "ClientSecret");
+            var clientId = Helper.ReadSecret("Youtube3", "ClientId");
+            var clientSecret = Helper.ReadSecret("Youtube3", "ClientSecret");
 
             var userCredential = GoogleWebAuthorizationBroker.AuthorizeAsync(
                 new ClientSecrets { ClientId = clientId, ClientSecret = clientSecret },
                 scopes, "user", CancellationToken.None).Result;
 
-            if (userCredential.Token.IsExpired(SystemClock.Default))
-                userCredential.RefreshTokenAsync(CancellationToken.None);
+            //            if (userCredential.Token.IsExpired(SystemClock.Default))
+            userCredential.RefreshTokenAsync(CancellationToken.None);
 
             return userCredential;
 
@@ -48,13 +42,14 @@ namespace PlaylistChaser.Web.Util.API
         /// </summary>
         /// <param name="playlist">local playlist</param>
         /// <returns>returns the same playlist</returns>
-        public Models.Playlist SyncPlaylist(Models.Playlist playlist)
+        public PlaylistAdditionalInfo SyncPlaylistInfo(PlaylistAdditionalInfo info)
         {
-            var ytPlaylist = toPlaylistModel(getPlaylist(playlist.YoutubeId));
-            playlist.Name = ytPlaylist.Name;
-            playlist.ChannelName = ytPlaylist.ChannelName;
-            playlist.Description = ytPlaylist.Description;
-            return playlist;
+            var ytPlaylist = toPlaylistModel(getPlaylist(info.PlaylistIdSource));
+            info.Name = ytPlaylist.Name;
+            info.CreatorName = ytPlaylist.CreatorName;
+            info.Description = ytPlaylist.Description;
+            info.PlaylistIdSource = ytPlaylist.PlaylistIdSource;
+            return info;
         }
 
         #region Get Stuff
@@ -63,7 +58,7 @@ namespace PlaylistChaser.Web.Util.API
         /// </summary>
         /// <param name="playlist">local playlist</param>
         /// <returns></returns>
-        public List<Song> GetPlaylistSongs(string playlistId)
+        public List<SongAdditionalInfo> GetPlaylistSongs(string playlistId)
             => toSongModels(getPlaylistSongs(playlistId));
 
         /// <summary>
@@ -137,11 +132,20 @@ namespace PlaylistChaser.Web.Util.API
         /// <returns></returns>
         private Playlist getPlaylist(string id)
         {
+
             var listRequest = ytService.Playlists.List("snippet");
             listRequest.Id = id;
-            var resp = listRequest.Execute();
-            var playlist = resp.Items.Single();
+            var playlist = listRequest.Execute().Items.Single();
+
             return playlist;
+        }
+
+        private bool checkIfMyPlaylist(string playlistId)
+        {
+            var listRequest = ytService.Playlists.List("status");
+            listRequest.Mine = true;
+            var myPlaylists = listRequest.Execute().Items;
+            return myPlaylists.Select(p => p.Id).Contains(playlistId);
         }
 
         /// <summary>
@@ -198,14 +202,12 @@ namespace PlaylistChaser.Web.Util.API
         #endregion
 
         #region Edit Stuff
-        public async Task<Models.Playlist> CreatePlaylist(string playlistName, string? description = null, PrivateStatus privacyStatus = PrivateStatus.Public)
-            => await CreatePlaylist(playlistName, description, privacyStatus.ToString().ToLower());
         /// <summary>   
         /// Creates the Playlist on Youtube
         /// </summary>
         /// <param name="playlistName">Name of the Playlist</param>
         /// <returns>returns the YT-Playlist in local Model</returns>
-        public async Task<Models.Playlist> CreatePlaylist(string playlistName, string? description = null, string privacyStatus = "public")
+        public async Task<PlaylistAdditionalInfo> CreatePlaylist(string playlistName, string? description = null, bool isPublic = true)
         {
             // Create a new, private playlist in the authorized user's channel.
             var newPlaylist = new Playlist();
@@ -213,11 +215,17 @@ namespace PlaylistChaser.Web.Util.API
             newPlaylist.Snippet.Title = playlistName;
             newPlaylist.Snippet.Description = description;
             newPlaylist.Status = new PlaylistStatus();
-            newPlaylist.Status.PrivacyStatus = privacyStatus;
+            newPlaylist.Status.PrivacyStatus = isPublic ? "public" : "private";
             newPlaylist = await ytService.Playlists.Insert(newPlaylist, "snippet,status").ExecuteAsync();
-
             return toPlaylistModel(newPlaylist);
         }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="playlistId"></param>
+        /// <param name="songIds"></param>
+        /// <returns>song ids at source </returns>
         public List<string> AddSongsToPlaylist(string playlistId, List<string> songIds)
         {
             var uploadedSongs = new List<string>();
@@ -267,30 +275,53 @@ namespace PlaylistChaser.Web.Util.API
 
         #endregion
 
-        #region model
-        private Models.Playlist toPlaylistModel(Playlist ytPlaylist)
+        #region Interface Implementations
+        public PlaylistAdditionalInfo GetPlaylistById(string playlistId)
+            => toPlaylistModel(getPlaylist(playlistId));
+        public List<(int Id, string IdAtSource)> FindSongs(List<(int SongId, string ArtistName, string SongName)> songs)
         {
-            var playlist = new Models.Playlist
+            var foundSongs = new List<(int Id, string SpotifyId)>();
+            try
             {
+                foreach (var song in songs)
+                {
+                    var response = searchSong(song.ArtistName, song.SongName);
+                    foundSongs.Add(new(song.SongId, response.Id.VideoId));
+                }
+                return foundSongs;
+            }
+            catch (Exception)
+            {
+                return foundSongs;
+            }
+        }
+        #endregion
+
+        #region model
+        private PlaylistAdditionalInfo toPlaylistModel(Playlist ytPlaylist)
+        {
+            return new PlaylistAdditionalInfo
+            {
+                PlaylistIdSource = ytPlaylist.Id,
                 Name = ytPlaylist.Snippet.Title,
-                YoutubeUrl = ytPlaylist.Id,
-                YoutubeId = ytPlaylist.Id,
-                ChannelName = ytPlaylist.Snippet.ChannelTitle,
-                Description = ytPlaylist.Snippet.Description
+                CreatorName = ytPlaylist.Snippet.ChannelTitle,
+                Description = string.IsNullOrEmpty(ytPlaylist.Snippet.Description) ? null : ytPlaylist.Snippet.Description,
+                SourceId = BuiltInIds.Sources.Youtube,
+                IsMine = checkIfMyPlaylist(ytPlaylist.Id),
             };
-            return playlist;
         }
 
-        private List<Song> toSongModels(List<PlaylistItemSnippet> ytSongs)
+        private List<SongAdditionalInfo> toSongModels(List<PlaylistItemSnippet> ytSongs)
         {
-            return ytSongs.Select(s => new Song
-            {
-                YoutubeSongName = s.Title,
-                YoutubeId = s.ResourceId.VideoId,
-                SongName = s.Title,
-                ArtistName = s.VideoOwnerChannelTitle
-            }).ToList();
+            var songs = new List<(Song Song, SongAdditionalInfo Info)>();
 
+            return ytSongs.Select(ytSong => new SongAdditionalInfo
+            {
+                SongIdSource = ytSong.ResourceId.VideoId,
+                Name = ytSong.Title,
+                ArtistName = ytSong.VideoOwnerChannelTitle,
+                SourceId = BuiltInIds.Sources.Youtube
+            }).ToList();
         }
         #endregion
 
@@ -310,5 +341,16 @@ namespace PlaylistChaser.Web.Util.API
             return match.Groups[1].Value;
         }
         #endregion
+
+        private SearchResult searchSong(string artistName, string songName)
+        {
+            // Search for the song using artist name and song name
+            var searchListRequest = ytService.Search.List("snippet");
+            searchListRequest.Q = $"{artistName} {songName}"; // Combine artist name and song name
+            searchListRequest.Type = "video";
+            searchListRequest.MaxResults = 1; // Number of results to retrieve
+
+            return searchListRequest.Execute().Items.SingleOrDefault();
+        }
     }
 }

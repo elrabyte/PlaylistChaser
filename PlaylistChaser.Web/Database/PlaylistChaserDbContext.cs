@@ -10,10 +10,13 @@ namespace PlaylistChaser.Web.Database
     {
         #region 1:1 Views
         public DbSet<Playlist> Playlist { get; set; }
-        public DbSet<Song> Song { get; set; }
-        public DbSet<SongState> SongState { get; set; }
+        public DbSet<PlaylistAdditionalInfo> PlaylistAdditionalInfo { get; set; }
         public DbSet<PlaylistSong> PlaylistSong { get; set; }
         public DbSet<PlaylistSongState> PlaylistSongState { get; set; }
+
+        public DbSet<Song> Song { get; set; }
+        public DbSet<SongAdditionalInfo> SongAdditionalInfo { get; set; }
+        public DbSet<SongState> SongState { get; set; }
         public DbSet<Thumbnail> Thumbnail { get; set; }
         public DbSet<CombinedPlaylistEntry> CombinedPlaylistEntry { get; set; }
         #endregion

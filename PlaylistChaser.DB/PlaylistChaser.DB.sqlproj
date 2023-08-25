@@ -79,6 +79,8 @@
     <Build Include="NewDbScripts\InBuiltValues\InsertStates.sql" />
     <Build Include="PlaylistSongState.sql" />
     <Build Include="SongState.sql" />
+    <Build Include="PlaylistAdditionalInfo.sql" />
+    <Build Include="SongAdditionalInfo.sql" />
   </ItemGroup>
   <ItemGroup>
     <RefactorLog Include="PlaylistChaser.DB.refactorlog" />
