@@ -1,115 +1,121 @@
 ﻿<!DOCTYPE html>
 <html lang="en">
 <head>
-	<meta charset="utf-8" />
-	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-	<title>@ViewData["Title"] - PlaylistChaser</title>
-	<!-- Node Modules CSS -->
-	<link rel="stylesheet" href="~/node_modules/bootstrap-icons/font/bootstrap-icons.min.css" />
-	<!-- END -->
-	<!-- Custom CSS -->
-	<link rel="stylesheet" href="~/css/main.min.css" />
-	<link rel="stylesheet" href="~/css/site.css" />
-	<!-- END -->
-	<script src="~/node_modules/jquery/dist/jquery.min.js"></script>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - PlaylistChaser</title>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="~/css/main.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" />
+    <!-- END -->
+    <!-- Node Modules CSS -->
+    <link rel="stylesheet" href="~/node_modules/bootstrap-icons/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="~/node_modules/bootstrap-table/src/bootstrap-table.css" />
+    <link rel="stylesheet" href="~/node_modules/bootstrap-table/src/extensions/filter-control/bootstrap-table-filter-control.css" />
+    <!-- END -->
+    <!-- Node Modules JS -->
+    <script src="~/node_modules/jquery/dist/jquery.min.js"></script>
+    <script src="~/node_modules/bootstrap-table/src/bootstrap-table.js" type="module"></script>
+    <script src="~/node_modules/bootstrap-table/src/extensions/filter-control/bootstrap-table-filter-control.js" type="module"></script>
+    <!-- END -->
 </head>
 <body>
-	<!-- Header with Navigation -->
-	<header>
-		<nav class="navbar navbar-expand-sm navbar-toggleable-sm border-bottom box-shadow mb-3">
-			<div class="container">
-				<a class="navbar-brand" asp-area="" asp-controller="Playlist" asp-action="Index">PlaylistChaser</a>
-				<button class="navbar-toggler"
-						type="button"
-						data-bs-toggle="collapse"
-						data-bs-target=".navbar-collapse"
-						aria-controls="navbarSupportedContent"
-						aria-expanded="false"
-						aria-label="Toggle navigation">
-					<span class="navbar-toggler-icon"></span>
-				</button>
-				<div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-					<ul class="navbar-nav flex-grow-1">
-						<li class="nav-item">
-							<a class="nav-link"
-							   asp-area=""
-							   asp-controller="Playlist"
-							   asp-action="Index">
-								Playlist
-							</a>
-						</li>
-						<li class="nav-item">
-							<a class="nav-link" asp-area="" asp-controller="Login" asp-action="LoginToSpotify">Login</a>
-						</li>
-					</ul>
-					<!-- Color Mode Toggler -->
-					<ul class="navbar-nav">
-						<li class="nav-item dropdown">
-							<button class="btn btn-link nav-link py-2 px-0 px-lg-2 dropdown-toggle d-flex align-items-center"
-									id="bd-theme"
-									type="button"
-									aria-expanded="false"
-									data-bs-toggle="dropdown"
-									data-bs-display="static"
-									aria-label="Toggle theme (dark)">
-								<i class="bi bi-moon-stars-fill my-1 theme-icon-active" data-active-icon="moon-stars-fill"></i>
-								<span class="d-lg-none ms-2" id="bd-theme-text">Toggle theme</span>
-							</button>
-							<ul class="dropdown-menu dropdown-menu-end" aria-labelledby="bd-theme-text">
-								<li>
-									<button type="button"
-											class="dropdown-item d-flex align-items-center"
-											data-bs-theme-value="light"
-											aria-pressed="false">
-										<i class="bi bi-sun-fill me-2 opacity-50 theme-icon" data-icon="sun-fill"></i>
-										Light
-										<i class="bi bi-check2 ms-auto d-none"></i>
-									</button>
-								</li>
-								<li>
-									<button type="button"
-											class="dropdown-item d-flex align-items-center active"
-											data-bs-theme-value="dark"
-											aria-pressed="true">
-										<i class="bi bi-moon-stars-fill me-2 opacity-50 theme-icon" data-icon="moon-stars-fill"></i>
-										Dark
-										<i class="bi bi-check2 ms-auto d-none"></i>
-									</button>
-								</li>
-								<li>
-									<button type="button"
-											class="dropdown-item d-flex align-items-center"
-											data-bs-theme-value="auto"
-											aria-pressed="false">
-										<i class="bi bi-circle-half me-2 opacity-50 theme-icon" data-icon="circle-half"></i>
-										Auto
-										<i class="bi bi-check2 ms-auto d-none"></i>
-									</button>
-								</li>
-							</ul>
-						</li>
-					</ul>
-					<!-- END -->
-				</div>
-			</div>
-		</nav>
-	</header>
-	<!-- END -->
-	<!-- Main -->
-	<main role="main" class="container pb-3">
-		@RenderBody()
-	</main>
-	<!-- END -->
-	<!-- Footer -->
-	<footer class="border-top footer text-muted">
-		<div class="container">
-			&copy; 2023 - PlaylistChaser - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-		</div>
-	</footer>
-	<!-- END -->
-	<script src="~/node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-	<script src="~/js/site.js" asp-append-version="true"></script>
-	<script src="~/js/colorModeToggler.js" asp-append-version="true"></script>
-	@await RenderSectionAsync("Scripts", required: false)
+    <!-- Header with Navigation -->
+    <header>
+        <nav class="navbar navbar-expand-sm navbar-toggleable-sm border-bottom box-shadow mb-3">
+            <div class="container">
+                <a class="navbar-brand" asp-area="" asp-controller="Playlist" asp-action="Index">PlaylistChaser</a>
+                <button class="navbar-toggler"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target=".navbar-collapse"
+                        aria-controls="navbarSupportedContent"
+                        aria-expanded="false"
+                        aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
+                    <ul class="navbar-nav flex-grow-1">
+                        <li class="nav-item">
+                            <a class="nav-link"
+                               asp-area=""
+                               asp-controller="Playlist"
+                               asp-action="Index">
+                                Playlist
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" asp-area="" asp-controller="Login" asp-action="LoginToSpotify">Login</a>
+                        </li>
+                    </ul>
+                    <!-- Color Mode Toggler -->
+                    <ul class="navbar-nav">
+                        <li class="nav-item dropdown">
+                            <button class="btn btn-link nav-link py-2 px-0 px-lg-2 dropdown-toggle d-flex align-items-center"
+                                    id="bd-theme"
+                                    type="button"
+                                    aria-expanded="false"
+                                    data-bs-toggle="dropdown"
+                                    data-bs-display="static"
+                                    aria-label="Toggle theme (dark)">
+                                <i class="bi bi-moon-stars-fill my-1 theme-icon-active" data-active-icon="moon-stars-fill"></i>
+                                <span class="d-lg-none ms-2" id="bd-theme-text">Toggle theme</span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="bd-theme-text">
+                                <li>
+                                    <button type="button"
+                                            class="dropdown-item d-flex align-items-center"
+                                            data-bs-theme-value="light"
+                                            aria-pressed="false">
+                                        <i class="bi bi-sun-fill me-2 opacity-50 theme-icon" data-icon="sun-fill"></i>
+                                        Light
+                                        <i class="bi bi-check2 ms-auto d-none"></i>
+                                    </button>
+                                </li>
+                                <li>
+                                    <button type="button"
+                                            class="dropdown-item d-flex align-items-center active"
+                                            data-bs-theme-value="dark"
+                                            aria-pressed="true">
+                                        <i class="bi bi-moon-stars-fill me-2 opacity-50 theme-icon" data-icon="moon-stars-fill"></i>
+                                        Dark
+                                        <i class="bi bi-check2 ms-auto d-none"></i>
+                                    </button>
+                                </li>
+                                <li>
+                                    <button type="button"
+                                            class="dropdown-item d-flex align-items-center"
+                                            data-bs-theme-value="auto"
+                                            aria-pressed="false">
+                                        <i class="bi bi-circle-half me-2 opacity-50 theme-icon" data-icon="circle-half"></i>
+                                        Auto
+                                        <i class="bi bi-check2 ms-auto d-none"></i>
+                                    </button>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+                    <!-- END -->
+                </div>
+            </div>
+        </nav>
+    </header>
+    <!-- END -->
+    <!-- Main -->
+    <main role="main" class="container pb-3">
+        @RenderBody()
+    </main>
+    <!-- END -->
+    <!-- Footer -->
+    <footer class="border-top footer text-muted">
+        <div class="container">
+            &copy; 2023 - PlaylistChaser - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+        </div>
+    </footer>
+    <!-- END -->
+    <script src="~/node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/js/colorModeToggler.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

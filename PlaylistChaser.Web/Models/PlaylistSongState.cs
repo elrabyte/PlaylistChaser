@@ -16,5 +16,22 @@ namespace PlaylistChaser.Web.Models
         public PlaylistSongStates StateId { get; set; }
         [Required]
         public DateTime LastChecked { get; set; }
+
+        [NotMapped]
+        public string IconHtml
+        {
+            get
+            {
+                switch (SourceId)
+                {
+                    case Sources.Youtube:
+                        return "<i class=\"bi bi-youtube\"></i>";
+                    case Sources.Spotify:
+                        return "<i class=\"bi bi-spotify\"></i>";
+                    default:
+                        return null;
+                }
+            }
+        }
     }
 }

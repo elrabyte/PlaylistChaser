@@ -4,7 +4,6 @@ using Google.Apis.Util;
 using Google.Apis.YouTube.v3;
 using Google.Apis.YouTube.v3.Data;
 using PlaylistChaser.Web.Models;
-using SpotifyAPI.Web;
 using System.Text.RegularExpressions;
 using Playlist = Google.Apis.YouTube.v3.Data.Playlist;
 
@@ -23,15 +22,15 @@ namespace PlaylistChaser.Web.Util.API
         private UserCredential authenticate()
         {
 
-            var clientId = Helper.ReadSecret("Youtube3", "ClientId");
-            var clientSecret = Helper.ReadSecret("Youtube3", "ClientSecret");
+            var clientId = Helper.ReadSecret("Youtube", "ClientId");
+            var clientSecret = Helper.ReadSecret("Youtube", "ClientSecret");
 
             var userCredential = GoogleWebAuthorizationBroker.AuthorizeAsync(
                 new ClientSecrets { ClientId = clientId, ClientSecret = clientSecret },
                 scopes, "user", CancellationToken.None).Result;
 
-            //            if (userCredential.Token.IsExpired(SystemClock.Default))
-            userCredential.RefreshTokenAsync(CancellationToken.None);
+            if (userCredential.Token.IsExpired(SystemClock.Default))
+                userCredential.RefreshTokenAsync(CancellationToken.None);
 
             return userCredential;
 

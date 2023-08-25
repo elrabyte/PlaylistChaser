@@ -119,25 +119,19 @@
 <div class="row">
     <div class="col">
         <h5>Songs</h5>
-        <table class="table">
-            <colgroup>
-                <col sytle="width:25%" />
-                <col sytle="width:25%" />
-                <col sytle="width:25%" />
-                <col sytle="width:13%" />
-                <col sytle="width:12%" />
-            </colgroup>
+        <table class="table"
+               data-toggle="table"
+               data-search="true"
+               data-filter-control="true"
+               data-show-search-clear-button="true"
+               data-height="800">
             <thead>
                 <tr>
-                    <th></th>
-                    <th>
-                        @Html.DisplayNameFor(m => m.Songs.First().SongName)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(m => m.Songs.First().ArtistName)
-                    </th>
-                    <th>@Html.DisplayNameFor(m => m.Songs.First().PlaylistSongStates)</th>
-                    <th>@Html.DisplayNameFor(m => m.Songs.First().SongStates)</th>
+                    <th data-checkbox="true"></th>
+                    <th data-sortable="true">@Html.DisplayNameFor(m => m.Songs.First().SongName)</th>
+                    <th data-sortable="true">@Html.DisplayNameFor(m => m.Songs.First().ArtistName)</th>
+                    <th data-filter-control="select" data-sortable="true">@Html.DisplayNameFor(m => m.Songs.First().PlaylistSongStates)</t>
+                    <th data-filter-control="select" data-sortable="true">@Html.DisplayNameFor(m => m.Songs.First().SongStates)</th>
                 </tr>
                 <tr>
                     <td>
@@ -150,7 +144,6 @@
 
                 @foreach (var song in Model.Songs)
                 {
-
                     <tr>
                         <td>
                             <img src="/Playlist/GetThumbnail?thumbnailId=@song.ThumbnailId">
@@ -164,13 +157,13 @@
                         <td>
                             @foreach (var state in song.PlaylistSongStates)
                             {
-                                <div>@(state.SourceId.ToString() + ": " + state.StateId.ToString())</div>
+                                <div>@Html.Raw(state.IconHtml)@(" " + state.SourceId.ToString() + ": " + state.StateId.ToString())</div>
                             }
                         </td>
                         <td>
                             @foreach (var state in song.SongStates)
                             {
-                                <div>@(state.SourceId.ToString() + ": " + state.StateId.ToString())</div>
+                                <div>@Html.Raw(state.IconHtml)@(" " + state.SourceId.ToString() + ": " + state.StateId.ToString())</div>
                             }
                         </td>
                     </tr>

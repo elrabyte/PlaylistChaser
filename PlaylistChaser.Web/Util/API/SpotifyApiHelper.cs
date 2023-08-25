@@ -168,7 +168,6 @@ namespace PlaylistChaser.Web.Util.API
 
         private List<FullTrack> getPlaylistSongs(string playlistId)
         {
-            const int maxResults = 100;
             var listRequest = spotify.Playlists.GetItems(playlistId).Result;
 
             var totalResults = listRequest.Total;
@@ -210,7 +209,36 @@ namespace PlaylistChaser.Web.Util.API
 
         public async Task<Dictionary<string, byte[]>> GetSongsThumbnailBySongIds(List<string> songIds)
         {
-            throw new NotImplementedException();
+            //throw new NotImplementedException();
+            var songThumbnails = new Dictionary<string, byte[]>();
+
+            var songs = getSongs(songIds);
+
+            foreach (var song in songs)
+            {
+                if (!songThumbnails.ContainsKey(song.Id))
+                    songThumbnails.Add(song.Id, await Helper.GetImageByUrl(song.Album.Images.OrderBy(i => i.Height).First().Url));
+            }
+            return songThumbnails;
+        }
+
+        private List<FullTrack> getSongs(List<string> songIds)
+        {
+            const int requestLimit = 50;
+            var songs = new List<FullTrack>();
+
+            //split request 
+            for (var i = 0; i <= songIds.Count; i += requestLimit)
+            {
+                var rangeCount = requestLimit;
+                //if rangeCount exceeds maxResults, calc rest count
+                if (i + requestLimit > songIds.Count)
+                    rangeCount = songIds.Count - i;
+
+                var curSongIds = songIds.GetRange(i, rangeCount);
+                songs.AddRange(spotify.Tracks.GetSeveral(new TracksRequest(curSongIds)).Result.Tracks);
+            }
+            return songs;
         }
 
         public List<string> AddSongsToPlaylist(string playlistId, List<string> songIds)
