@@ -107,38 +107,6 @@ namespace PlaylistChaser.Web.Controllers
             }
         }
 
-        /// <summary>
-        /// adds a youtube playlist to the local db
-        /// </summary>
-        /// <param name="ytPlaylistUrl">youtube playlist url</param>
-        /// <returns></returns>
-        public async Task<ActionResult> SearchYTPlaylistAsync(string ytPlaylistUrl)
-        {
-            var ytHelper = new YoutubeApiHelper();
-            //add playlist to db
-            //  get playlist from youtube
-            var playlistId = ytHelper.GetPlaylistIdFromUrl(ytPlaylistUrl);
-            var newInfo = ytHelper.GetPlaylistById(playlistId);
-
-            //  add playlist
-            var newPlaylist = infoToPlaylist(newInfo, PLaylistTypes.Simple);
-            db.Playlist.Add(newPlaylist);
-            db.SaveChanges();
-
-            //additional Info
-            newInfo.PlaylistId = newPlaylist.Id;
-            db.PlaylistAdditionalInfo.Add(newInfo);
-            db.SaveChanges();
-
-            //add thumbnail
-            var thumbnail = new Thumbnail { FileContents = await new YoutubeApiHelper().GetPlaylistThumbnail(playlistId) };
-            db.Thumbnail.Add(thumbnail);
-            db.SaveChanges();
-            newPlaylist.ThumbnailId = thumbnail.Id;
-            db.SaveChanges();
-
-            return RedirectToAction("Index");
-        } //TODO: remove
 
         /// <summary>
         /// add songs if not already and connect to playlist
@@ -164,13 +132,15 @@ namespace PlaylistChaser.Web.Controllers
                 db.SaveChanges();
                 i.SongId = newSong.Id;
                 db.SongAdditionalInfo.Add(i);
+                //add state for each source
+                //TODO: Loop through sources instead of by hand
+                db.SongState.Add(new SongState { SongId = newSong.Id, SourceId = Sources.Youtube, StateId = SongStates.NotChecked, LastChecked = DateTime.Now });
+                db.SongState.Add(new SongState { SongId = newSong.Id, SourceId = Sources.Spotify, StateId = SongStates.NotChecked, LastChecked = DateTime.Now });
+                var state = db.SongState.Single(ss => ss.SongId == newSong.Id && ss.SourceId == source);
+                state.StateId = SongStates.Available;
+                state.LastChecked = DateTime.Now;
             });
             db.SaveChanges();
-
-            //add SongState
-            db.SongState.AddRange(newSongInfos.Select(i => new SongState { SongId = i.SongId, SourceId = source, StateId = SongStates.Available, LastChecked = DateTime.Now }));
-            db.SaveChanges();
-
 
             //add new songs to PlaylistSong
             var songsPopulated = songInfos.AsEnumerable() // Switch to client-side evaluation
@@ -183,8 +153,19 @@ namespace PlaylistChaser.Web.Controllers
             db.SaveChanges();
 
             //add PlaylistSongState
-            db.PlaylistSongState.AddRange(newPlaylistSongs.Select(ps => new PlaylistSongState { PlaylistSongId = ps.Id, SourceId = Sources.Youtube, StateId = PlaylistSongStates.Added, LastChecked = DateTime.Now }));
+            //  add state for each source
+            //  TODO: Loop through sources instead of by hand
+            newPlaylistSongs.ForEach(ps =>
+            {
+                db.PlaylistSongState.Add(new PlaylistSongState { PlaylistSongId = ps.Id, SourceId = Sources.Youtube, StateId = PlaylistSongStates.NotAdded, LastChecked = DateTime.Now });
+                db.PlaylistSongState.Add(new PlaylistSongState { PlaylistSongId = ps.Id, SourceId = Sources.Spotify, StateId = PlaylistSongStates.NotAdded, LastChecked = DateTime.Now });
+                db.SaveChanges();
+                var state = db.PlaylistSongState.Single(pss => pss.PlaylistSongId == ps.Id && pss.SourceId == source);
+                state.StateId = PlaylistSongStates.Added;
+                state.LastChecked = DateTime.Now;
+            });
             db.SaveChanges();
+
         }
 
         /// <summary>
