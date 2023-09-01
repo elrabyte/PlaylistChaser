@@ -290,6 +290,7 @@ namespace PlaylistChaser.Web.Controllers
                         {
                             newInfo = await ytHelper.CreatePlaylist(playlist.Name, playlist.Description);
                             info.PlaylistIdSource = newInfo.PlaylistIdSource;
+                            info.IsMine = true;
                             db.SaveChanges();
                         }
 
@@ -306,6 +307,7 @@ namespace PlaylistChaser.Web.Controllers
                         {
                             newInfo = await spotifyHelper.CreatePlaylist(playlist.Name, playlist.Description);
                             info.PlaylistIdSource = newInfo.PlaylistIdSource;
+                            info.IsMine = true;
                             db.SaveChanges();
                         }
 
@@ -454,26 +456,26 @@ namespace PlaylistChaser.Web.Controllers
 
 
             }
-            //set not found songs as NotAvailable
-            var stillMissingSongIds = missingSongs.Where(s => !foundSongs.Exact.Select(fs => fs.Id).Contains(s.Id)
-                                                              && !foundSongs.NotExact.Select(fs => fs.Id).Contains(s.Id)).Select(s => s.Id).ToList();
+            ////set not found songs as NotAvailable
+            //var stillMissingSongIds = missingSongs.Where(s => !foundSongs.Exact.Select(fs => fs.Id).Contains(s.Id)
+            //                                                  && !foundSongs.NotExact.Select(fs => fs.Id).Contains(s.Id)).Select(s => s.Id).ToList();
 
-            stillMissingSongIds.ForEach(i =>
-            {
-                //add song state
-                var songState = songStates.SingleOrDefault(ss => ss.SongId == i);
-                if (songState == null)
-                {
-                    songState = new SongState { SongId = i, SourceId = source, StateId = SongStates.NotAvailable, LastChecked = DateTime.Now };
-                    db.SongState.Add(songState);
-                }
-                else
-                {
-                    songState.StateId = SongStates.NotAvailable;
-                    songState.LastChecked = DateTime.Now;
-                }
-                db.SaveChanges();
-            });
+            //stillMissingSongIds.ForEach(i =>
+            //{
+            //    //add song state
+            //    var songState = songStates.SingleOrDefault(ss => ss.SongId == i);
+            //    if (songState == null)
+            //    {
+            //        songState = new SongState { SongId = i, SourceId = source, StateId = SongStates.NotAvailable, LastChecked = DateTime.Now };
+            //        db.SongState.Add(songState);
+            //    }
+            //    else
+            //    {
+            //        songState.StateId = SongStates.NotAvailable;
+            //        songState.LastChecked = DateTime.Now;
+            //    }
+            //    db.SaveChanges();
+            //});
         }
         #endregion
 

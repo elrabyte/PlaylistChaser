@@ -302,8 +302,8 @@ namespace PlaylistChaser.Web.Util.API
             {
                 foreach (var song in songs)
                 {
-                    var response = searchSongExact(song.ArtistName, song.SongName);
-                    foundSongsExact.Add(new(song.SongId, response.Id.VideoId));
+                    var videoId = searchSongExact(song.ArtistName, song.SongName);
+                    foundSongsExact.Add(new(song.SongId, videoId));
                 }
                 return (foundSongsExact, foundSongs);
             }
@@ -359,15 +359,15 @@ namespace PlaylistChaser.Web.Util.API
         }
         #endregion
 
-        private SearchResult searchSongExact(string artistName, string songName)
+        private string searchSongExact(string artistName, string songName)
         {
             // Search for the song using artist name and song name
             var searchListRequest = ytService.Search.List("snippet");
             searchListRequest.Q = $"{artistName} {songName}"; // Combine artist name and song name
-            searchListRequest.Type = "video";
+            searchListRequest.Type = "youtube#video";
             searchListRequest.MaxResults = 1; // Number of results to retrieve
 
-            return searchListRequest.Execute().Items.SingleOrDefault();
+            return searchListRequest.Execute().Items.First().Id.VideoId; //first because for some reason it sometimes returns more than 1 result
         }
     }
 }
