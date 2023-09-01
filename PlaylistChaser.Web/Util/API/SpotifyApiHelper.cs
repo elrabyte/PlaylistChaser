@@ -108,16 +108,13 @@ namespace PlaylistChaser.Web.Util.API
             var userId = (await spotify.UserProfile.Current()).Id;
             return await spotify.Playlists.Create(userId, request);
         }
-        public async Task<bool> UpdatePlaylist(string spotifyPlaylistId, List<string> spotifySongIds, string playlistDescription = null)
+        public async Task<bool> UpdatePlaylist(string spotifyPlaylistId, string? playlistName = null, string? playlistDescription = null, bool isPublic = true)
         {
-            //can add max. 100 songs per request
-            var rounds = Math.Ceiling(spotifySongIds.Count / 100d);
-            for (int i = 0; i < rounds; i++)
-                await spotify.Playlists.AddItems(spotifyPlaylistId, new PlaylistAddItemsRequest(spotifySongIds.Skip(i * 100).Take(100).ToList()));
-
             //update playlistdescription
             var request = new PlaylistChangeDetailsRequest();
+            request.Name = playlistName;
             request.Description = playlistDescription;
+            request.Public = isPublic;
 
             return await spotify.Playlists.ChangeDetails(spotifyPlaylistId, request);
         }
@@ -162,7 +159,7 @@ namespace PlaylistChaser.Web.Util.API
         }
 
         public async Task<PlaylistAdditionalInfo> CreatePlaylist(string playlistName, string? description, bool isPublic = true)
-            => toPlaylistModel(await createPlaylist(playlistName, description, isPublic));
+            => toPlaylistModel(await createPlaylist(playlistName, description, isPublic), true);
 
         Task<bool> ISource.DeletePlaylist(string youtubePlaylistId)
         {
@@ -188,7 +185,7 @@ namespace PlaylistChaser.Web.Util.API
                 listRequest = spotify.Playlists.GetItems(playlistId, new PlaylistGetItemsRequest { Offset = resultsShown }).Result;
 
 
-                resultsShown += listRequest.Total;
+                resultsShown += listRequest.Limit;
                 songs.AddRange(listRequest.Items.Select(i => (FullTrack)i.Track).ToList());
             }
             return songs;
@@ -250,23 +247,30 @@ namespace PlaylistChaser.Web.Util.API
         public List<string> AddSongsToPlaylist(string playlistId, List<string> songIds)
         {
             var uploadedSongs = new List<string>();
-            //can add max. 100 songs per request
-            var rounds = Math.Ceiling(songIds.Count / 100d);
-            for (int i = 0; i < rounds; i++)
+            try
             {
-                var curSongids = songIds.Skip(i * 100).Take(100);
-                var trackUris = curSongids.Select(i => string.Format("spotify:track:{0}", i)).ToList();
-                var response = spotify.Playlists.AddItems(playlistId, new PlaylistAddItemsRequest(trackUris)).Result;
-                uploadedSongs.AddRange(curSongids);
+                //can add max. 100 songs per request
+                var rounds = Math.Ceiling(songIds.Count / 100d);
+                for (int i = 0; i < rounds; i++)
+                {
+                    var curSongids = songIds.Skip(i * 100).Take(100);
+                    var trackUris = curSongids.Select(i => string.Format("spotify:track:{0}", i)).ToList();
+                    var response = spotify.Playlists.AddItems(playlistId, new PlaylistAddItemsRequest(trackUris)).Result;
+                    uploadedSongs.AddRange(curSongids);
+                }
+                return uploadedSongs;
             }
-            return uploadedSongs;
+            catch (Exception ex)
+            {
+                return uploadedSongs;
+            }
         }
 
         public PlaylistAdditionalInfo GetPlaylistById(string playlistId)
             => toPlaylistModel(spotify.Playlists.Get(playlistId).Result);
 
         #region model 
-        private PlaylistAdditionalInfo toPlaylistModel(FullPlaylist spotifyPlaylist)
+        private PlaylistAdditionalInfo toPlaylistModel(FullPlaylist spotifyPlaylist, bool isMine = false)
         {
             var info = new PlaylistAdditionalInfo
             {
@@ -275,7 +279,7 @@ namespace PlaylistChaser.Web.Util.API
                 Description = string.IsNullOrEmpty(spotifyPlaylist.Description) ? null : spotifyPlaylist.Description,
                 PlaylistIdSource = spotifyPlaylist.Id,
                 SourceId = BuiltInIds.Sources.Spotify,
-                IsMine = false
+                IsMine = isMine
             };
             return info;
         }

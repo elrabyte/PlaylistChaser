@@ -1,6 +1,5 @@
 ﻿using Google.Apis.Auth.OAuth2;
 using Google.Apis.Services;
-using Google.Apis.Util;
 using Google.Apis.YouTube.v3;
 using Google.Apis.YouTube.v3.Data;
 using PlaylistChaser.Web.Models;
@@ -58,7 +57,7 @@ namespace PlaylistChaser.Web.Util.API
         /// <param name="playlist">local playlist</param>
         /// <returns></returns>
         public List<SongAdditionalInfo> GetPlaylistSongs(string playlistId)
-            => toSongModels(getPlaylistSongs(playlistId));
+            => toSongInfoModels(getPlaylistSongs(playlistId));
 
         /// <summary>
         /// returns the playlist thumbnail as a base64 string
@@ -272,6 +271,24 @@ namespace PlaylistChaser.Web.Util.API
 
         }
 
+
+        public async Task<bool> UpdatePlaylist(string playlistId, string? playlistName = null, string? description = null, bool isPublic = true)
+        {
+            try
+            {
+                var playlist = getPlaylist(playlistId);
+                playlist.Snippet.Title = playlistName;
+                playlist.Snippet.Description = description;
+                playlist.Status.PrivacyStatus = isPublic ? "public" : "private";
+                await ytService.Playlists.Update(playlist, "snippet,status").ExecuteAsync();
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+
+        }
         #endregion
 
         #region Interface Implementations
@@ -279,6 +296,7 @@ namespace PlaylistChaser.Web.Util.API
             => toPlaylistModel(getPlaylist(playlistId));
         public (List<(int Id, string IdAtSource)> Exact, List<(int Id, string IdAtSource)> NotExact) FindSongs(List<(int SongId, string ArtistName, string SongName)> songs)
         {
+            var foundSongsExact = new List<(int Id, string SpotifyId)>();
             var foundSongs = new List<(int Id, string SpotifyId)>();
             try
             {
@@ -310,7 +328,7 @@ namespace PlaylistChaser.Web.Util.API
             };
         }
 
-        private List<SongAdditionalInfo> toSongModels(List<PlaylistItemSnippet> ytSongs)
+        private List<SongAdditionalInfo> toSongInfoModels(List<PlaylistItemSnippet> ytSongs)
         {
             var songs = new List<(Song Song, SongAdditionalInfo Info)>();
 

@@ -46,6 +46,8 @@ namespace PlaylistChaser.Web.Controllers
         {
             var playlist = (await db.GetPlaylists(id)).Single();
             playlist.Songs = await db.GetSongs(playlist.PlaylistId);
+
+            ViewBag.SelectedSource = Sources.Youtube;
             return View(playlist);
         }
         #endregion
@@ -87,6 +89,8 @@ namespace PlaylistChaser.Web.Controllers
 
                 //add playlist to db
                 var newPlaylist = infoToPlaylist(info, PLaylistTypes.Simple);
+                //  set description
+                newPlaylist.Description += string.Format("\nPlaylist is from {0} by user {1}", source.ToString(), info.CreatorName);
                 db.Playlist.Add(newPlaylist);
                 db.SaveChanges();
 
@@ -117,8 +121,6 @@ namespace PlaylistChaser.Web.Controllers
         /// <param name="songsFromPlaylist"></param>
         private void addSongsToPlaylist(int playlistId, List<SongAdditionalInfo> songsFromPlaylist, Sources source)
         {
-
-
             //check if songs are already in db
             //TODO: for now only check if it wasnt added from same source
             //      on youtube songname & artist name dont have to be a unique combination
@@ -135,9 +137,10 @@ namespace PlaylistChaser.Web.Controllers
                 i.SongId = newSong.Id;
                 db.SongAdditionalInfo.Add(i);
                 //add state for each source
-                //TODO: Loop through sources instead of by hand
-                db.SongState.Add(new SongState { SongId = newSong.Id, SourceId = Sources.Youtube, StateId = SongStates.NotChecked, LastChecked = DateTime.Now });
-                db.SongState.Add(new SongState { SongId = newSong.Id, SourceId = Sources.Spotify, StateId = SongStates.NotChecked, LastChecked = DateTime.Now });
+                foreach (Sources src in Enum.GetValues(typeof(Sources)))
+                    db.SongState.Add(new SongState { SongId = newSong.Id, SourceId = src, StateId = SongStates.NotChecked, LastChecked = DateTime.Now });
+
+                db.SaveChanges();
                 var state = db.SongState.Single(ss => ss.SongId == newSong.Id && ss.SourceId == source);
                 state.StateId = SongStates.Available;
                 state.LastChecked = DateTime.Now;
@@ -156,11 +159,11 @@ namespace PlaylistChaser.Web.Controllers
 
             //add PlaylistSongState
             //  add state for each source
-            //  TODO: Loop through sources instead of by hand
             newPlaylistSongs.ForEach(ps =>
             {
-                db.PlaylistSongState.Add(new PlaylistSongState { PlaylistSongId = ps.Id, SourceId = Sources.Youtube, StateId = PlaylistSongStates.NotAdded, LastChecked = DateTime.Now });
-                db.PlaylistSongState.Add(new PlaylistSongState { PlaylistSongId = ps.Id, SourceId = Sources.Spotify, StateId = PlaylistSongStates.NotAdded, LastChecked = DateTime.Now });
+                foreach (Sources src in Enum.GetValues(typeof(Sources)))
+                    db.PlaylistSongState.Add(new PlaylistSongState { PlaylistSongId = ps.Id, SourceId = src, StateId = PlaylistSongStates.NotAdded, LastChecked = DateTime.Now });
+
                 db.SaveChanges();
                 var state = db.PlaylistSongState.Single(pss => pss.PlaylistSongId == ps.Id && pss.SourceId == source);
                 state.StateId = PlaylistSongStates.Added;
@@ -181,7 +184,8 @@ namespace PlaylistChaser.Web.Controllers
             try
             {
                 var playlist = db.Playlist.Single(p => p.Id == id);
-                var additionalInfo = getInfo(id, source).Result;
+                var info = db.PlaylistAdditionalInfo.Single(i => i.PlaylistId == id && i.SourceId == source);
+
                 List<SongAdditionalInfo> songInfos = null;
                 //filtered
                 var plInfos = db.PlaylistAdditionalInfo.Where(i => i.SourceId == source);
@@ -193,7 +197,7 @@ namespace PlaylistChaser.Web.Controllers
                         switch (playlist.PlaylistTypeId)
                         {
                             case PLaylistTypes.Simple:
-                                songInfos = ytHelper.GetPlaylistSongs(additionalInfo.PlaylistIdSource);
+                                songInfos = ytHelper.GetPlaylistSongs(info.PlaylistIdSource);
                                 break;
                             case PLaylistTypes.Combined:
                                 //sync all attached playlists
@@ -211,7 +215,7 @@ namespace PlaylistChaser.Web.Controllers
                         {
                             case PLaylistTypes.Simple:
                                 var spotyHelper = new SpotifyApiHelper(HttpContext);
-                                songInfos = spotyHelper.GetPlaylistSongs(additionalInfo.PlaylistIdSource);
+                                songInfos = spotyHelper.GetPlaylistSongs(info.PlaylistIdSource);
 
                                 break;
                             default:
@@ -224,8 +228,8 @@ namespace PlaylistChaser.Web.Controllers
 
                 if (playlist.PlaylistTypeId == PLaylistTypes.Combined)
                 {
-                    //add add songs to combined 
-                    syncCombinedPlaylistLocal(id, source);
+                    //add songs to combined 
+                    syncCombinedPlaylistLocal(id);
                 }
 
 
@@ -257,63 +261,68 @@ namespace PlaylistChaser.Web.Controllers
                 var missingSongs = getMissingSongs(id, source);
                 if (!missingSongs.Any())
                     return new JsonResult(new { success = true, message = "Already up to date!" });
-                var missingSongsIdsAtSource = songInfos.Where(i => missingSongs.Any(s => s.Id == i.SongId)).Select(i => i.SongIdSource).ToList();
 
                 //check if songs exists
                 findSongs(missingSongs, source);
 
-                //get additionalPlaylistInfo
-                var info = await getInfo(id, source);
+                var missingSongsIdsAtSource = songInfos.Where(i => missingSongs.Any(s => s.Id == i.SongId)).Select(i => i.SongIdSource).ToList();
 
+                //create info - first time for that source
+                var info = db.PlaylistAdditionalInfo.SingleOrDefault(i => i.PlaylistId == id && i.SourceId == source);
+                if (info == null)
+                {
+                    info = infoToPlaylist(playlist, source);
+                    db.PlaylistAdditionalInfo.Add(info);
+                }
+                else if (!info.IsMine)
+                    return new JsonResult(new { success = false, message = "No permission to edit playlist at source" });
 
                 IQueryable<int> uploadedPlaylistSongIds = null;
                 PlaylistAdditionalInfo newInfo;
                 List<string> uploadedSongsIdsSource = null;
-
                 switch (source)
                 {
                     case Sources.Youtube:
+                        var ytHelper = new YoutubeApiHelper();
+
+                        //create Playlist - first time for that source
+                        if (string.IsNullOrEmpty(info.PlaylistIdSource))
                         {
-                            var ytHelper = new YoutubeApiHelper();
-
-                            //create Playlist
-                            if (string.IsNullOrEmpty(info.PlaylistIdSource))
-                            {
-                                newInfo = await ytHelper.CreatePlaylist(playlist.Name, playlist.Description);
-                                info.PlaylistIdSource = newInfo.PlaylistIdSource;
-                                db.SaveChanges();
-                            }
-
-                            //add to playlist on youtube 
-                            uploadedSongsIdsSource = ytHelper.AddSongsToPlaylist(info.PlaylistIdSource, missingSongsIdsAtSource);
-                            break;
+                            newInfo = await ytHelper.CreatePlaylist(playlist.Name, playlist.Description);
+                            info.PlaylistIdSource = newInfo.PlaylistIdSource;
+                            db.SaveChanges();
                         }
+
+                        //add to playlist on youtube 
+                        uploadedSongsIdsSource = ytHelper.AddSongsToPlaylist(info.PlaylistIdSource, missingSongsIdsAtSource);
+
+                        //update playlist
+                        ytHelper.UpdatePlaylist(info.PlaylistIdSource, info.Name, getPlaylistDescriptionText(info.Description, uploadedSongsIdsSource.Count, playlistSongs.Count()));
+                        break;
                     case Sources.Spotify:
+                        var spotifyHelper = new SpotifyApiHelper(HttpContext);
+                        //create Playlist
+                        if (string.IsNullOrEmpty(info.PlaylistIdSource))
                         {
-                            var spotifyHelper = new SpotifyApiHelper(HttpContext);
-                            //create Playlist
-                            if (string.IsNullOrEmpty(info.PlaylistIdSource))
-                            {
-                                newInfo = await spotifyHelper.CreatePlaylist(playlist.Name, playlist.Description);
-                                info.PlaylistIdSource = newInfo.PlaylistIdSource;
-                                db.SaveChanges();
-                            }
-
-                            //add to playlist on spotify
-                            uploadedSongsIdsSource = spotifyHelper.AddSongsToPlaylist(info.PlaylistIdSource, missingSongsIdsAtSource);
-
-                            break;
+                            newInfo = await spotifyHelper.CreatePlaylist(playlist.Name, playlist.Description);
+                            info.PlaylistIdSource = newInfo.PlaylistIdSource;
+                            db.SaveChanges();
                         }
+
+                        //add to playlist on spotify
+                        uploadedSongsIdsSource = spotifyHelper.AddSongsToPlaylist(info.PlaylistIdSource, missingSongsIdsAtSource);
+
+                        //update playlist
+                        spotifyHelper.UpdatePlaylist(info.PlaylistIdSource, playlist.Name, getPlaylistDescriptionText(playlist.Description, uploadedSongsIdsSource.Count, playlistSongs.Count()));
+                        break;
                     default:
                         throw new NotImplementedException(notImplementedForThatSource);
                 }
 
-
-
                 //update PlaylistSongStates
                 var uploadedSongIds = songInfos.Where(i => uploadedSongsIdsSource.Any(id => id == i.SongIdSource)).Select(i => i.SongId);
                 uploadedPlaylistSongIds = playlistSongs.Where(ps => uploadedSongIds.Contains(ps.SongId)).Select(i => i.Id);
-                await updatePlaylistSongsState(uploadedPlaylistSongIds, source, PlaylistSongStates.Added);
+                updatePlaylistSongsState(uploadedPlaylistSongIds, source, PlaylistSongStates.Added);
 
                 if (uploadedPlaylistSongIds.Count() != missingSongs.Count())
                     return new JsonResult(new { success = false, message = "Not all Songs were added" });
@@ -325,37 +334,39 @@ namespace PlaylistChaser.Web.Controllers
                 return new JsonResult(new { success = false, message = ex.Message });
             }
         }
+        private string getPlaylistDescriptionText(string playlistDescription, int uploadedSongsCount, int totalSongsCount)
+            => playlistDescription + string.Format("\nFound {0}/{1} Songs, {2}", uploadedSongsCount.ToString(), totalSongsCount.ToString(), DateTime.Now.ToString());
 
         private IQueryable<Song> getMissingSongs(int playlistId, Sources source)
         {
             var playlistSongs = db.PlaylistSong.Where(ps => ps.PlaylistId == playlistId).ToList();
-            var states = new List<PlaylistSongStates?> { PlaylistSongStates.Added };
-            var notAddedPlaylistSongs = playlistSongs.Where(ps => db.PlaylistSongState.Where(ps => ps.SourceId == source).SingleOrDefault(pss => pss.PlaylistSongId == ps.Id)?.StateId != PlaylistSongStates.Added).ToList();
+            var notAddedPlaylistSongs = playlistSongs.Where(ps => db.PlaylistSongState.Where(ps => ps.SourceId == source).SingleOrDefault(pss => pss.PlaylistSongId == ps.Id)?.StateId == PlaylistSongStates.NotAdded).ToList();
             var notAddedPlaylistSongIds = notAddedPlaylistSongs.Select(pss => pss.SongId);
             var notAddedSongs = db.Song.Where(s => notAddedPlaylistSongIds.Contains(s.Id));
+
+            notAddedSongs = notAddedSongs.Where(s => db.SongState.Single(ss => ss.SongId == s.Id && ss.SourceId == source).StateId != SongStates.NotAvailable);
+
             return notAddedSongs;
         }
 
-        private async Task<bool> updatePlaylistSongsState(IQueryable<int> playlistSongIds, Sources source, PlaylistSongStates state)
+        private void updatePlaylistSongsState(IQueryable<int> playlistSongIds, Sources source, PlaylistSongStates state)
         {
             var playlistSongStates = db.PlaylistSongState.Where(pss => pss.SourceId == source);
-            await playlistSongIds.ForEachAsync(psId =>
+            playlistSongIds.ToList().ForEach(psId =>
             {
                 var playlistSongState = playlistSongStates.SingleOrDefault(pss => pss.PlaylistSongId == psId);
                 if (playlistSongState == null)
                 {
-                    playlistSongState = new PlaylistSongState { PlaylistSongId = psId, SourceId = source, StateId = PlaylistSongStates.Added, LastChecked = DateTime.Now };
+                    playlistSongState = new PlaylistSongState { PlaylistSongId = psId, SourceId = source, StateId = state, LastChecked = DateTime.Now };
                     db.PlaylistSongState.Add(playlistSongState);
                 }
                 else
                 {
-                    playlistSongState.StateId = PlaylistSongStates.Added;
+                    playlistSongState.StateId = state;
                     playlistSongState.LastChecked = DateTime.Now;
                 }
                 db.SaveChanges();
             });
-
-            return true;
         }
 
         private void findSongs(IQueryable<Song> missingSongs, Sources source)
@@ -363,90 +374,106 @@ namespace PlaylistChaser.Web.Controllers
             //filtered tables
             var songStates = db.SongState.Where(ss => ss.SourceId == source);
             var songInfos = db.SongAdditionalInfo.Where(i => i.SourceId == source);
-            var missingSongsList = missingSongs.Where(s => !songInfos.Any(i => i.SongId == s.Id)).ToList();
 
             //check if songs exists
-            List<(int Id, string IdAtSource)> foundSongs = null;
+            (List<(int Id, string IdAtSource)> Exact, List<(int Id, string IdAtSource)> NotExact) foundSongs;
             switch (source)
             {
                 case Sources.Youtube:
                     var ytHelper = new YoutubeApiHelper();
-                    foundSongs = ytHelper.FindSongs(missingSongsList.Select(s => (s.Id, s.ArtistName, s.SongName)).ToList());
+                    foundSongs = ytHelper.FindSongs(missingSongs.ToList().Select(s => (s.Id, s.ArtistName, s.SongName)).ToList());
                     break;
                 case Sources.Spotify:
                     var spotifyHelper = new SpotifyApiHelper(HttpContext);
-                    foundSongs = spotifyHelper.FindSongs(missingSongsList.Select(s => (s.Id, s.ArtistName, s.SongName)).ToList());
+                    foundSongs = spotifyHelper.FindSongs(missingSongs.ToList().Select(s => (s.Id, s.ArtistName, s.SongName)).ToList());
                     break;
                 default:
-                    break;
+                    throw new NotImplementedException(notImplementedForThatSource);
             }
-
-            foreach (var foundSong in foundSongs)
+            foreach (var foundSong in foundSongs.Exact)
             {
                 var song = db.Song.Single(s => s.Id == foundSong.Id);
 
+                var newState = SongStates.Available;
+
                 //add songInfo
                 var songInfo = songToInfo(song, foundSong.IdAtSource, source);
-                db.SongAdditionalInfo.Add(songInfo);
-                db.SaveChanges();
+
+                if (songInfo.ArtistName != null)
+                {
+                    db.SongAdditionalInfo.Add(songInfo);
+                    db.SaveChanges();
+                }
+                else //e.g. Private video
+                    newState = SongStates.NotAvailable;
 
                 //add song state
                 var songState = songStates.SingleOrDefault(ss => ss.SongId == foundSong.Id);
                 if (songState == null)
                 {
-                    songState = new SongState { SongId = foundSong.Id, SourceId = source, StateId = SongStates.Available, LastChecked = DateTime.Now };
+                    songState = new SongState { SongId = foundSong.Id, SourceId = source, StateId = newState, LastChecked = DateTime.Now };
                     db.SongState.Add(songState);
                 }
                 else
                 {
-                    songState.StateId = SongStates.Available;
+                    songState.StateId = newState;
                     songState.LastChecked = DateTime.Now;
                 }
                 db.SaveChanges();
 
             }
-        }
-
-        private async Task<PlaylistAdditionalInfo> getInfo(int playlistId, Sources source)
-        {
-            //additional info                            
-            var info = db.PlaylistAdditionalInfo.SingleOrDefault(i => i.PlaylistId == playlistId && i.SourceId == source);
-            if (info == null)
+            foreach (var foundSong in foundSongs.NotExact)
             {
-                var playlist = db.Playlist.Single(p => p.Id == playlistId);
+                var song = db.Song.Single(s => s.Id == foundSong.Id);
 
-                //create Playlist
-                PlaylistAdditionalInfo newInfo;
-                switch (source)
+                var newState = SongStates.MaybeAvailable;
+
+                //add songInfo
+                var songInfo = songToInfo(song, foundSong.IdAtSource, source);
+                if (songInfo.ArtistName != null)
                 {
-                    case Sources.Youtube:
-                        var ytHelper = new YoutubeApiHelper();
-                        newInfo = await ytHelper.CreatePlaylist(playlist.Name, playlist.Description);
-                        break;
-                    case Sources.Spotify:
-                        var spotyHelper = new SpotifyApiHelper(HttpContext);
-                        newInfo = await spotyHelper.CreatePlaylist(playlist.Name, playlist.Description);
-                        break;
-                    default:
-                        throw new NotImplementedException(notImplementedForThatSource);
+                    db.SongAdditionalInfo.Add(songInfo);
+                    db.SaveChanges();
                 }
+                else  //e.g. Private video
+                    newState = SongStates.NotAvailable;
 
-                info = new PlaylistAdditionalInfo
+                //add song state
+                var songState = songStates.SingleOrDefault(ss => ss.SongId == foundSong.Id);
+                if (songState == null)
                 {
-                    PlaylistId = playlistId,
-                    SourceId = source,
-                    Name = newInfo.Name,
-                    Description = newInfo.Description,
-                    PlaylistIdSource = newInfo.PlaylistIdSource,
-                    CreatorName = newInfo.CreatorName,
-                    Url = newInfo.Url,
-                    IsMine = newInfo.IsMine,
-                };
-
-                db.PlaylistAdditionalInfo.Add(info);
+                    songState = new SongState { SongId = foundSong.Id, SourceId = source, StateId = newState, LastChecked = DateTime.Now };
+                    db.SongState.Add(songState);
+                }
+                else
+                {
+                    songState.StateId = newState;
+                    songState.LastChecked = DateTime.Now;
+                }
                 db.SaveChanges();
+
+
             }
-            return info;
+            //set not found songs as NotAvailable
+            var stillMissingSongIds = missingSongs.Where(s => !foundSongs.Exact.Select(fs => fs.Id).Contains(s.Id)
+                                                              && !foundSongs.NotExact.Select(fs => fs.Id).Contains(s.Id)).Select(s => s.Id).ToList();
+
+            stillMissingSongIds.ForEach(i =>
+            {
+                //add song state
+                var songState = songStates.SingleOrDefault(ss => ss.SongId == i);
+                if (songState == null)
+                {
+                    songState = new SongState { SongId = i, SourceId = source, StateId = SongStates.NotAvailable, LastChecked = DateTime.Now };
+                    db.SongState.Add(songState);
+                }
+                else
+                {
+                    songState.StateId = SongStates.NotAvailable;
+                    songState.LastChecked = DateTime.Now;
+                }
+                db.SaveChanges();
+            });
         }
         #endregion
 
@@ -484,13 +511,13 @@ namespace PlaylistChaser.Web.Controllers
             db.SaveChanges();
 
             //add playlistSongs
-            syncCombinedPlaylistLocal(playlist.Id, source);
+            syncCombinedPlaylistLocal(playlist.Id);
 
 
             return new JsonResult(new { success = true });
         }
 
-        private void syncCombinedPlaylistLocal(int playlistId, Sources source)
+        private void syncCombinedPlaylistLocal(int playlistId)
         {
             var playlistIds = db.CombinedPlaylistEntry.Where(cp => cp.CombinedPlaylistId == playlistId).Select(cp => cp.PlaylistId);
             var availSongIds = db.PlaylistSong.Where(ps => playlistIds.Contains(ps.PlaylistId)).Select(ps => ps.SongId).Distinct();
@@ -498,7 +525,9 @@ namespace PlaylistChaser.Web.Controllers
             var newPlaylistSongs = availSongIds.Where(s => !curSongIds.Contains(s)).Select(i => new PlaylistSong { PlaylistId = playlistId, SongId = i }).ToList();
             db.PlaylistSong.AddRange(newPlaylistSongs);
             db.SaveChanges();
-            db.PlaylistSongState.AddRange(newPlaylistSongs.Select(ps => new PlaylistSongState { PlaylistSongId = ps.Id, SourceId = source, StateId = PlaylistSongStates.NotAdded, LastChecked = DateTime.Now }));
+            foreach (Sources src in Enum.GetValues(typeof(Sources)))
+                db.PlaylistSongState.AddRange(newPlaylistSongs.Select(ps => new PlaylistSongState { PlaylistSongId = ps.Id, SourceId = src, StateId = PlaylistSongStates.NotAdded, LastChecked = DateTime.Now }));
+
             db.SaveChanges();
         }
 
@@ -662,7 +691,7 @@ namespace PlaylistChaser.Web.Controllers
         {
             try
             {
-                var info = await getInfo(id, source);
+                var info = db.PlaylistAdditionalInfo.Single(i => i.PlaylistId == id && i.SourceId == source);
                 var songInfos = db.SongAdditionalInfo.Where(i => i.SourceId == source);
 
 
