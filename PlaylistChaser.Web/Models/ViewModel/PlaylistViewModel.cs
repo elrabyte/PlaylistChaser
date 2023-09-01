@@ -16,7 +16,7 @@ namespace PlaylistChaser.Web.Models.ViewModel
         public int? ThumbnailId { get; set; }
 
 
-         [NotMapped]
-        public List<PlaylistSongViewModel> Songs { get; set; }
+        [NotMapped]
+        public List<PlaylistSongViewModel>? Songs { get; set; }
     }
 }
