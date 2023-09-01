@@ -36,7 +36,9 @@ namespace PlaylistChaser.Web.Controllers
         public async Task<ActionResult> Index()
         {
             var playlists = await db.GetPlaylists();
-            var ytHelper = new YoutubeApiHelper(); //initial Auth
+            //initial Auth
+            var ytHelper = new YoutubeApiHelper();
+            new LoginController().LoginToSpotify();
             return View(playlists);
         }
 

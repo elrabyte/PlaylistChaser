@@ -9,40 +9,28 @@ namespace PlaylistChaser.Web.Util.API
         private SpotifyClient spotify;
         private const string spotifyAccessTokenKey = "spotifyAccessToken";
         private const string redirectUri = "https://localhost:7245/Login/LoginToSpotify";
-        private string spotifyClientId;
-        private string spotifyClientSecret;
 
         internal SpotifyApiHelper(HttpContext context)
         {
-            setSecrets();
             var accessToken = context.Session.GetString(spotifyAccessTokenKey);
-            if (accessToken != null)
-            {
-                spotify = new SpotifyClient(accessToken);
-                return;
-            }
+            if (accessToken == null)
+                throw new Exception("Not logged in yet");
 
-            var config = SpotifyClientConfig
-                        .CreateDefault()
-                        .WithAuthenticator(new ClientCredentialsAuthenticator(spotifyClientId, spotifyClientSecret));
-
-            spotify = new SpotifyClient(config);
+            spotify = new SpotifyClient(accessToken);
         }
 
         #region Authenticate
         internal SpotifyApiHelper(HttpContext context, string code = null)
         {
-            setSecrets();
-            var accessToken = new OAuthClient().RequestToken(new AuthorizationCodeTokenRequest(spotifyClientId, spotifyClientSecret, code, new Uri(redirectUri))).Result.AccessToken;
+            var clientId = Helper.ReadSecret("Spotify", "ClientId");
+            var clientSecret = Helper.ReadSecret("Spotify", "ClientSecret");
+
+            var accessToken = new OAuthClient().RequestToken(new AuthorizationCodeTokenRequest(clientId, clientSecret, code, new Uri(redirectUri))).Result.AccessToken;
             context.Session.SetString(spotifyAccessTokenKey, accessToken);
 
             spotify = new SpotifyClient(accessToken);
         }
-        private void setSecrets()
-        {
-            spotifyClientId = Helper.ReadSecret("Spotify", "ClientId");
-            spotifyClientSecret = Helper.ReadSecret("Spotify", "ClientSecret");
-        }
+
         public static Uri getLoginUri()
         {
             var clientId = Helper.ReadSecret("Spotify", "ClientId");
