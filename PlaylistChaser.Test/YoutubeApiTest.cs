@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using PlaylistChaser.Web.Models;
 using PlaylistChaser.Web.Util.API;
 
@@ -20,19 +21,33 @@ namespace PlaylistChaser.Test
 		Playlist TestPlaylist = new Playlist
 		{
 			Id = 1,
-			YoutubeUrl = PLAYLIST_URL,
-			YoutubeId = PLAYLIST_ID,
+		};
+		PlaylistAdditionalInfo TestPlaylistInfoYT = new PlaylistAdditionalInfo
+		{
+			PlaylistId = 0,
+			PlaylistIdSource = PLAYLIST_ID,
+			SourceId = Web.Util.BuiltInIds.Sources.Youtube,
 		};
 		#endregion
 		#region Test Results
 		Playlist ExpectedPlaylist = new Playlist
 		{
 			Id = 1,
-			YoutubeUrl = PLAYLIST_URL,
-			YoutubeId = PLAYLIST_ID,
 			Name = "Rick Astley Videos",
 			ChannelName = "RickAstleyVEVO",
 			Description = "Videos from the dapper British pop-soul singer.\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nrick astley, never gonna give you up, together forever",
+		};
+		PlaylistAdditionalInfo ExpectedPlaylistInfoYT = new PlaylistAdditionalInfo
+		{
+            CreatorName = "RickAstleyVEVO",
+            Description = "Videos from the dapper British pop-soul singer.\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nrick astley, never gonna give you up, together forever",
+			Id = null,
+			IsMine = false,
+            PlaylistId = 0,
+			PlaylistIdSource = PLAYLIST_ID,
+            Name = "Rick Astley Videos",
+			SourceId = Web.Util.BuiltInIds.Sources.Youtube,
+			Url = null,
 		};
 		#endregion
 		[Fact]
@@ -46,42 +61,65 @@ namespace PlaylistChaser.Test
 		[Fact]
 		public void SyncPlaylist()
 		{
-			var actualPlaylist = youtubeApiHelper.SyncPlaylist(TestPlaylist);
+			var actualPlaylistInfo = youtubeApiHelper.SyncPlaylistInfo(TestPlaylistInfoYT);
 
-			Assert.Equivalent(ExpectedPlaylist, actualPlaylist);
+			Assert.Equivalent(ExpectedPlaylistInfoYT, actualPlaylistInfo);
 		}
 
-		#region Get Stuff
-		[Fact]
-		public void GetPlaylistSongs()
-		{
-			var actualSongs = youtubeApiHelper.GetPlaylistSongs(TestPlaylist.YoutubeId);
+        #region Get Stuff
+        [Fact]
+        public void GetPlaylistSongs()
+        {
+			var actualSongs = youtubeApiHelper.GetPlaylistSongs(TestPlaylistInfoYT.PlaylistIdSource);
 			Assert.True(actualSongs.Any());
 		}
 		[Fact]
 		public async void GetPlaylistThumbnailBase64()
 		{
-			var actualPlaylistThumbnail = await youtubeApiHelper.GetPlaylistThumbnail(TestPlaylist.YoutubeId);
-			Assert.True(!string.IsNullOrEmpty(actualPlaylistThumbnail));
+			var actualPlaylistThumbnail = await youtubeApiHelper.GetPlaylistThumbnail(TestPlaylistInfoYT.PlaylistIdSource);
+			Assert.True(actualPlaylistThumbnail.Any());
 		}
 		[Fact]
 		public async void GetSongsThumbnailBase64ByPlaylist()
 		{
-			var actualThumbnails = await youtubeApiHelper.GetSongsThumbnailByPlaylist(TestPlaylist.YoutubeId);
+			var actualThumbnails = await youtubeApiHelper.GetSongsThumbnailByPlaylist(TestPlaylistInfoYT.PlaylistIdSource);
 			Assert.True(actualThumbnails.Any());
 		}
 		#endregion
 		#region Edit Stuff
+		const string NEW_PLAYLIST_NAME = "Test - 7895";
+		const string NEW_PLAYLIST_DESC = "TestDescritption - 79879";
+
 		[Fact]
-		public void CreatePlaylist()
+		public void GetPlaylist()
 		{
-			throw new NotImplementedException();
-		}
+			var testPLaylist = youtubeApiHelper.GetPlaylistById(PLAYLIST_ID);
+			Assert.Equivalent(testPLaylist, ExpectedPlaylistInfoYT);
+
+        }
+
 		[Fact]
-		public void DeletePlaylist()
+		public async void PlaylistLifeCycle()
 		{
-			throw new NotImplementedException();
-		}
+			string newPlaylistSourceId;
+
+            //create test
+            var newPlaylistInfo = youtubeApiHelper.CreatePlaylist(NEW_PLAYLIST_NAME, NEW_PLAYLIST_DESC).Result;
+            newPlaylistSourceId = newPlaylistInfo.PlaylistIdSource;
+
+			//delete test
+			await youtubeApiHelper.DeletePlaylist(newPlaylistSourceId);
+			try
+			{
+				youtubeApiHelper.GetPlaylistById(newPlaylistSourceId);
+				Assert.Fail("Playlist wasn't deleted");
+			}
+			catch (Exception ex)
+			{
+				if (ex.Message.Contains("quota"))
+					Assert.Fail("Quota exceeded");
+			}
+        }
 		#endregion
 
 		#region Helper
