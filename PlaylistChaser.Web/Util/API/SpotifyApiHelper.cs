@@ -46,34 +46,52 @@ namespace PlaylistChaser.Web.Util.API
         #region Queries
 
         #region Song
-        public List<(int Id, string IdAtSource)> FindSongs(List<(int SongId, string ArtistName, string SongName)> songs)
+        public (List<(int Id, string IdAtSource)> Exact, List<(int Id, string IdAtSource)> NotExact) FindSongs(List<(int SongId, string ArtistName, string SongName)> songs)
         {
+            var foundSongsExact = new List<(int Id, string SpotifyId)>();
             var foundSongs = new List<(int Id, string SpotifyId)>();
             try
             {
                 foreach (var song in songs)
                 {
-                    var response = searchSong(SearchRequest.Types.Track, song.ArtistName, song.SongName).Result;
-                    //first song found
-                    if (response.Tracks.Items?.Count == 1)
+                    var spotifySong = searchSongExact(SearchRequest.Types.Track, song.ArtistName, song.SongName).Result;
+                    if (spotifySong != null)
+                        foundSongsExact.Add(new(song.SongId, spotifySong.Id));
+                    else
                     {
-                        var spotifySong = response.Tracks.Items.First();
-                        foundSongs.Add(new(song.SongId, spotifySong.Id));
+                        spotifySong = searchSong(SearchRequest.Types.Track, song.SongName).Result;
+                        if (spotifySong != null)
+                            foundSongs.Add(new(song.SongId, spotifySong.Id));
                     }
                 }
-                return foundSongs;
+                return (foundSongsExact, foundSongs);
             }
             catch (Exception ex)
             {
-                return foundSongs;
+                return (foundSongsExact, foundSongs);
             }
         }
 
-        private async Task<SearchResponse> searchSong(SearchRequest.Types type, string artistName, string songName)
+        private async Task<FullTrack> searchSongExact(SearchRequest.Types type, string artistName, string songName)
         {
             var query = string.Format("artist:\"{0}\" track:\"{1}\"", artistName, songName);
             var searchRequest = new SearchRequest(type, query);
-            return await spotify.Search.Item(searchRequest);
+
+            var response = await spotify.Search.Item(searchRequest);
+            if (response.Tracks.Items?.Count == 1)
+                return response.Tracks.Items.Single();
+            else
+                return null;
+        }
+        private async Task<FullTrack> searchSong(SearchRequest.Types type, string songName)
+        {
+            var searchRequest = new SearchRequest(type, songName);
+
+            var response = await spotify.Search.Item(searchRequest);
+            if (response.Tracks.Items?.Count >= 1)
+                return response.Tracks.Items.First();
+            else
+                return null;
         }
         public async Task<FullTrack> GetSong(string spotifySongId)
         {
@@ -82,7 +100,7 @@ namespace PlaylistChaser.Web.Util.API
         #endregion
 
         #region Playlist
-        private async Task<FullPlaylist> createPlaylist(string playlistName, string description = null, bool isPublic = true)
+        private async Task<FullPlaylist> createPlaylist(string playlistName, string? description = null, bool isPublic = true)
         {
             var request = new PlaylistCreateRequest(playlistName);
             request.Public = isPublic;

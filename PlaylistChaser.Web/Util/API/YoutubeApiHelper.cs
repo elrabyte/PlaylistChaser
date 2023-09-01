@@ -132,7 +132,7 @@ namespace PlaylistChaser.Web.Util.API
         private Playlist getPlaylist(string id)
         {
 
-            var listRequest = ytService.Playlists.List("snippet");
+            var listRequest = ytService.Playlists.List("snippet,status");
             listRequest.Id = id;
             var playlist = listRequest.Execute().Items.Single();
 
@@ -277,21 +277,21 @@ namespace PlaylistChaser.Web.Util.API
         #region Interface Implementations
         public PlaylistAdditionalInfo GetPlaylistById(string playlistId)
             => toPlaylistModel(getPlaylist(playlistId));
-        public List<(int Id, string IdAtSource)> FindSongs(List<(int SongId, string ArtistName, string SongName)> songs)
+        public (List<(int Id, string IdAtSource)> Exact, List<(int Id, string IdAtSource)> NotExact) FindSongs(List<(int SongId, string ArtistName, string SongName)> songs)
         {
             var foundSongs = new List<(int Id, string SpotifyId)>();
             try
             {
                 foreach (var song in songs)
                 {
-                    var response = searchSong(song.ArtistName, song.SongName);
-                    foundSongs.Add(new(song.SongId, response.Id.VideoId));
+                    var response = searchSongExact(song.ArtistName, song.SongName);
+                    foundSongsExact.Add(new(song.SongId, response.Id.VideoId));
                 }
-                return foundSongs;
+                return (foundSongsExact, foundSongs);
             }
             catch (Exception)
             {
-                return foundSongs;
+                return (foundSongsExact, foundSongs);
             }
         }
         #endregion
@@ -341,7 +341,7 @@ namespace PlaylistChaser.Web.Util.API
         }
         #endregion
 
-        private SearchResult searchSong(string artistName, string songName)
+        private SearchResult searchSongExact(string artistName, string songName)
         {
             // Search for the song using artist name and song name
             var searchListRequest = ytService.Search.List("snippet");

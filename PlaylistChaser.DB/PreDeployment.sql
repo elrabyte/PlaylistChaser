@@ -95,3 +95,12 @@ select id, 2, SpotifyId, SongName, isnull(ArtistName,SongName) from Song where S
 
 alter table Song 
 drop column SpotifyId
+-------
+
+set identity_insert dbo.State on;
+insert into dbo.State (id, name, Entity) 
+	 values (111, 'MaybeAvailable', 'Song')
+	 set identity_insert dbo.State off;
+
+---31.08.23
+
