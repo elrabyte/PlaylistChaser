@@ -1,6 +1,6 @@
 ﻿using PlaylistChaser.Web.Models;
 
-namespace PlaylistChaser.Web.Util.API
+namespace PlaylistChaser.Web.Util
 {
     internal interface ISource
     {
@@ -24,7 +24,7 @@ namespace PlaylistChaser.Web.Util.API
         /// <param name="playlistId">playlistId at source</param>
         /// <returns></returns>
         internal List<SongAdditionalInfo> GetPlaylistSongs(string playlistId);
-        internal List<(int Id, string IdAtSource)> FindSongs(List<(int SongId, string ArtistName, string SongName)> songs);
+        internal (List<(int Id, string IdAtSource)> Exact, List<(int Id, string IdAtSource)> NotExact) FindSongs(List<(int SongId, string ArtistName, string SongName)> songs);
         #endregion
 
         #region get Thumbnail

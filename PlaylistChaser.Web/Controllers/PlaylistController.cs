@@ -58,7 +58,7 @@ namespace PlaylistChaser.Web.Controllers
             try
             {
                 PlaylistAdditionalInfo info;
-                Thumbnail thumbnail = null;
+                Thumbnail thumbnail;
                 string playlistId;
                 switch (source)
                 {
@@ -85,7 +85,7 @@ namespace PlaylistChaser.Web.Controllers
                         throw new NotImplementedException(notImplementedForThatSource);
                 }
 
-                //  add playlist
+                //add playlist to db
                 var newPlaylist = infoToPlaylist(info, PLaylistTypes.Simple);
                 db.Playlist.Add(newPlaylist);
                 db.SaveChanges();
@@ -509,54 +509,89 @@ namespace PlaylistChaser.Web.Controllers
         #region Details Functions
 
         #region Delete
-        public ActionResult Edit_Delete(int id, bool deleteAtSources = false)
-        {
-            deletePlaylist(id, deleteAtSources);
 
-            return RedirectToAction("Index");
-        }
-
-        private void deletePlaylist(int playlistId, bool deleteAtSources = false)
+        public async Task<ActionResult> DeletePLaylistAtSource(int id, Sources source)
         {
-            if (deleteAtSources)
+            try
             {
-                ////delete spotify playlist
-                //var spotifyHelper = new SpotifyApiHelper(HttpContext);
-                //if (playlist.SpotifyUrl != null)
-                //    if (!spotifyHelper.DeletePlaylist(playlist).Result)
-                //        return RedirectToAction("Index");
+                var playlist = db.Playlist.Single(p => p.Id == id);
 
+                //delete at source
+                var info = db.PlaylistAdditionalInfo.Single(i => i.PlaylistId == id && i.SourceId == source);
+                switch (source)
+                {
+                    case Sources.Youtube:
+                        var ytHelper = new YoutubeApiHelper();
+                        await ytHelper.DeletePlaylist(info.PlaylistIdSource);
+                        break;
+                    case Sources.Spotify:
+                        var spotifyHelper = new SpotifyApiHelper(HttpContext);
+                        await spotifyHelper.DeletePlaylist(info.PlaylistIdSource);
+                        break;
+                    default:
+                        throw new NotImplementedException(notImplementedForThatSource);
+                }
 
-                ////delete from YT
-                //var ytHelper = new YoutubeApiHelper();
-                //ytHelper.DeletePlaylist(playlist.YoutubeId);
+                //remove info
+                db.PlaylistAdditionalInfo.Remove(info);
+                db.SaveChanges();
+
+                //change states
+                var playlistSongIds = db.PlaylistSong.Where(ps => ps.PlaylistId == id).Select(ps => ps.Id);
+                db.PlaylistSongState.Where(pss => playlistSongIds.Contains(pss.PlaylistSongId) && pss.SourceId == source).ToList().ForEach(pss => { pss.StateId = PlaylistSongStates.NotAdded; pss.LastChecked = DateTime.Now; });
+                db.SaveChanges();
+
+                return new JsonResult(new { success = true });
             }
+            catch (Exception ex)
+            {
+                return new JsonResult(new { success = false, message = ex.Message });
+            }
+        }
+        public ActionResult DeletePlaylistLocal(int id)
+        {
+            try
+            {
+                var playlist = db.Playlist.Single(p => p.Id == id);
 
-            //delete from db
-            var playlist = db.Playlist.Single(p => p.Id == playlistId);
-            //  remove songs
-            db.PlaylistSong.RemoveRange(db.PlaylistSong.Where(ps => ps.PlaylistId == playlistId));
-            db.SaveChanges();
+                //check if all sources where deleted
+                if (db.PlaylistAdditionalInfo.Any(i => i.PlaylistId == id))
+                    return new JsonResult(new { success = false, message = "Playlist still active at sources" });
+
+                //delete from db
+                var playlistSongs = db.PlaylistSong.Where(ps => ps.PlaylistId == id);
+                //  remove songs states
+                db.PlaylistSongState.RemoveRange(db.PlaylistSongState.Where(pss => playlistSongs.Select(ps => ps.Id).Contains(pss.PlaylistSongId))); ;
+                db.SaveChanges();
+                //  remove playlistsongs
+                db.PlaylistSong.RemoveRange(playlistSongs);
+                db.SaveChanges();
+
+                //  remove playlist
+                db.Playlist.Remove(playlist);
+                db.SaveChanges();
+
+                //  remove thumbnail
+                //  could be same as song thumbnail
+                if (!db.Song.Any(s => s.ThumbnailId == playlist.ThumbnailId))
+                {
+                    //remove thumbnail
+                    if (playlist.ThumbnailId != null)
+                    {
+                        db.Thumbnail.Remove(db.Thumbnail.Single(t => t.Id == playlist.ThumbnailId));
+                        db.SaveChanges();
+                    }
+                }
 
 
-            //TODO: needs check, could be same as song Thumbnail
-            ////  remove thumbnail
-            //if (playlist.ThumbnailId != null)
-            //{
-            //    db.Thumbnail.Remove(db.Thumbnail.Single(t => t.Id == playlist.ThumbnailId));
-            //    db.SaveChanges();
-            //}
-
-            //  delete info
-            var infos = db.PlaylistAdditionalInfo.Where(i => i.PlaylistId == playlistId);
-            db.PlaylistAdditionalInfo.RemoveRange(infos);
-            db.SaveChanges();
-
-            //  deleete playlist
-            db.Playlist.Remove(playlist);
-            db.SaveChanges();
-
-            //songCleanUp();
+                //  remove songs that aren't used anymore
+                songCleanUp();
+                return new JsonResult(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                return new JsonResult(new { success = false, message = ex.Message });
+            }
         }
 
         /// <summary>
@@ -564,15 +599,17 @@ namespace PlaylistChaser.Web.Controllers
         /// </summary>
         private void songCleanUp()
         {
-            var deletableSongs = db.Song.Where(s => !db.PlaylistSong.Select(ps => ps.SongId).Contains(s.Id));
-            db.Song.RemoveRange(deletableSongs);
-            db.SaveChanges();
+            //var deletableSongs = db.Song.Where(s => !db.PlaylistSong.Select(ps => ps.SongId).Contains(s.Id));
+            //if (db.SongAdditionalInfo.Any(i => deletableSongs.Select(s => s.Id).Contains(i.SongId)))
+            //    return;
+            //db.Song.RemoveRange(deletableSongs);
+            //db.SaveChanges();
         }
 
         #endregion
 
         #region Thumbnail
-        public async Task<ActionResult> SyncPlaylistThumbnails(Sources source, int? id = null)
+        public async Task<ActionResult> SyncPlaylistThumbnailsFrom(Sources source, int? id = null)
         {
             try
             {
@@ -691,10 +728,12 @@ namespace PlaylistChaser.Web.Controllers
         }
 
         private Playlist infoToPlaylist(PlaylistAdditionalInfo info, PLaylistTypes playlistType, int? thumbnailId = null)
-         => new Playlist { Name = info.Name, ChannelName = info.CreatorName, Description = info.Description, PlaylistTypeId = playlistType, ThumbnailId = thumbnailId };
+            => new Playlist { Name = info.Name, ChannelName = info.CreatorName, Description = info.Description, PlaylistTypeId = playlistType, ThumbnailId = thumbnailId };
+        private PlaylistAdditionalInfo infoToPlaylist(Playlist playlist, Sources source, bool isMine = true)
+            => new PlaylistAdditionalInfo { Name = playlist.Name, CreatorName = playlist.ChannelName, Description = playlist.Description, IsMine = isMine, PlaylistId = playlist.Id, SourceId = source };
 
         private SongAdditionalInfo songToInfo(Song song, string songIdSource, Sources sourceId, string url = null)
-         => new SongAdditionalInfo { Name = song.SongName, ArtistName = song.ArtistName, SongId = song.Id, SongIdSource = songIdSource, SourceId = sourceId, Url = url };
+            => new SongAdditionalInfo { Name = song.SongName, ArtistName = song.ArtistName, SongId = song.Id, SongIdSource = songIdSource, SourceId = sourceId, Url = url };
 
         private Song infoToSong(SongAdditionalInfo info, int? thumbnailId = null)
             => new Song { SongName = info.Name, ArtistName = info.ArtistName, ThumbnailId = thumbnailId };
