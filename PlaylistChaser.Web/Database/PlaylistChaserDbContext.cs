@@ -2,12 +2,13 @@ using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using PlaylistChaser.Web.Models;
 using PlaylistChaser.Web.Models.ViewModel;
-using static PlaylistChaser.Web.Util.BuiltInIds;
 
 namespace PlaylistChaser.Web.Database
 {
     public class PlaylistChaserDbContext : DbContext
     {
+        public PlaylistChaserDbContext(DbContextOptions<PlaylistChaserDbContext> options) : base(options) { }
+
         #region 1:1 Views
         public DbSet<Playlist> Playlist { get; set; }
         public DbSet<PlaylistAdditionalInfo> PlaylistAdditionalInfo { get; set; }
@@ -26,14 +27,7 @@ namespace PlaylistChaser.Web.Database
         private DbSet<PlaylistSongViewModel> SongViewModel { get; set; }
         #endregion
 
-        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        {
-
-            string connectionString = "Server=(localdb)\\MSSQLLocalDB;Database=playlistchaserdb;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=true";
-            //string connectionString = "Server=DESKTOP-AUKQ7J7\\SQLEXPRESS;Database=playlistchaserdb;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=true";
-            optionsBuilder.UseSqlServer(connectionString);
-        }
-
+        #region SPs
         public async Task<List<PlaylistViewModel>> GetPlaylists(int? playlistId = null)
         {
             var sql = "exec dbo.GetPlaylists @playlistId";
@@ -54,5 +48,6 @@ namespace PlaylistChaser.Web.Database
             return playlistSongs;
 
         }
+        #endregion
     }
 }

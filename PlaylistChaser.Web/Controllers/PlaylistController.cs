@@ -10,15 +10,16 @@ using Thumbnail = PlaylistChaser.Web.Models.Thumbnail;
 
 namespace PlaylistChaser.Web.Controllers
 {
-    public class PlaylistController : Controller
+    public class PlaylistController : BaseController
     {
-        private readonly ILogger<PlaylistController> _logger;
-        private PlaylistChaserDbContext db;
-
-        public PlaylistController(ILogger<PlaylistController> logger)
+        IConfiguration configuration;
+        private YoutubeApiHelper ytHelper;
+        public PlaylistController(IConfiguration configuration, PlaylistChaserDbContext db) : base(configuration, db)
         {
-            _logger = logger;
-            db = new PlaylistChaserDbContext();
+            this.configuration = configuration;
+            var ytClientId = configuration["Youtube:ClientId"];
+            var ytClientSecret = configuration["Youtube:ClientSecret"];
+            ytHelper = new YoutubeApiHelper(ytClientId, ytClientSecret);
         }
 
         #region error
@@ -35,10 +36,10 @@ namespace PlaylistChaser.Web.Controllers
         #region Views
         public async Task<ActionResult> Index()
         {
-            var playlists = await db.GetPlaylists();
             //initial Auth
-            var ytHelper = new YoutubeApiHelper();
             new LoginController().LoginToSpotify();
+
+            var playlists = await db.GetPlaylists();
             return View(playlists);
         }
 
@@ -65,7 +66,6 @@ namespace PlaylistChaser.Web.Controllers
                 switch (source)
                 {
                     case Sources.Youtube:
-                        var ytHelper = new YoutubeApiHelper();
                         //get playlist from youtube
                         playlistId = ytHelper.GetPlaylistIdFromUrl(playlistUrl);
                         info = ytHelper.GetPlaylistById(playlistId);
@@ -193,7 +193,6 @@ namespace PlaylistChaser.Web.Controllers
                 switch (source)
                 {
                     case Sources.Youtube:
-                        var ytHelper = new YoutubeApiHelper();
                         switch (playlist.PlaylistTypeId)
                         {
                             case PLaylistTypes.Simple:
@@ -211,10 +210,10 @@ namespace PlaylistChaser.Web.Controllers
                         }
                         break;
                     case Sources.Spotify:
+                        var spotyHelper = new SpotifyApiHelper(HttpContext);
                         switch (playlist.PlaylistTypeId)
                         {
                             case PLaylistTypes.Simple:
-                                var spotyHelper = new SpotifyApiHelper(HttpContext);
                                 songInfos = spotyHelper.GetPlaylistSongs(info.PlaylistIdSource);
 
                                 break;
@@ -283,8 +282,6 @@ namespace PlaylistChaser.Web.Controllers
                 switch (source)
                 {
                     case Sources.Youtube:
-                        var ytHelper = new YoutubeApiHelper();
-
                         //create Playlist - first time for that source
                         if (string.IsNullOrEmpty(info.PlaylistIdSource))
                         {
@@ -373,16 +370,19 @@ namespace PlaylistChaser.Web.Controllers
 
         private void findSongs(IQueryable<Song> missingSongs, Sources source)
         {
+
             //filtered tables
             var songStates = db.SongState.Where(ss => ss.SourceId == source);
             var songInfos = db.SongAdditionalInfo.Where(i => i.SourceId == source);
+
+            //only songs that weren't checked before
+            missingSongs = missingSongs.Where(s => songStates.Single(ss => ss.SongId == s.Id).StateId == SongStates.NotChecked);
 
             //check if songs exists
             (List<(int Id, string IdAtSource)> Exact, List<(int Id, string IdAtSource)> NotExact) foundSongs;
             switch (source)
             {
                 case Sources.Youtube:
-                    var ytHelper = new YoutubeApiHelper();
                     foundSongs = ytHelper.FindSongs(missingSongs.ToList().Select(s => (s.Id, s.ArtistName, s.SongName)).ToList());
                     break;
                 case Sources.Spotify:
@@ -489,7 +489,6 @@ namespace PlaylistChaser.Web.Controllers
             switch (source)
             {
                 case Sources.Youtube:
-                    var ytHelper = new YoutubeApiHelper();
                     //add playlist to YT
                     var playlistdescription = string.Format("songs by: {0}", string.Join(',', db.Playlist.Where(p => playlistIdsList.Contains(p.Id)).Select(p => p.ChannelName)));
                     info = await ytHelper.CreatePlaylist(playlistName, playlistdescription);
@@ -552,7 +551,6 @@ namespace PlaylistChaser.Web.Controllers
                 switch (source)
                 {
                     case Sources.Youtube:
-                        var ytHelper = new YoutubeApiHelper();
                         await ytHelper.DeletePlaylist(info.PlaylistIdSource);
                         break;
                     case Sources.Spotify:
@@ -656,7 +654,7 @@ namespace PlaylistChaser.Web.Controllers
                             if (info == null)
                                 continue;
 
-                            thumbnailImg = await new YoutubeApiHelper().GetPlaylistThumbnail(info.PlaylistIdSource);
+                            thumbnailImg = await ytHelper.GetPlaylistThumbnail(info.PlaylistIdSource);
 
                             break;
                         default:
@@ -709,7 +707,6 @@ namespace PlaylistChaser.Web.Controllers
                 switch (source)
                 {
                     case Sources.Youtube:
-                        var ytHelper = new YoutubeApiHelper();
                         thumbnails = await ytHelper.GetSongsThumbnailBySongIds(sourceIds.ToList());
                         break;
                     case Sources.Spotify:

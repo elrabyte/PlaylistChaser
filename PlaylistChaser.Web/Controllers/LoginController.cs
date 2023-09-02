@@ -10,7 +10,7 @@ namespace PlaylistChaser.Web.Controllers
             if (code == null)
                 return Redirect(SpotifyApiHelper.getLoginUri().ToString());
 
-            var spotifyHelper = new SpotifyApiHelper(HttpContext, code);
+            new SpotifyApiHelper(HttpContext, code);
             return new JsonResult(new { success = true });
         }
     }

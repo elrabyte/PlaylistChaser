@@ -12,28 +12,31 @@ namespace PlaylistChaser.Web.Util.API
     internal class YoutubeApiHelper : ISource
     {
         private YouTubeService ytService;
+        private string clientId;
+        private string clientSecret;
 
         string[] scopes = { "https://www.googleapis.com/auth/youtube" };
 
-        internal YoutubeApiHelper()
+        internal YoutubeApiHelper(string clientId, string clientSecret)
         {
+            this.clientId = clientId;
+            this.clientSecret = clientSecret;
             ytService = new YouTubeService(new BaseClientService.Initializer() { HttpClientInitializer = authenticate() });
+
         }
         private UserCredential authenticate()
         {
-
-            var clientId = Helper.ReadSecret("Youtube", "ClientId");
-            var clientSecret = Helper.ReadSecret("Youtube", "ClientSecret");
 
             var userCredential = GoogleWebAuthorizationBroker.AuthorizeAsync(
                 new ClientSecrets { ClientId = clientId, ClientSecret = clientSecret },
                 scopes, "user", CancellationToken.None).Result;
 
+#if DEBUG == false
             if (userCredential.Token.IsExpired(SystemClock.Default))
-                userCredential.RefreshTokenAsync(CancellationToken.None);
+#endif
+            userCredential.RefreshTokenAsync(CancellationToken.None);
 
             return userCredential;
-
         }
 
         /// <summary>
