@@ -23,21 +23,22 @@ namespace PlaylistChaser.Web.Controllers
         }
 
         #region error
+        const string notImplementedForThatSource = "Not yet implemented for that source!";
+        const string notImplementedForThatType = "Not yet implemented for that type!";
+
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
         {
             return View(new ErrorViewModel { RequestId = System.Diagnostics.Activity.Current?.Id ?? HttpContext.TraceIdentifier });
         }
 
-        const string notImplementedForThatSource = "Not yet implemented for that source!";
-        const string notImplementedForThatType = "Not yet implemented for that type!";
         #endregion
 
         #region Views
         public async Task<ActionResult> Index()
         {
             //initial Auth
-            new LoginController().LoginToSpotify();
+            var res = new LoginController(configuration).LoginToSpotify();
 
             var playlists = await db.GetPlaylists();
             return View(playlists);

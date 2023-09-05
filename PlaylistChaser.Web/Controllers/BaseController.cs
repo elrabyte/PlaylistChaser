@@ -5,12 +5,12 @@ namespace PlaylistChaser.Web.Controllers
 {
     public class BaseController : Controller
     {
-        protected readonly IConfiguration Configuration;
+        protected readonly IConfiguration configuration;
         protected readonly PlaylistChaserDbContext db;
 
         public BaseController(IConfiguration configuration, PlaylistChaserDbContext db)
         {
-            Configuration = configuration;
+            this.configuration = configuration;
             this.db = db;
         }
     }

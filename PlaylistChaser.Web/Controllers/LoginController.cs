@@ -5,12 +5,21 @@ namespace PlaylistChaser.Web.Controllers
 {
     public class LoginController : Controller
     {
+        protected readonly IConfiguration configuration;
+        public LoginController(IConfiguration configuration)
+        {
+            this.configuration = configuration;
+        }
         public ActionResult LoginToSpotify(string? code = null)
         {
-            if (code == null)
-                return Redirect(SpotifyApiHelper.getLoginUri().ToString());
+            var clientId = configuration["Spotify:ClientId"];
+            var clientSecret = configuration["Spotify:ClientSecret"];
+            var redirectUri = configuration["Spotify:RedirectUri"];
 
-            new SpotifyApiHelper(HttpContext, code);
+            if (code == null)
+                return Redirect(SpotifyApiHelper.getLoginUri(clientId, redirectUri).ToString());
+
+            new SpotifyApiHelper(HttpContext, code, clientId, clientSecret, redirectUri);
             return new JsonResult(new { success = true });
         }
     }

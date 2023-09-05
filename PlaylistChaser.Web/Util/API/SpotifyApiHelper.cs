@@ -8,7 +8,6 @@ namespace PlaylistChaser.Web.Util.API
     {
         private SpotifyClient spotify;
         private const string spotifyAccessTokenKey = "spotifyAccessToken";
-        private const string redirectUri = "https://localhost:7245/Login/LoginToSpotify";
 
         internal SpotifyApiHelper(HttpContext context)
         {
@@ -20,20 +19,16 @@ namespace PlaylistChaser.Web.Util.API
         }
 
         #region Authenticate
-        internal SpotifyApiHelper(HttpContext context, string code = null)
+        internal SpotifyApiHelper(HttpContext context, string code, string clientId, string clientSecret, string redirectUri)
         {
-            var clientId = Helper.ReadSecret("Spotify", "ClientId");
-            var clientSecret = Helper.ReadSecret("Spotify", "ClientSecret");
-
             var accessToken = new OAuthClient().RequestToken(new AuthorizationCodeTokenRequest(clientId, clientSecret, code, new Uri(redirectUri))).Result.AccessToken;
             context.Session.SetString(spotifyAccessTokenKey, accessToken);
 
             spotify = new SpotifyClient(accessToken);
         }
 
-        public static Uri getLoginUri()
+        public static Uri getLoginUri(string clientId, string redirectUri)
         {
-            var clientId = Helper.ReadSecret("Spotify", "ClientId");
             var loginRequest = new LoginRequest(new Uri(redirectUri), clientId, LoginRequest.ResponseType.Code)
             {
                 Scope = new[] { Scopes.PlaylistModifyPrivate, Scopes.PlaylistModifyPublic, Scopes.UserReadPrivate }
