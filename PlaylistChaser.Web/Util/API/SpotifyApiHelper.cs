@@ -148,11 +148,6 @@ namespace PlaylistChaser.Web.Util.API
         #endregion
         #endregion
 
-        PlaylistAdditionalInfo ISource.SyncPlaylistInfo(PlaylistAdditionalInfo info)
-        {
-            throw new NotImplementedException();
-        }
-
         public async Task<PlaylistAdditionalInfo> CreatePlaylist(string playlistName, string? description, bool isPublic = true)
             => toPlaylistModel(await createPlaylist(playlistName, description, isPublic), true);
 

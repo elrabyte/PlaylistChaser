@@ -39,21 +39,6 @@ namespace PlaylistChaser.Web.Util.API
             return userCredential;
         }
 
-        /// <summary>
-        /// brings the local playlist up to date with the youtube side
-        /// </summary>
-        /// <param name="playlist">local playlist</param>
-        /// <returns>returns the same playlist</returns>
-        public PlaylistAdditionalInfo SyncPlaylistInfo(PlaylistAdditionalInfo info)
-        {
-            var ytPlaylist = toPlaylistModel(getPlaylist(info.PlaylistIdSource));
-            info.Name = ytPlaylist.Name;
-            info.CreatorName = ytPlaylist.CreatorName;
-            info.Description = ytPlaylist.Description;
-            info.PlaylistIdSource = ytPlaylist.PlaylistIdSource;
-            return info;
-        }
-
         #region Get Stuff
         /// <summary>
         /// Gets List of songs in local Song-Model by youtube playlist id
@@ -371,7 +356,7 @@ namespace PlaylistChaser.Web.Util.API
             searchListRequest.Type = "youtube#video";
             searchListRequest.MaxResults = 1; // Number of results to retrieve
 
-            return searchListRequest.Execute().Items.First().Id.VideoId; //first because for some reason it sometimes returns more than 1 result
+            return searchListRequest.Execute().Items.First().Id.VideoId; //first instead of single, because for some reason it sometimes returns more than 1 result
         }
     }
 }

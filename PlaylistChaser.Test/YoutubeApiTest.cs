@@ -57,14 +57,6 @@ namespace PlaylistChaser.Test
             Assert.NotNull(youtubeApiHelper);
         }
 
-        [Fact]
-        public void SyncPlaylist()
-        {
-            var actualPlaylistInfo = youtubeApiHelper.SyncPlaylistInfo(TestPlaylistInfoYT);
-
-            Assert.Equivalent(ExpectedPlaylistInfoYT, actualPlaylistInfo);
-        }
-
         #region Get Stuff
         [Fact]
         public void GetPlaylistSongs()
