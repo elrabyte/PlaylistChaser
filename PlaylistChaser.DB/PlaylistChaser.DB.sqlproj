@@ -57,7 +57,7 @@
   <Import Condition="'$(SQLDBExtensionsRefPath)' == ''" Project="$(MSBuildExtensionsPath)\Microsoft\VisualStudio\v$(VisualStudioVersion)\SSDT\Microsoft.Data.Tools.Schema.SqlTasks.targets" />
   <ItemGroup>
     <Folder Include="Properties" />
-    <Folder Include="publish\" />
+    <Folder Include="_publish" />
     <Folder Include="NewDbScripts" />
     <Folder Include="NewDbScripts\InBuiltValues" />
     <Folder Include="SP" />
@@ -86,7 +86,8 @@
     <RefactorLog Include="PlaylistChaser.DB.refactorlog" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="publish\local_playlistchaserdb.publish.xml" />
+    <None Include="_publish\local_playlistchaserdb.publish.xml" />
     <None Include="PreDeployment.sql" />
+    <None Include="_publish\prod_playlistchaserdb.publish.xml" />
   </ItemGroup>
 </Project>
