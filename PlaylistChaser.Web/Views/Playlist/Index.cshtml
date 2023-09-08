@@ -163,6 +163,7 @@
     //auth
     $(document).ready(function(){
         loginToSpotify();
+        loginToYoutube();
     })
 
     function loginToSpotify() {
@@ -175,6 +176,19 @@
                     return alert(data.message)
                 else if (data.url)
                     return window.location.replace(data.url);
+            },
+            dataType: "json"
+        });
+    }
+
+    function loginToYoutube() {
+        let url = "/Login/LoginToYoutube/";
+        $.ajax({
+            type: "POST",
+            url: url,
+            success: function (data) {
+                if (!data.success)
+                    return alert(data.message)                
             },
             dataType: "json"
         });

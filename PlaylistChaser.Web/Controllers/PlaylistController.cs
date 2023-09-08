@@ -2,7 +2,6 @@
 using Microsoft.EntityFrameworkCore;
 using PlaylistChaser.Web.Database;
 using PlaylistChaser.Web.Models;
-using PlaylistChaser.Web.Models.ViewModel;
 using PlaylistChaser.Web.Util.API;
 using static PlaylistChaser.Web.Util.BuiltInIds;
 using Playlist = PlaylistChaser.Web.Models.Playlist;
@@ -12,6 +11,8 @@ namespace PlaylistChaser.Web.Controllers
 {
     public class PlaylistController : BaseController
     {
+        public PlaylistController(IConfiguration configuration, PlaylistChaserDbContext db) : base(configuration, db) { }
+
         #region Properties
         private YoutubeApiHelper _ytHelper;
         private YoutubeApiHelper ytHelper
@@ -20,18 +21,8 @@ namespace PlaylistChaser.Web.Controllers
             {
                 if (_ytHelper == null)
                 {
-                    var oAuth = db.OAuth2Credential.SingleOrDefault(c => c.UserId == 1 && c.Provider == Sources.Youtube.ToString());
-
-                    if (oAuth != null)
-                    {
-                        _ytHelper = new YoutubeApiHelper(oAuth.AccessToken);
-                    }
-                    else
-                    {
-                        var ytClientId = configuration["Youtube:ClientId"];
-                        var ytClientSecret = configuration["Youtube:ClientSecret"];
-                        _ytHelper = new YoutubeApiHelper(ytClientId, ytClientSecret, new DatabaseDataStore(db));
-                    }
+                    var oAuth = db.OAuth2Credential.Single(c => c.UserId == 1 && c.Provider == Sources.Youtube.ToString());
+                    _ytHelper = new YoutubeApiHelper(oAuth.AccessToken);
                 }
                 return _ytHelper;
             }
@@ -50,20 +41,11 @@ namespace PlaylistChaser.Web.Controllers
                 return _spottyHelper;
             }
         }
-        #endregion
+        #endregion        
 
-        public PlaylistController(IConfiguration configuration, PlaylistChaserDbContext db) : base(configuration, db) { }
-
-        #region error
+        #region Error
         const string notImplementedForThatSource = "Not yet implemented for that source!";
         const string notImplementedForThatType = "Not yet implemented for that type!";
-
-        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-        public IActionResult Error()
-        {
-            return View(new ErrorViewModel { RequestId = System.Diagnostics.Activity.Current?.Id ?? HttpContext.TraceIdentifier });
-        }
-
         #endregion
 
         #region Views
@@ -772,7 +754,7 @@ namespace PlaylistChaser.Web.Controllers
         #endregion
 
         #region  Helper
-        public ActionResult GetThumbnail(int thumbnailId)
+        public async Task<ActionResult> GetThumbnail(int thumbnailId)
         {
             var thumbnail = db.Thumbnail.SingleOrDefault(t => t.Id == thumbnailId);
             if (thumbnail == null)

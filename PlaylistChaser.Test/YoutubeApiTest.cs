@@ -21,9 +21,8 @@ namespace PlaylistChaser.Test
 
         public YoutubeApiTest()
         {
-            var clientId = "";
-            var clientSecret = "";
-            youtubeApiHelper = new YoutubeApiHelper(clientId, clientSecret, new DatabaseDataStore(db));
+            var accessToken = "";
+            youtubeApiHelper = new YoutubeApiHelper(accessToken);
         }
         Playlist TestPlaylist = new Playlist
         {

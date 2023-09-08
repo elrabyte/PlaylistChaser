@@ -1,6 +1,7 @@
 ﻿using Google.Apis.Auth.OAuth2;
 using Google.Apis.Services;
 using Google.Apis.Util; //used for SystemClock.Default - only used in prod
+using Google.Apis.Util.Store;
 using Google.Apis.YouTube.v3;
 using Google.Apis.YouTube.v3.Data;
 using PlaylistChaser.Web.Models;
@@ -13,21 +14,10 @@ namespace PlaylistChaser.Web.Util.API
     internal class YoutubeApiHelper : ISource
     {
         private YouTubeService ytService;
-        private string clientId;
-        private string clientSecret;
 
         public OAuth2Credential oAuthCredential;
 
-        string[] scopes = { "https://www.googleapis.com/auth/youtube" };
-
-        internal YoutubeApiHelper(string clientId, string clientSecret, DatabaseDataStore dataStore)
-        {
-            this.clientId = clientId;
-            this.clientSecret = clientSecret;
-            var accessToken = getAccessToken(dataStore);
-
-            setYoutubeService(accessToken);
-        }
+        static string[] scopes = { "https://www.googleapis.com/auth/youtube" };
         internal YoutubeApiHelper(string accessToken)
         {
             setYoutubeService(accessToken);
@@ -40,20 +30,31 @@ namespace PlaylistChaser.Web.Util.API
                 ApplicationName = "PlaylistChaser", // Provide a meaningful name for your application
             });
         }
-        private string getAccessToken(DatabaseDataStore dataStore, int userId = 1)
-        {
-            var userCredential = GoogleWebAuthorizationBroker.AuthorizeAsync(new ClientSecrets { ClientId = clientId, ClientSecret = clientSecret },
-                                                                             scopes,
-                                                                             userId.ToString(),
-                                                                             CancellationToken.None,
-                                                                             dataStore
-                                                                            ).Result;
 
-#if DEBUG == false
-            if (userCredential.Token.IsExpired(SystemClock.Default))
-#endif
-            userCredential.RefreshTokenAsync(CancellationToken.None);
-            return userCredential.Token.AccessToken;
+        static async internal Task<OAuth2Credential> GetOauthCredential(string clientId, string clientSecret, string? refreshToken = null)
+        {
+            var userCredential = GoogleWebAuthorizationBroker.AuthorizeAsync(
+                new ClientSecrets { ClientId = clientId, ClientSecret = clientSecret },
+                scopes,
+                "user",
+                CancellationToken.None,
+                new NullDataStore()
+                ).Result;
+
+            if (refreshToken != null)
+            {
+                userCredential.Token.RefreshToken = refreshToken;
+                await userCredential.RefreshTokenAsync(CancellationToken.None);
+            }
+
+            var oAuth = new OAuth2Credential
+            {
+                Provider = Sources.Youtube.ToString(),
+                AccessToken = userCredential.Token.AccessToken,
+                RefreshToken = userCredential.Token.RefreshToken,
+                TokenExpiration = DateTime.Now.AddSeconds((double)userCredential.Token.ExpiresInSeconds)
+            };
+            return oAuth;
         }
 
         #region Get Stuff
