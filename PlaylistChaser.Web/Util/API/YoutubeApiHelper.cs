@@ -52,7 +52,7 @@ namespace PlaylistChaser.Web.Util.API
 #if DEBUG == false
             if (userCredential.Token.IsExpired(SystemClock.Default))
 #endif
-            var refreshed = userCredential.RefreshTokenAsync(CancellationToken.None);
+            userCredential.RefreshTokenAsync(CancellationToken.None);
             return userCredential.Token.AccessToken;
         }
 
