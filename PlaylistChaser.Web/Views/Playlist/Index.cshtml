@@ -159,5 +159,25 @@
             dataType: "json"
         });
     }
+
+    //auth
+    $(document).ready(function(){
+        loginToSpotify();
+    })
+
+    function loginToSpotify() {
+        let url = "/Login/LoginToSpotify/";
+        $.ajax({
+            type: "POST",
+            url: url,
+            success: function (data) {
+                if (!data.success)
+                    return alert(data.message)
+                else if (data.url)
+                    return window.location.replace(data.url);
+            },
+            dataType: "json"
+        });
+    }
 </script>
 <!-- END -->

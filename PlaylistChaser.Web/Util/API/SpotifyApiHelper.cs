@@ -1,30 +1,49 @@
 ﻿using PlaylistChaser.Web.Models;
 using SpotifyAPI.Web;
 using System.Text.RegularExpressions;
+using static PlaylistChaser.Web.Util.BuiltInIds;
 
 namespace PlaylistChaser.Web.Util.API
 {
     internal class SpotifyApiHelper : ISource
     {
         private SpotifyClient spotify;
-        private const string spotifyAccessTokenKey = "spotifyAccessToken";
 
-        internal SpotifyApiHelper(HttpContext context)
+        internal SpotifyApiHelper(string accessToken)
         {
-            var accessToken = context.Session.GetString(spotifyAccessTokenKey);
             if (accessToken == null)
+            {
                 throw new Exception("Not logged in yet");
+            }
 
             spotify = new SpotifyClient(accessToken);
         }
 
         #region Authenticate
-        internal SpotifyApiHelper(HttpContext context, string code, string clientId, string clientSecret, string redirectUri)
+        static async internal Task<OAuth2Credential> GetOauthCredential(string code, string clientId, string clientSecret, string redirectUri)
         {
-            var accessToken = new OAuthClient().RequestToken(new AuthorizationCodeTokenRequest(clientId, clientSecret, code, new Uri(redirectUri))).Result.AccessToken;
-            context.Session.SetString(spotifyAccessTokenKey, accessToken);
+            var response = await new OAuthClient().RequestToken(new AuthorizationCodeTokenRequest(clientId, clientSecret, code, new Uri(redirectUri)));
 
-            spotify = new SpotifyClient(accessToken);
+            var oAuth = new OAuth2Credential
+            {
+                Provider = Sources.Spotify.ToString(),
+                AccessToken = response.AccessToken,
+                RefreshToken = response.RefreshToken,
+                TokenExpiration = DateTime.Now.AddSeconds(response.ExpiresIn)
+            };
+            return oAuth;
+        }
+        static async internal Task<OAuth2Credential> GetOAuthCredential(string clientId, string clientSecret, string refreshToken)
+        {
+            var response = await new OAuthClient().RequestToken(new AuthorizationCodeRefreshRequest(clientId, clientSecret, refreshToken));
+            var oAuth = new OAuth2Credential
+            {
+                Provider = Sources.Spotify.ToString(),
+                AccessToken = response.AccessToken,
+                RefreshToken = refreshToken,
+                TokenExpiration = DateTime.Now.AddSeconds(response.ExpiresIn)
+            };
+            return oAuth;
         }
 
         public static Uri getLoginUri(string clientId, string redirectUri)

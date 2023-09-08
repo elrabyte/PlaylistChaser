@@ -1,3 +1,4 @@
+using PlaylistChaser.Web.Database;
 using PlaylistChaser.Web.Models;
 using PlaylistChaser.Web.Util.API;
 
@@ -5,7 +6,12 @@ namespace PlaylistChaser.Test
 {
     public class YoutubeApiTest
     {
-        YoutubeApiHelper youtubeApiHelper;
+        private YoutubeApiHelper youtubeApiHelper;
+        private PlaylistChaserDbContext db;
+        public YoutubeApiTest(PlaylistChaserDbContext db)
+        {
+            this.db = db;
+        }
 
         #region Test Inputs
         const string VIDEO_URL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
@@ -17,7 +23,7 @@ namespace PlaylistChaser.Test
         {
             var clientId = "";
             var clientSecret = "";
-            youtubeApiHelper = new YoutubeApiHelper(clientId, clientSecret);
+            youtubeApiHelper = new YoutubeApiHelper(clientId, clientSecret, new DatabaseDataStore(db));
         }
         Playlist TestPlaylist = new Playlist
         {
