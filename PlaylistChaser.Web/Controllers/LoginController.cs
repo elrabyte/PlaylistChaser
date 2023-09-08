@@ -61,8 +61,10 @@ namespace PlaylistChaser.Web.Controllers
             var oAuth = db.OAuth2Credential.SingleOrDefault(a => a.UserId == userId && a.Provider == Sources.Youtube.ToString());
             if (oAuth == null)
             {
-                await YoutubeApiHelper.GetOauthCredential(clientId, clientSecret);
-                return new JsonResult(new { success = true });
+                var newOAuth = await YoutubeApiHelper.GetOauthCredential(clientId, clientSecret);
+                newOAuth.UserId = userId;
+                db.OAuth2Credential.Add(newOAuth);
+                db.SaveChanges();
             }
             else if (oAuth.TokenExpiration < DateTime.Now) //refresh token
             {
