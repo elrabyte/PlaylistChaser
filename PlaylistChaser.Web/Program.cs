@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using PlaylistChaser.Web.Database;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -13,9 +14,11 @@ builder.Services.AddSession();
 
 
 // Add configuration sources
+var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+environment ??= "Production"; //TODO: do it in right
 builder.Configuration
        .SetBasePath(builder.Environment.ContentRootPath)
-       .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
+       .AddJsonFile($"appsettings.{environment}.json", optional: false, reloadOnChange: true);
 
 #if DEBUG == false
 builder.Services.AddDbContext<PlaylistChaserDbContext>(options =>
