@@ -7,12 +7,6 @@ namespace PlaylistChaser.Web.Util
         #region Playlist
 
         internal PlaylistAdditionalInfo GetPlaylistById(string playlistId);
-        /// <summary>
-        /// source to local
-        /// </summary>
-        /// <param name="playlist"></param>
-        /// <returns></returns>
-        internal PlaylistAdditionalInfo SyncPlaylistInfo(PlaylistAdditionalInfo playlist);
         internal Task<PlaylistAdditionalInfo> CreatePlaylist(string playlistName, string? description = null, bool isPublic = true);
         internal Task<bool> DeletePlaylist(string youtubePlaylistId);
         #endregion

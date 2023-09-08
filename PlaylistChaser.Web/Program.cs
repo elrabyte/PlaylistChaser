@@ -1,3 +1,6 @@
+using Microsoft.EntityFrameworkCore;
+using PlaylistChaser.Web.Database;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -7,6 +10,20 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddDistributedMemoryCache();
 
 builder.Services.AddSession();
+
+
+// Add configuration sources
+builder.Configuration
+       .SetBasePath(builder.Environment.ContentRootPath)
+       .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
+
+#if DEBUG == false
+builder.Services.AddDbContext<PlaylistChaserDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("ServerConnectionString")));
+#else
+builder.Services.AddDbContext<PlaylistChaserDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("LocalConnectionString")));
+#endif
 
 var app = builder.Build();
 
@@ -22,10 +39,10 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseStaticFiles(new StaticFileOptions
 {
-	FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
-		Path.Combine(app.Environment.ContentRootPath, "node_modules")
-	),
-	RequestPath = "/node_modules"
+    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
+        Path.Combine(app.Environment.ContentRootPath, "node_modules")
+    ),
+    RequestPath = "/node_modules"
 });
 
 app.UseRouting();

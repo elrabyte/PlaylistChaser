@@ -10,35 +10,66 @@ using Thumbnail = PlaylistChaser.Web.Models.Thumbnail;
 
 namespace PlaylistChaser.Web.Controllers
 {
-    public class PlaylistController : Controller
+    public class PlaylistController : BaseController
     {
-        private readonly ILogger<PlaylistController> _logger;
-        private PlaylistChaserDbContext db;
-
-        public PlaylistController(ILogger<PlaylistController> logger)
+        #region Properties
+        private YoutubeApiHelper _ytHelper;
+        private YoutubeApiHelper ytHelper
         {
-            _logger = logger;
-            db = new PlaylistChaserDbContext();
+            get
+            {
+                if (_ytHelper == null)
+                {
+                    var oAuth = db.OAuth2Credential.SingleOrDefault(c => c.UserId == 1 && c.Provider == Sources.Youtube.ToString());
+
+                    if (oAuth != null)
+                    {
+                        _ytHelper = new YoutubeApiHelper(oAuth.AccessToken);
+                    }
+                    else
+                    {
+                        var ytClientId = configuration["Youtube:ClientId"];
+                        var ytClientSecret = configuration["Youtube:ClientSecret"];
+                        _ytHelper = new YoutubeApiHelper(ytClientId, ytClientSecret, new DatabaseDataStore(db));
+                    }
+                }
+                return _ytHelper;
+            }
         }
 
+        private SpotifyApiHelper _spottyHelper;
+        private SpotifyApiHelper spottyHelper
+        {
+            get
+            {
+                if (_spottyHelper == null)
+                {
+                    var oAuth = db.OAuth2Credential.Single(c => c.UserId == 1 && c.Provider == Sources.Spotify.ToString());
+                    _spottyHelper = new SpotifyApiHelper(oAuth.AccessToken);
+                }
+                return _spottyHelper;
+            }
+        }
+        #endregion
+
+        public PlaylistController(IConfiguration configuration, PlaylistChaserDbContext db) : base(configuration, db) { }
+
         #region error
+        const string notImplementedForThatSource = "Not yet implemented for that source!";
+        const string notImplementedForThatType = "Not yet implemented for that type!";
+
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
         {
             return View(new ErrorViewModel { RequestId = System.Diagnostics.Activity.Current?.Id ?? HttpContext.TraceIdentifier });
         }
 
-        const string notImplementedForThatSource = "Not yet implemented for that source!";
-        const string notImplementedForThatType = "Not yet implemented for that type!";
         #endregion
 
         #region Views
         public async Task<ActionResult> Index()
         {
             var playlists = await db.GetPlaylists();
-            //initial Auth
-            var ytHelper = new YoutubeApiHelper();
-            new LoginController().LoginToSpotify();
             return View(playlists);
         }
 
@@ -65,7 +96,6 @@ namespace PlaylistChaser.Web.Controllers
                 switch (source)
                 {
                     case Sources.Youtube:
-                        var ytHelper = new YoutubeApiHelper();
                         //get playlist from youtube
                         playlistId = ytHelper.GetPlaylistIdFromUrl(playlistUrl);
                         info = ytHelper.GetPlaylistById(playlistId);
@@ -75,13 +105,12 @@ namespace PlaylistChaser.Web.Controllers
 
                         break;
                     case Sources.Spotify:
-                        var spotyHelper = new SpotifyApiHelper(HttpContext);
                         //get playlist from spotify
-                        playlistId = spotyHelper.GetPlaylistIdFromUrl(playlistUrl);
-                        info = spotyHelper.GetPlaylistById(spotyHelper.GetPlaylistIdFromUrl(playlistUrl));
+                        playlistId = spottyHelper.GetPlaylistIdFromUrl(playlistUrl);
+                        info = spottyHelper.GetPlaylistById(spottyHelper.GetPlaylistIdFromUrl(playlistUrl));
 
                         //add thumbnail
-                        thumbnail = new Thumbnail { FileContents = await spotyHelper.GetPlaylistThumbnail(playlistId) };
+                        thumbnail = new Thumbnail { FileContents = await spottyHelper.GetPlaylistThumbnail(playlistId) };
                         break;
                     default:
                         throw new NotImplementedException(notImplementedForThatSource);
@@ -193,7 +222,6 @@ namespace PlaylistChaser.Web.Controllers
                 switch (source)
                 {
                     case Sources.Youtube:
-                        var ytHelper = new YoutubeApiHelper();
                         switch (playlist.PlaylistTypeId)
                         {
                             case PLaylistTypes.Simple:
@@ -214,8 +242,7 @@ namespace PlaylistChaser.Web.Controllers
                         switch (playlist.PlaylistTypeId)
                         {
                             case PLaylistTypes.Simple:
-                                var spotyHelper = new SpotifyApiHelper(HttpContext);
-                                songInfos = spotyHelper.GetPlaylistSongs(info.PlaylistIdSource);
+                                songInfos = spottyHelper.GetPlaylistSongs(info.PlaylistIdSource);
 
                                 break;
                             default:
@@ -283,8 +310,6 @@ namespace PlaylistChaser.Web.Controllers
                 switch (source)
                 {
                     case Sources.Youtube:
-                        var ytHelper = new YoutubeApiHelper();
-
                         //create Playlist - first time for that source
                         if (string.IsNullOrEmpty(info.PlaylistIdSource))
                         {
@@ -301,21 +326,20 @@ namespace PlaylistChaser.Web.Controllers
                         ytHelper.UpdatePlaylist(info.PlaylistIdSource, info.Name, getPlaylistDescriptionText(info.Description, uploadedSongsIdsSource.Count, playlistSongs.Count()));
                         break;
                     case Sources.Spotify:
-                        var spotifyHelper = new SpotifyApiHelper(HttpContext);
                         //create Playlist
                         if (string.IsNullOrEmpty(info.PlaylistIdSource))
                         {
-                            newInfo = await spotifyHelper.CreatePlaylist(playlist.Name, playlist.Description);
+                            newInfo = await spottyHelper.CreatePlaylist(playlist.Name, playlist.Description);
                             info.PlaylistIdSource = newInfo.PlaylistIdSource;
                             info.IsMine = true;
                             db.SaveChanges();
                         }
 
                         //add to playlist on spotify
-                        uploadedSongsIdsSource = spotifyHelper.AddSongsToPlaylist(info.PlaylistIdSource, missingSongsIdsAtSource);
+                        uploadedSongsIdsSource = spottyHelper.AddSongsToPlaylist(info.PlaylistIdSource, missingSongsIdsAtSource);
 
                         //update playlist
-                        spotifyHelper.UpdatePlaylist(info.PlaylistIdSource, playlist.Name, getPlaylistDescriptionText(playlist.Description, uploadedSongsIdsSource.Count, playlistSongs.Count()));
+                        spottyHelper.UpdatePlaylist(info.PlaylistIdSource, playlist.Name, getPlaylistDescriptionText(playlist.Description, uploadedSongsIdsSource.Count, playlistSongs.Count()));
                         break;
                     default:
                         throw new NotImplementedException(notImplementedForThatSource);
@@ -373,21 +397,24 @@ namespace PlaylistChaser.Web.Controllers
 
         private void findSongs(IQueryable<Song> missingSongs, Sources source)
         {
+
             //filtered tables
             var songStates = db.SongState.Where(ss => ss.SourceId == source);
             var songInfos = db.SongAdditionalInfo.Where(i => i.SourceId == source);
+
+            //only songs that weren't checked before
+            missingSongs = missingSongs.Where(s => songStates.Single(ss => ss.SongId == s.Id).StateId == SongStates.NotChecked);
 
             //check if songs exists
             (List<(int Id, string IdAtSource)> Exact, List<(int Id, string IdAtSource)> NotExact) foundSongs;
             switch (source)
             {
                 case Sources.Youtube:
-                    var ytHelper = new YoutubeApiHelper();
                     foundSongs = ytHelper.FindSongs(missingSongs.ToList().Select(s => (s.Id, s.ArtistName, s.SongName)).ToList());
                     break;
                 case Sources.Spotify:
-                    var spotifyHelper = new SpotifyApiHelper(HttpContext);
-                    foundSongs = spotifyHelper.FindSongs(missingSongs.ToList().Select(s => (s.Id, s.ArtistName, s.SongName)).ToList());
+                    //var spottyHelper = new SpotifyApiHelper(HttpContext);
+                    foundSongs = spottyHelper.FindSongs(missingSongs.ToList().Select(s => (s.Id, s.ArtistName, s.SongName)).ToList());
                     break;
                 default:
                     throw new NotImplementedException(notImplementedForThatSource);
@@ -489,7 +516,6 @@ namespace PlaylistChaser.Web.Controllers
             switch (source)
             {
                 case Sources.Youtube:
-                    var ytHelper = new YoutubeApiHelper();
                     //add playlist to YT
                     var playlistdescription = string.Format("songs by: {0}", string.Join(',', db.Playlist.Where(p => playlistIdsList.Contains(p.Id)).Select(p => p.ChannelName)));
                     info = await ytHelper.CreatePlaylist(playlistName, playlistdescription);
@@ -552,12 +578,10 @@ namespace PlaylistChaser.Web.Controllers
                 switch (source)
                 {
                     case Sources.Youtube:
-                        var ytHelper = new YoutubeApiHelper();
                         await ytHelper.DeletePlaylist(info.PlaylistIdSource);
                         break;
                     case Sources.Spotify:
-                        var spotifyHelper = new SpotifyApiHelper(HttpContext);
-                        await spotifyHelper.DeletePlaylist(info.PlaylistIdSource);
+                        await spottyHelper.DeletePlaylist(info.PlaylistIdSource);
                         break;
                     default:
                         throw new NotImplementedException(notImplementedForThatSource);
@@ -656,7 +680,7 @@ namespace PlaylistChaser.Web.Controllers
                             if (info == null)
                                 continue;
 
-                            thumbnailImg = await new YoutubeApiHelper().GetPlaylistThumbnail(info.PlaylistIdSource);
+                            thumbnailImg = await ytHelper.GetPlaylistThumbnail(info.PlaylistIdSource);
 
                             break;
                         default:
@@ -709,12 +733,10 @@ namespace PlaylistChaser.Web.Controllers
                 switch (source)
                 {
                     case Sources.Youtube:
-                        var ytHelper = new YoutubeApiHelper();
                         thumbnails = await ytHelper.GetSongsThumbnailBySongIds(sourceIds.ToList());
                         break;
                     case Sources.Spotify:
-                        var spotyHelper = new SpotifyApiHelper(HttpContext);
-                        thumbnails = await spotyHelper.GetSongsThumbnailBySongIds(sourceIds.ToList());
+                        thumbnails = await spottyHelper.GetSongsThumbnailBySongIds(sourceIds.ToList());
                         break;
                     default:
                         throw new NotImplementedException(notImplementedForThatSource);

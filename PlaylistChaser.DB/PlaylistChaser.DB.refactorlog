@@ -77,4 +77,39 @@
     <Property Name="ParentElementType" Value="SqlTable" />
     <Property Name="NewName" Value="Name" />
   </Operation>
+  <Operation Name="Rename Refactor" Key="658aace3-f184-4cd8-9e95-d8354129d4ba" ChangeDateTime="09/08/2023 10:49:09">
+    <Property Name="ElementName" Value="[dbo].[OAuth2Credential].[Description]" />
+    <Property Name="ElementType" Value="SqlSimpleColumn" />
+    <Property Name="ParentElementName" Value="[dbo].[OAuth2Credential]" />
+    <Property Name="ParentElementType" Value="SqlTable" />
+    <Property Name="NewName" Value="UserId" />
+  </Operation>
+  <Operation Name="Rename Refactor" Key="4e701281-61e9-4f8d-90d1-7bec1fcbf928" ChangeDateTime="09/08/2023 10:49:22">
+    <Property Name="ElementName" Value="[dbo].[OAuth2Credential].[ChannelName]" />
+    <Property Name="ElementType" Value="SqlSimpleColumn" />
+    <Property Name="ParentElementName" Value="[dbo].[OAuth2Credential]" />
+    <Property Name="ParentElementType" Value="SqlTable" />
+    <Property Name="NewName" Value="AccessToken" />
+  </Operation>
+  <Operation Name="Rename Refactor" Key="525c3f85-335c-4f1d-913d-b87ad26acecb" ChangeDateTime="09/08/2023 10:49:40">
+    <Property Name="ElementName" Value="[dbo].[OAuth2Credential].[PlaylistTypeId]" />
+    <Property Name="ElementType" Value="SqlSimpleColumn" />
+    <Property Name="ParentElementName" Value="[dbo].[OAuth2Credential]" />
+    <Property Name="ParentElementType" Value="SqlTable" />
+    <Property Name="NewName" Value="RefreshToken" />
+  </Operation>
+  <Operation Name="Rename Refactor" Key="388864a5-7411-4c6c-af1f-5de9b59cc3d6" ChangeDateTime="09/08/2023 10:49:49">
+    <Property Name="ElementName" Value="[dbo].[OAuth2Credential].[ThumbnailId]" />
+    <Property Name="ElementType" Value="SqlSimpleColumn" />
+    <Property Name="ParentElementName" Value="[dbo].[OAuth2Credential]" />
+    <Property Name="ParentElementType" Value="SqlTable" />
+    <Property Name="NewName" Value="TokenExpiration" />
+  </Operation>
+  <Operation Name="Rename Refactor" Key="f335b53e-b930-42bd-a72f-8a925fac50b0" ChangeDateTime="09/08/2023 11:13:23">
+    <Property Name="ElementName" Value="[dbo].[OAuth2Credential].[Name]" />
+    <Property Name="ElementType" Value="SqlSimpleColumn" />
+    <Property Name="ParentElementName" Value="[dbo].[OAuth2Credential]" />
+    <Property Name="ParentElementType" Value="SqlTable" />
+    <Property Name="NewName" Value="Provider" />
+  </Operation>
 </Operations>

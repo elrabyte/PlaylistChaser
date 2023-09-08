@@ -1,39 +1,53 @@
 ﻿using PlaylistChaser.Web.Models;
 using SpotifyAPI.Web;
 using System.Text.RegularExpressions;
+using static PlaylistChaser.Web.Util.BuiltInIds;
 
 namespace PlaylistChaser.Web.Util.API
 {
     internal class SpotifyApiHelper : ISource
     {
         private SpotifyClient spotify;
-        private const string spotifyAccessTokenKey = "spotifyAccessToken";
-        private const string redirectUri = "https://localhost:7245/Login/LoginToSpotify";
 
-        internal SpotifyApiHelper(HttpContext context)
+        internal SpotifyApiHelper(string accessToken)
         {
-            var accessToken = context.Session.GetString(spotifyAccessTokenKey);
             if (accessToken == null)
+            {
                 throw new Exception("Not logged in yet");
+            }
 
             spotify = new SpotifyClient(accessToken);
         }
 
         #region Authenticate
-        internal SpotifyApiHelper(HttpContext context, string code = null)
+        static async internal Task<OAuth2Credential> GetOauthCredential(string code, string clientId, string clientSecret, string redirectUri)
         {
-            var clientId = Helper.ReadSecret("Spotify", "ClientId");
-            var clientSecret = Helper.ReadSecret("Spotify", "ClientSecret");
+            var response = await new OAuthClient().RequestToken(new AuthorizationCodeTokenRequest(clientId, clientSecret, code, new Uri(redirectUri)));
 
-            var accessToken = new OAuthClient().RequestToken(new AuthorizationCodeTokenRequest(clientId, clientSecret, code, new Uri(redirectUri))).Result.AccessToken;
-            context.Session.SetString(spotifyAccessTokenKey, accessToken);
-
-            spotify = new SpotifyClient(accessToken);
+            var oAuth = new OAuth2Credential
+            {
+                Provider = Sources.Spotify.ToString(),
+                AccessToken = response.AccessToken,
+                RefreshToken = response.RefreshToken,
+                TokenExpiration = DateTime.Now.AddSeconds(response.ExpiresIn)
+            };
+            return oAuth;
+        }
+        static async internal Task<OAuth2Credential> GetOAuthCredential(string clientId, string clientSecret, string refreshToken)
+        {
+            var response = await new OAuthClient().RequestToken(new AuthorizationCodeRefreshRequest(clientId, clientSecret, refreshToken));
+            var oAuth = new OAuth2Credential
+            {
+                Provider = Sources.Spotify.ToString(),
+                AccessToken = response.AccessToken,
+                RefreshToken = refreshToken,
+                TokenExpiration = DateTime.Now.AddSeconds(response.ExpiresIn)
+            };
+            return oAuth;
         }
 
-        public static Uri getLoginUri()
+        public static Uri getLoginUri(string clientId, string redirectUri)
         {
-            var clientId = Helper.ReadSecret("Spotify", "ClientId");
             var loginRequest = new LoginRequest(new Uri(redirectUri), clientId, LoginRequest.ResponseType.Code)
             {
                 Scope = new[] { Scopes.PlaylistModifyPrivate, Scopes.PlaylistModifyPublic, Scopes.UserReadPrivate }
@@ -152,11 +166,6 @@ namespace PlaylistChaser.Web.Util.API
 
         #endregion
         #endregion
-
-        PlaylistAdditionalInfo ISource.SyncPlaylistInfo(PlaylistAdditionalInfo info)
-        {
-            throw new NotImplementedException();
-        }
 
         public async Task<PlaylistAdditionalInfo> CreatePlaylist(string playlistName, string? description, bool isPublic = true)
             => toPlaylistModel(await createPlaylist(playlistName, description, isPublic), true);

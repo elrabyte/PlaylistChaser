@@ -1,10 +1,11 @@
 ﻿using Google.Apis.Auth.OAuth2;
 using Google.Apis.Services;
-using Google.Apis.Util;
+using Google.Apis.Util; //used for SystemClock.Default - only used in prod
 using Google.Apis.YouTube.v3;
 using Google.Apis.YouTube.v3.Data;
 using PlaylistChaser.Web.Models;
 using System.Text.RegularExpressions;
+using static PlaylistChaser.Web.Util.BuiltInIds;
 using Playlist = Google.Apis.YouTube.v3.Data.Playlist;
 
 namespace PlaylistChaser.Web.Util.API
@@ -12,43 +13,47 @@ namespace PlaylistChaser.Web.Util.API
     internal class YoutubeApiHelper : ISource
     {
         private YouTubeService ytService;
+        private string clientId;
+        private string clientSecret;
+
+        public OAuth2Credential oAuthCredential;
 
         string[] scopes = { "https://www.googleapis.com/auth/youtube" };
 
-        internal YoutubeApiHelper()
+        internal YoutubeApiHelper(string clientId, string clientSecret, DatabaseDataStore dataStore)
         {
-            ytService = new YouTubeService(new BaseClientService.Initializer() { HttpClientInitializer = authenticate() });
+            this.clientId = clientId;
+            this.clientSecret = clientSecret;
+            var accessToken = getAccessToken(dataStore);
+
+            setYoutubeService(accessToken);
         }
-        private UserCredential authenticate()
+        internal YoutubeApiHelper(string accessToken)
         {
+            setYoutubeService(accessToken);
+        }
+        private void setYoutubeService(string accessToken)
+        {
+            ytService = new YouTubeService(new BaseClientService.Initializer
+            {
+                HttpClientInitializer = new AccessTokenInitializer(accessToken),
+                ApplicationName = "PlaylistChaser", // Provide a meaningful name for your application
+            });
+        }
+        private string getAccessToken(DatabaseDataStore dataStore, int userId = 1)
+        {
+            var userCredential = GoogleWebAuthorizationBroker.AuthorizeAsync(new ClientSecrets { ClientId = clientId, ClientSecret = clientSecret },
+                                                                             scopes,
+                                                                             userId.ToString(),
+                                                                             CancellationToken.None,
+                                                                             dataStore
+                                                                            ).Result;
 
-            var clientId = Helper.ReadSecret("Youtube", "ClientId");
-            var clientSecret = Helper.ReadSecret("Youtube", "ClientSecret");
-
-            var userCredential = GoogleWebAuthorizationBroker.AuthorizeAsync(
-                new ClientSecrets { ClientId = clientId, ClientSecret = clientSecret },
-                scopes, "user", CancellationToken.None).Result;
-
+#if DEBUG == false
             if (userCredential.Token.IsExpired(SystemClock.Default))
-                userCredential.RefreshTokenAsync(CancellationToken.None);
-
-            return userCredential;
-
-        }
-
-        /// <summary>
-        /// brings the local playlist up to date with the youtube side
-        /// </summary>
-        /// <param name="playlist">local playlist</param>
-        /// <returns>returns the same playlist</returns>
-        public PlaylistAdditionalInfo SyncPlaylistInfo(PlaylistAdditionalInfo info)
-        {
-            var ytPlaylist = toPlaylistModel(getPlaylist(info.PlaylistIdSource));
-            info.Name = ytPlaylist.Name;
-            info.CreatorName = ytPlaylist.CreatorName;
-            info.Description = ytPlaylist.Description;
-            info.PlaylistIdSource = ytPlaylist.PlaylistIdSource;
-            return info;
+#endif
+            userCredential.RefreshTokenAsync(CancellationToken.None);
+            return userCredential.Token.AccessToken;
         }
 
         #region Get Stuff
@@ -324,7 +329,7 @@ namespace PlaylistChaser.Web.Util.API
                 Name = ytPlaylist.Snippet.Title,
                 CreatorName = ytPlaylist.Snippet.ChannelTitle,
                 Description = string.IsNullOrEmpty(ytPlaylist.Snippet.Description) ? null : ytPlaylist.Snippet.Description,
-                SourceId = BuiltInIds.Sources.Youtube,
+                SourceId = Sources.Youtube,
                 IsMine = checkIfMyPlaylist(ytPlaylist.Id),
             };
         }
@@ -338,7 +343,7 @@ namespace PlaylistChaser.Web.Util.API
                 SongIdSource = ytSong.ResourceId.VideoId,
                 Name = ytSong.Title,
                 ArtistName = ytSong.VideoOwnerChannelTitle,
-                SourceId = BuiltInIds.Sources.Youtube
+                SourceId = Sources.Youtube
             }).ToList();
         }
         #endregion
@@ -368,7 +373,7 @@ namespace PlaylistChaser.Web.Util.API
             searchListRequest.Type = "youtube#video";
             searchListRequest.MaxResults = 1; // Number of results to retrieve
 
-            return searchListRequest.Execute().Items.First().Id.VideoId; //first because for some reason it sometimes returns more than 1 result
+            return searchListRequest.Execute().Items.First().Id.VideoId; //first instead of single, because for some reason it sometimes returns more than 1 result
         }
     }
 }
