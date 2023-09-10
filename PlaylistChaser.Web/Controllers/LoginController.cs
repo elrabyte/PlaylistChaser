@@ -12,28 +12,36 @@ namespace PlaylistChaser.Web.Controllers
         #region Spotify
         public async Task<ActionResult> LoginToSpotify()
         {
-            var clientId = configuration["Spotify:ClientId"];
-            var clientSecret = configuration["Spotify:ClientSecret"];
-            var redirectUri = configuration["Spotify:RedirectUri"];
-            var userId = 1;
-
-            var oAuth = db.OAuth2Credential.SingleOrDefault(a => a.UserId == userId && a.Provider == Sources.Spotify.ToString());
-            if (oAuth == null)
+            try
             {
-                var url = SpotifyApiHelper.getLoginUri(clientId, redirectUri).ToString();
-                return new JsonResult(new { success = true, url = url });
+                var clientId = configuration["Spotify:ClientId"];
+                var clientSecret = configuration["Spotify:ClientSecret"];
+                var redirectUri = configuration["Spotify:RedirectUri"];
+                var userId = 1;
+
+                var oAuth = db.OAuth2Credential.SingleOrDefault(a => a.UserId == userId && a.Provider == Sources.Spotify.ToString());
+                if (oAuth == null)
+                {
+                    var url = SpotifyApiHelper.getLoginUri(clientId, redirectUri).ToString();
+                    return new JsonResult(new { success = true, url = url });
+                }
+                else if (oAuth.TokenExpiration < DateTime.Now) //refresh token
+                {
+                    var newOAuth = await SpotifyApiHelper.GetOAuthCredential(clientId, clientSecret, oAuth.RefreshToken);
+                    oAuth.AccessToken = newOAuth.AccessToken;
+                    oAuth.RefreshToken = newOAuth.RefreshToken;
+                    oAuth.TokenExpiration = newOAuth.TokenExpiration;
+
+                    db.SaveChanges();
+                }
+
+                return new JsonResult(new { success = true });
             }
-            else if (oAuth.TokenExpiration < DateTime.Now) //refresh token
+            catch (Exception ex)
             {
-                var newOAuth = await SpotifyApiHelper.GetOAuthCredential(clientId, clientSecret, oAuth.RefreshToken);
-                oAuth.AccessToken = newOAuth.AccessToken;
-                oAuth.RefreshToken = newOAuth.RefreshToken;
-                oAuth.TokenExpiration = newOAuth.TokenExpiration;
-
-                db.SaveChanges();
+                return new JsonResult(new { success = false, message = ex.Message });
             }
 
-            return new JsonResult(new { success = true });
         }
         public async Task<ActionResult> AcceptSpotifyCode(string code)
         {
