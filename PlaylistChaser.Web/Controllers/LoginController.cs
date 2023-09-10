@@ -54,29 +54,36 @@ namespace PlaylistChaser.Web.Controllers
         #region Youtube
         public async Task<ActionResult> LoginToYoutube()
         {
-            var clientId = configuration["Youtube:ClientId"];
-            var clientSecret = configuration["Youtube:ClientSecret"];
-            var userId = 1;
-
-            var oAuth = db.OAuth2Credential.SingleOrDefault(a => a.UserId == userId && a.Provider == Sources.Youtube.ToString());
-            if (oAuth == null)
+            try
             {
-                var newOAuth = await YoutubeApiHelper.GetOauthCredential(clientId, clientSecret);
-                newOAuth.UserId = userId;
-                db.OAuth2Credential.Add(newOAuth);
-                db.SaveChanges();
+                var clientId = configuration["Youtube:ClientId"];
+                var clientSecret = configuration["Youtube:ClientSecret"];
+                var userId = 1;
+
+                var oAuth = db.OAuth2Credential.SingleOrDefault(a => a.UserId == userId && a.Provider == Sources.Youtube.ToString());
+                if (oAuth == null)
+                {
+                    var newOAuth = await YoutubeApiHelper.GetOauthCredential(clientId, clientSecret);
+                    newOAuth.UserId = userId;
+                    db.OAuth2Credential.Add(newOAuth);
+                    db.SaveChanges();
+                }
+                else if (oAuth.TokenExpiration < DateTime.Now) //refresh token
+                {
+                    var newOAuth = await YoutubeApiHelper.GetOauthCredential(clientId, clientSecret, oAuth.RefreshToken);
+                    oAuth.AccessToken = newOAuth.AccessToken;
+                    oAuth.RefreshToken = newOAuth.RefreshToken;
+                    oAuth.TokenExpiration = newOAuth.TokenExpiration;
+
+                    db.SaveChanges();
+                }
+
+                return new JsonResult(new { success = true });
             }
-            else if (oAuth.TokenExpiration < DateTime.Now) //refresh token
+            catch (Exception ex)
             {
-                var newOAuth = await YoutubeApiHelper.GetOauthCredential(clientId, clientSecret, oAuth.RefreshToken);
-                oAuth.AccessToken = newOAuth.AccessToken;
-                oAuth.RefreshToken = newOAuth.RefreshToken;
-                oAuth.TokenExpiration = newOAuth.TokenExpiration;
-
-                db.SaveChanges();
+                return new JsonResult(new { success = false, message = ex.Message });
             }
-
-            return new JsonResult(new { success = true });
         }
         #endregion
     }

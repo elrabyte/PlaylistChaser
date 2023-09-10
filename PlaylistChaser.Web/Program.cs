@@ -20,13 +20,8 @@ builder.Configuration
        .SetBasePath(builder.Environment.ContentRootPath)
        .AddJsonFile($"appsettings.{environment}.json", optional: false, reloadOnChange: true);
 
-#if DEBUG == false
 builder.Services.AddDbContext<PlaylistChaserDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("ServerConnectionString")));
-#else
-builder.Services.AddDbContext<PlaylistChaserDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("LocalConnectionString")));
-#endif
 
 var app = builder.Build();
 
