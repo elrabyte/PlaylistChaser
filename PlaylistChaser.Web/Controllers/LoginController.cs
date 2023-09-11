@@ -68,7 +68,6 @@ namespace PlaylistChaser.Web.Controllers
                 var redirectUri = configuration["Youtube:RedirectUri"];
                 var userId = 1;
 
-
                 var oAuth = db.OAuth2Credential.SingleOrDefault(a => a.UserId == userId && a.Provider == Sources.Youtube.ToString());
                 if (oAuth == null)
                 {
@@ -77,7 +76,7 @@ namespace PlaylistChaser.Web.Controllers
                 }
                 else if (oAuth.TokenExpiration < DateTime.Now) //refresh token
                 {
-                    var newOAuth = await YoutubeApiHelper.GetOauthCredential(clientId, clientSecret, oAuth.RefreshToken);
+                    var newOAuth = await YoutubeApiHelper.GetOauthCredential(clientId, clientSecret, oAuth.RefreshToken, userId);
                     oAuth.AccessToken = newOAuth.AccessToken;
                     oAuth.RefreshToken = newOAuth.RefreshToken;
                     oAuth.TokenExpiration = newOAuth.TokenExpiration;
@@ -100,8 +99,7 @@ namespace PlaylistChaser.Web.Controllers
             var redirectUri = configuration["Youtube:RedirectUri"];
             var userId = 1;
 
-            var oAuth = await YoutubeApiHelper.GetOauthCredential(code, clientId, clientSecret, redirectUri);
-            oAuth.UserId = userId;
+            var oAuth = await YoutubeApiHelper.GetOauthCredential(code, clientId, clientSecret, redirectUri, userId);
             db.OAuth2Credential.Add(oAuth);
             db.SaveChanges();
 

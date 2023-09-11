@@ -1,7 +1,7 @@
 ﻿using Google.Apis.Auth.OAuth2;
 using Google.Apis.Auth.OAuth2.Flows;
+using Google.Apis.Auth.OAuth2.Responses;
 using Google.Apis.Services;
-using Google.Apis.Util; //used for SystemClock.Default - only used in prod
 using Google.Apis.Util.Store;
 using Google.Apis.YouTube.v3;
 using Google.Apis.YouTube.v3.Data;
@@ -15,10 +15,7 @@ namespace PlaylistChaser.Web.Util.API
     internal class YoutubeApiHelper : ISource
     {
         private YouTubeService ytService;
-
-        public OAuth2Credential oAuthCredential;
-
-        static string[] scopes = { "https://www.googleapis.com/auth/youtube" };
+        static string[] scopes = { YouTubeService.Scope.Youtube };
         internal YoutubeApiHelper(string accessToken)
         {
             setYoutubeService(accessToken);
@@ -28,10 +25,9 @@ namespace PlaylistChaser.Web.Util.API
             ytService = new YouTubeService(new BaseClientService.Initializer
             {
                 HttpClientInitializer = new AccessTokenInitializer(accessToken),
-                ApplicationName = "PlaylistChaser", // Provide a meaningful name for your application
+                ApplicationName = "PlaylistChaser"
             });
         }
-
 
         /// <summary>
         /// Refresh Existing Token
@@ -40,28 +36,9 @@ namespace PlaylistChaser.Web.Util.API
         /// <param name="clientSecret"></param>
         /// <param name="refreshToken"></param>
         /// <returns></returns>
-        static async internal Task<OAuth2Credential> GetOauthCredential(string clientId, string clientSecret, string refreshToken)
+        static async internal Task<OAuth2Credential> GetOauthCredential(string clientId, string clientSecret, string refreshToken, int userId)
         {
-            var userId = 1;
-            var flow = new GoogleAuthorizationCodeFlow(new GoogleAuthorizationCodeFlow.Initializer
-            {
-                ClientSecrets = new ClientSecrets
-                {
-                    ClientId = clientId,
-                    ClientSecret = clientSecret
-                },
-                Scopes = scopes,
-                DataStore = new NullDataStore()
-            });
-
-            var credential = await flow.RefreshTokenAsync(userId.ToString(), refreshToken, CancellationToken.None);
-            var oAuth = new OAuth2Credential
-            {
-                Provider = Sources.Youtube.ToString(),
-                AccessToken = credential.AccessToken,
-                RefreshToken = credential.RefreshToken,
-                TokenExpiration = DateTime.Now.AddSeconds((double)credential.ExpiresInSeconds)
-            };
+            var oAuth = await getToken(clientId, clientSecret, userId, refreshToken: refreshToken);
             return oAuth;
         }
 
@@ -73,9 +50,13 @@ namespace PlaylistChaser.Web.Util.API
         /// <param name="clientSecret"></param>
         /// <param name="redirectUri"></param>
         /// <returns></returns>
-        static async internal Task<OAuth2Credential> GetOauthCredential(string code, string clientId, string clientSecret, string redirectUri)
+        static async internal Task<OAuth2Credential> GetOauthCredential(string code, string clientId, string clientSecret, string redirectUri, int userId)
         {
-            var userId = 1;
+            var oAuth = await getToken(clientId, clientSecret, userId, code: code, redirectUri: redirectUri);
+            return oAuth;
+        }
+        private static async Task<OAuth2Credential> getToken(string clientId, string clientSecret, int userId, string? refreshToken = null, string? code = null, string? redirectUri = null)
+        {
             var flow = new GoogleAuthorizationCodeFlow(new GoogleAuthorizationCodeFlow.Initializer
             {
                 ClientSecrets = new ClientSecrets
@@ -87,16 +68,24 @@ namespace PlaylistChaser.Web.Util.API
                 DataStore = new NullDataStore()
             });
 
-            var credential = await flow.ExchangeCodeForTokenAsync(userId.ToString(), code, redirectUri, CancellationToken.None);
+            TokenResponse credential = null;
+            if (refreshToken != null)
+                credential = await flow.RefreshTokenAsync(userId.ToString(), refreshToken, CancellationToken.None);
+            else if (code != null && redirectUri != null)
+                credential = await flow.ExchangeCodeForTokenAsync(userId.ToString(), code, redirectUri, CancellationToken.None);
+
             var oAuth = new OAuth2Credential
             {
                 Provider = Sources.Youtube.ToString(),
                 AccessToken = credential.AccessToken,
                 RefreshToken = credential.RefreshToken,
-                TokenExpiration = DateTime.Now.AddSeconds((double)credential.ExpiresInSeconds)
+                TokenExpiration = DateTime.Now.AddSeconds((double)credential.ExpiresInSeconds),
+                UserId = userId
             };
+
             return oAuth;
         }
+
         public static Uri getLoginUri(string clientId, string clientSecret, string redirectUri)
         {
             var flow = new GoogleAuthorizationCodeFlow(new GoogleAuthorizationCodeFlow.Initializer
@@ -109,6 +98,7 @@ namespace PlaylistChaser.Web.Util.API
                 Scopes = scopes,
                 DataStore = new NullDataStore()
             });
+
             var loginRequest = flow.CreateAuthorizationCodeRequest(redirectUri);
             return loginRequest.Build();
         }
@@ -303,7 +293,8 @@ namespace PlaylistChaser.Web.Util.API
                     playlistItem.Snippet.ResourceId.Kind = "youtube#video";
                     playlistItem.Snippet.ResourceId.VideoId = songId;
 
-                    var response = ytService.PlaylistItems.Insert(playlistItem, "snippet").Execute();
+                    var request = ytService.PlaylistItems.Insert(playlistItem, "snippet");
+                    var response = request.Execute();
                     uploadedSongs.Add(songId);
                 }
                 return uploadedSongs;
@@ -312,7 +303,7 @@ namespace PlaylistChaser.Web.Util.API
             {
                 if (ex.Message == "The service youtube has thrown an exception. HttpStatusCode is Forbidden. The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.")
                 {
-                    //exceeded daily? requests limit 
+                    //exceeded daily requests limit 
                     var a = 1;
                 }
 
