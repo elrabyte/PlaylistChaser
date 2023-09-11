@@ -66,15 +66,15 @@ namespace PlaylistChaser.Web.Controllers
             {
                 var clientId = configuration["Youtube:ClientId"];
                 var clientSecret = configuration["Youtube:ClientSecret"];
+                var redirectUri = configuration["Youtube:RedirectUri"];
                 var userId = 1;
+
 
                 var oAuth = db.OAuth2Credential.SingleOrDefault(a => a.UserId == userId && a.Provider == Sources.Youtube.ToString());
                 if (oAuth == null)
                 {
-                    var newOAuth = await YoutubeApiHelper.GetOauthCredential(clientId, clientSecret);
-                    newOAuth.UserId = userId;
-                    db.OAuth2Credential.Add(newOAuth);
-                    db.SaveChanges();
+                    var url = YoutubeApiHelper.getLoginUri(clientId, clientSecret, redirectUri).ToString();
+                    return new JsonResult(new { success = true, url = url });
                 }
                 else if (oAuth.TokenExpiration < DateTime.Now) //refresh token
                 {
@@ -92,6 +92,21 @@ namespace PlaylistChaser.Web.Controllers
             {
                 return new JsonResult(new { success = false, message = ex.Message });
             }
+        }
+
+        public async Task<ActionResult> AcceptYoutubeCode(string code)
+        {
+            var clientId = configuration["Youtube:ClientId"];
+            var clientSecret = configuration["Youtube:ClientSecret"];
+            var redirectUri = configuration["Youtube:RedirectUri"];
+            var userId = 1;
+
+            var oAuth = await YoutubeApiHelper.GetOauthCredential(code, clientId, clientSecret, redirectUri);
+            oAuth.UserId = userId;
+            db.OAuth2Credential.Add(oAuth);
+            db.SaveChanges();
+
+            return RedirectToAction("Index", "Playlist");
         }
         #endregion
     }

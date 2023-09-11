@@ -1,4 +1,5 @@
 ﻿using Google.Apis.Auth.OAuth2;
+using Google.Apis.Auth.OAuth2.Flows;
 using Google.Apis.Services;
 using Google.Apis.Util; //used for SystemClock.Default - only used in prod
 using Google.Apis.Util.Store;
@@ -31,30 +32,85 @@ namespace PlaylistChaser.Web.Util.API
             });
         }
 
-        static async internal Task<OAuth2Credential> GetOauthCredential(string clientId, string clientSecret, string? refreshToken = null)
+
+        /// <summary>
+        /// Refresh Existing Token
+        /// </summary>
+        /// <param name="clientId"></param>
+        /// <param name="clientSecret"></param>
+        /// <param name="refreshToken"></param>
+        /// <returns></returns>
+        static async internal Task<OAuth2Credential> GetOauthCredential(string clientId, string clientSecret, string refreshToken)
         {
-            var userCredential = GoogleWebAuthorizationBroker.AuthorizeAsync(
-                new ClientSecrets { ClientId = clientId, ClientSecret = clientSecret },
-                scopes,
-                "user",
-                CancellationToken.None,
-                new NullDataStore()
-                ).Result;
-
-            if (refreshToken != null)
+            var userId = 1;
+            var flow = new GoogleAuthorizationCodeFlow(new GoogleAuthorizationCodeFlow.Initializer
             {
-                userCredential.Token.RefreshToken = refreshToken;
-                await userCredential.RefreshTokenAsync(CancellationToken.None);
-            }
+                ClientSecrets = new ClientSecrets
+                {
+                    ClientId = clientId,
+                    ClientSecret = clientSecret
+                },
+                Scopes = scopes,
+                DataStore = new NullDataStore()
+            });
 
+            var credential = await flow.RefreshTokenAsync(userId.ToString(), refreshToken, CancellationToken.None);
             var oAuth = new OAuth2Credential
             {
                 Provider = Sources.Youtube.ToString(),
-                AccessToken = userCredential.Token.AccessToken,
-                RefreshToken = userCredential.Token.RefreshToken,
-                TokenExpiration = DateTime.Now.AddSeconds((double)userCredential.Token.ExpiresInSeconds)
+                AccessToken = credential.AccessToken,
+                RefreshToken = credential.RefreshToken,
+                TokenExpiration = DateTime.Now.AddSeconds((double)credential.ExpiresInSeconds)
             };
             return oAuth;
+        }
+
+        /// <summary>
+        /// Create new Token
+        /// </summary>
+        /// <param name="code"></param>
+        /// <param name="clientId"></param>
+        /// <param name="clientSecret"></param>
+        /// <param name="redirectUri"></param>
+        /// <returns></returns>
+        static async internal Task<OAuth2Credential> GetOauthCredential(string code, string clientId, string clientSecret, string redirectUri)
+        {
+            var userId = 1;
+            var flow = new GoogleAuthorizationCodeFlow(new GoogleAuthorizationCodeFlow.Initializer
+            {
+                ClientSecrets = new ClientSecrets
+                {
+                    ClientId = clientId,
+                    ClientSecret = clientSecret
+                },
+                Scopes = scopes,
+                DataStore = new NullDataStore()
+            });
+
+            var credential = await flow.ExchangeCodeForTokenAsync(userId.ToString(), code, redirectUri, CancellationToken.None);
+            var oAuth = new OAuth2Credential
+            {
+                Provider = Sources.Youtube.ToString(),
+                AccessToken = credential.AccessToken,
+                RefreshToken = credential.RefreshToken,
+                TokenExpiration = DateTime.Now.AddSeconds((double)credential.ExpiresInSeconds)
+            };
+            return oAuth;
+        }
+        public static Uri getLoginUri(string clientId, string clientSecret, string redirectUri)
+        {
+            var flow = new GoogleAuthorizationCodeFlow(new GoogleAuthorizationCodeFlow.Initializer
+            {
+                ClientSecrets = new ClientSecrets
+                {
+                    ClientId = clientId,
+                    ClientSecret = clientSecret
+                },
+                Scopes = scopes,
+                DataStore = new NullDataStore()
+            });
+            var loginRequest = flow.CreateAuthorizationCodeRequest(redirectUri);
+            return loginRequest.Build();
         }
 
         #region Get Stuff

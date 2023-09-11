@@ -188,7 +188,9 @@
             url: url,
             success: function (data) {
                 if (!data.success)
-                    return alert(data.message)                
+                    return alert(data.message)
+                else if (data.url)
+                    return window.location.replace(data.url);
             },
             dataType: "json"
         });
