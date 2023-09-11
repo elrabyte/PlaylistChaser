@@ -1,6 +1,9 @@
-﻿using PlaylistChaser.Web.Models;
+﻿using Google.Apis.Auth.OAuth2;
+using Microsoft.Identity.Client.Platforms.Features.DesktopOs.Kerberos;
+using PlaylistChaser.Web.Models;
 using SpotifyAPI.Web;
 using System.Text.RegularExpressions;
+using System.Web.Providers.Entities;
 using static PlaylistChaser.Web.Util.BuiltInIds;
 
 namespace PlaylistChaser.Web.Util.API
@@ -8,7 +11,7 @@ namespace PlaylistChaser.Web.Util.API
     internal class SpotifyApiHelper : ISource
     {
         private SpotifyClient spotify;
-
+        static string[] scopes = { Scopes.PlaylistModifyPrivate, Scopes.PlaylistModifyPublic, Scopes.UserReadPrivate };
         internal SpotifyApiHelper(string accessToken)
         {
             if (accessToken == null)
@@ -20,29 +23,43 @@ namespace PlaylistChaser.Web.Util.API
         }
 
         #region Authenticate
-        static async internal Task<OAuth2Credential> GetOauthCredential(string code, string clientId, string clientSecret, string redirectUri)
+        static async internal Task<OAuth2Credential> GetOauthCredential(string code, string clientId, string clientSecret, string redirectUri, int userId)
         {
-            var response = await new OAuthClient().RequestToken(new AuthorizationCodeTokenRequest(clientId, clientSecret, code, new Uri(redirectUri)));
+            var oAuth = await getToken(clientId, clientSecret, userId, code: code, redirectUri: redirectUri);
+            return oAuth;
+        }
+        static async internal Task<OAuth2Credential> GetOAuthCredential(string clientId, string clientSecret, string refreshToken, int userId)
+        {
+            var oAuth = await getToken(clientId, clientSecret, userId, refreshToken: refreshToken);
+            return oAuth;
+        }
+        private static async Task<OAuth2Credential> getToken(string clientId, string clientSecret, int userId, string? refreshToken = null, string? code = null, string? redirectUri = null)
+        {
+            IRefreshableToken response = null;
+            DateTime? tokenExpiration = null;
+            if (refreshToken != null)
+            {
+                var tokenResponse = await new OAuthClient().RequestToken(new AuthorizationCodeRefreshRequest(clientId, clientSecret, refreshToken));
+                tokenExpiration = DateTime.Now.AddSeconds(tokenResponse.ExpiresIn);
+                response = tokenResponse;
+                response.RefreshToken = refreshToken;
+            }
+            else if (code != null && redirectUri != null)
+            {
+                var tokenResponse = await new OAuthClient().RequestToken(new AuthorizationCodeTokenRequest(clientId, clientSecret, code, new Uri(redirectUri)));
+                tokenExpiration = DateTime.Now.AddSeconds(tokenResponse.ExpiresIn);
+                response = tokenResponse;
+            }
 
             var oAuth = new OAuth2Credential
             {
                 Provider = Sources.Spotify.ToString(),
                 AccessToken = response.AccessToken,
                 RefreshToken = response.RefreshToken,
-                TokenExpiration = DateTime.Now.AddSeconds(response.ExpiresIn)
+                TokenExpiration = tokenExpiration.Value,
+                UserId = userId,
             };
-            return oAuth;
-        }
-        static async internal Task<OAuth2Credential> GetOAuthCredential(string clientId, string clientSecret, string refreshToken)
-        {
-            var response = await new OAuthClient().RequestToken(new AuthorizationCodeRefreshRequest(clientId, clientSecret, refreshToken));
-            var oAuth = new OAuth2Credential
-            {
-                Provider = Sources.Spotify.ToString(),
-                AccessToken = response.AccessToken,
-                RefreshToken = refreshToken,
-                TokenExpiration = DateTime.Now.AddSeconds(response.ExpiresIn)
-            };
+
             return oAuth;
         }
 
@@ -50,7 +67,7 @@ namespace PlaylistChaser.Web.Util.API
         {
             var loginRequest = new LoginRequest(new Uri(redirectUri), clientId, LoginRequest.ResponseType.Code)
             {
-                Scope = new[] { Scopes.PlaylistModifyPrivate, Scopes.PlaylistModifyPublic, Scopes.UserReadPrivate }
+                Scope = scopes
             };
             return loginRequest.ToUri();
         }

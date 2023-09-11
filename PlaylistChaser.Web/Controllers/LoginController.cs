@@ -27,7 +27,7 @@ namespace PlaylistChaser.Web.Controllers
                 }
                 else if (oAuth.TokenExpiration < DateTime.Now) //refresh token
                 {
-                    var newOAuth = await SpotifyApiHelper.GetOAuthCredential(clientId, clientSecret, oAuth.RefreshToken);
+                    var newOAuth = await SpotifyApiHelper.GetOAuthCredential(clientId, clientSecret, oAuth.RefreshToken, userId);
                     oAuth.AccessToken = newOAuth.AccessToken;
                     oAuth.RefreshToken = newOAuth.RefreshToken;
                     oAuth.TokenExpiration = newOAuth.TokenExpiration;
@@ -50,8 +50,7 @@ namespace PlaylistChaser.Web.Controllers
             var redirectUri = configuration["Spotify:RedirectUri"];
             var userId = 1;
 
-            var oAuth = await SpotifyApiHelper.GetOauthCredential(code, clientId, clientSecret, redirectUri);
-            oAuth.UserId = userId;
+            var oAuth = await SpotifyApiHelper.GetOauthCredential(code, clientId, clientSecret, redirectUri, userId);
             db.OAuth2Credential.Add(oAuth);
             db.SaveChanges();
 
