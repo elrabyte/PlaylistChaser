@@ -1,6 +1,6 @@
-﻿@using PlaylistChaser.Web.Models.ViewModel;
+﻿@using PlaylistChaser.Web.Models.SearchModel;
 @using static PlaylistChaser.Web.Util.BuiltInIds;
-@model PlaylistViewModel
+@model PlaylistDetailsModel
 @{
     ViewData["Title"] = "Details";
     var sources = (Sources[])Enum.GetValues(typeof(Sources));
@@ -8,27 +8,27 @@
 
 <script type="text/javascript">
     function syncSongsThumbnail() {
-        let url = "/Playlist/SyncSongsThumbnail/@Model.PlaylistId";
+        let url = "/Playlist/SyncSongsThumbnail/@Model.Playlist.PlaylistId";
         let btn = $("#syncSongsThumbnailBtn");
         ajaxCall(url, btn);
     }
     function syncPlaylistFrom() {
-        let url = "/Playlist/SyncPlaylistFrom/@Model.PlaylistId";
+        let url = "/Playlist/SyncPlaylistFrom/@Model.Playlist.PlaylistId";
         let btn = $("#syncPlaylistFromBtn");
         ajaxCall(url, btn);
     }
     function syncPlaylistTo() {
-        let url = "/Playlist/SyncPlaylistTo/@Model.PlaylistId";
+        let url = "/Playlist/SyncPlaylistTo/@Model.Playlist.PlaylistId";
         let btn = $("#syncPlaylistToBtn");
         ajaxCall(url, btn);
     }
     function deletePlaylistAtSource() {
-        let url = "/Playlist/DeletePlaylistAtSource/@Model.PlaylistId";
+        let url = "/Playlist/DeletePlaylistAtSource/@Model.Playlist.PlaylistId";
         let btn = $("#deletePlaylistAtSourceBtn");
         ajaxCall(url, btn);
     }
     function deletePlaylistLocal() {
-        let url = "/Playlist/DeletePlaylistLocal/@Model.PlaylistId";
+        let url = "/Playlist/DeletePlaylistLocal/@Model.Playlist.PlaylistId";
         let btn = $("#deletePlaylistLocalBtn");
         ajaxCall(url, btn, function () { window.location.replace("/Playlist") });
     }
@@ -95,12 +95,12 @@
 <div class="row">
     <div class="col-md-10">
         <div class="form-group row">
-            @Html.LabelFor(m => m.Name)
-            @Html.DisplayFor(m => m.Name)
+            @Html.LabelFor(m => m.Playlist.Name)
+            @Html.DisplayFor(m => m.Playlist.Name)
         </div>
         <div class="form-group row">
-            @Html.LabelFor(m => m.Description)
-            @Html.DisplayFor(m => m.Description)
+            @Html.LabelFor(m => m.Playlist.Description)
+            @Html.DisplayFor(m => m.Playlist.Description)
         </div>
 
         <div id="btn-header-row" class="btn-group btn-group-lg" role="group" aria-label="Control group">
@@ -125,60 +125,6 @@
 <div class="row">
     <div class="col">
         <h5>Songs</h5>
-        <table class="table"
-               data-toggle="table"
-               data-search="true"
-               data-filter-control="true"
-               data-show-search-clear-button="true"
-               data-height="800">
-            <thead>
-                <tr>
-                    <th data-sortable="true">@Html.DisplayNameFor(m => m.Songs.First().SongName)</th>
-                    <th data-sortable="true">@Html.DisplayNameFor(m => m.Songs.First().ArtistName)</th>
-                    <th data-filter-control="select" data-sortable="true">@Html.DisplayNameFor(m => m.Songs.First().PlaylistSongStates)</t>
-                    <th data-filter-control="select" data-sortable="true">@Html.DisplayNameFor(m => m.Songs.First().SongStates)</th>
-                </tr>
-                <tr>
-                    <td>
-                        @Model.Songs.Count
-                    </td>
-                    <td colspan="4">&nbsp;</td>
-                </tr>
-            </thead>
-            <tbody>
-
-                @foreach (var song in Model.Songs)
-                {
-                    <tr>
-                        <td>
-                            @Html.DisplayFor(m => song.SongName)
-                        </td>
-                        <td>
-                            @Html.DisplayFor(m => song.ArtistName)
-                        </td>
-                        <td>
-                            @foreach (var state in song.PlaylistSongStates)
-                            {
-                                <div>@Html.Raw(state.IconHtml)@(" " + state.SourceId.ToString() + ": " + state.StateId.ToString())</div>
-                            }
-                        </td>
-                        <td>
-                            @foreach (var state in song.SongStates)
-                            {
-                                <div>@Html.Raw(state.IconHtml)@(" " + state.SourceId.ToString() + ": " + state.StateId.ToString())</div>
-                            }
-                        </td>
-                    </tr>
-                }
-            </tbody>
-            <tfoot>
-                <tr>
-                    <td>
-                        @Model.Songs.Count
-                    </td>
-                    <td colspan="4">&nbsp;</td>
-                </tr>
-            </tfoot>
-        </table>
+        @await Component.InvokeAsync("SongsGrid", new { playlistId = Model.Playlist.PlaylistId, addSongStates = Model.AddSongStates })
     </div>
 </div>

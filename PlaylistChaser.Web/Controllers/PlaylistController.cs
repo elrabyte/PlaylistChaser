@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using PlaylistChaser.Web.Database;
 using PlaylistChaser.Web.Models;
+using PlaylistChaser.Web.Models.SearchModel;
 using PlaylistChaser.Web.Util.API;
 using static PlaylistChaser.Web.Util.BuiltInIds;
 using Playlist = PlaylistChaser.Web.Models.Playlist;
@@ -52,16 +53,24 @@ namespace PlaylistChaser.Web.Controllers
         public async Task<ActionResult> Index()
         {
             var playlists = await db.GetPlaylists();
-            return View(playlists);
+            var model = new PlaylistIndexModel
+            {
+                Playlists = playlists
+            };
+            return View(model);
         }
 
         public async Task<ActionResult> Details(int id)
         {
             var playlist = (await db.GetPlaylists(id)).Single();
-            playlist.Songs = await db.GetSongs(playlist.PlaylistId);
+            var model = new PlaylistDetailsModel
+            {
+                Playlist = playlist,
+                AddSongStates = true
+            };
 
             ViewBag.SelectedSource = Sources.Youtube;
-            return View(playlist);
+            return View(model);
         }
         #endregion
 

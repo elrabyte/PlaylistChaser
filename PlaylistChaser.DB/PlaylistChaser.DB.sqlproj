@@ -82,6 +82,7 @@
     <Build Include="PlaylistAdditionalInfo.sql" />
     <Build Include="SongAdditionalInfo.sql" />
     <Build Include="OAuth2Credential.sql" />
+    <Build Include="SP\GetSongs.sql" />
   </ItemGroup>
   <ItemGroup>
     <RefactorLog Include="PlaylistChaser.DB.refactorlog" />

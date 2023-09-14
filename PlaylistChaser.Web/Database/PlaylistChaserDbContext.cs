@@ -25,7 +25,8 @@ namespace PlaylistChaser.Web.Database
 
         #region SP ViewModels
         private DbSet<PlaylistViewModel> PlaylistViewModel { get; set; }
-        private DbSet<PlaylistSongViewModel> SongViewModel { get; set; }
+        private DbSet<PlaylistSongViewModel> PlaylistSongViewModel { get; set; }
+        private DbSet<SongViewModel> SongViewModel { get; set; }
         #endregion
 
         #region SPs
@@ -35,20 +36,22 @@ namespace PlaylistChaser.Web.Database
             return await PlaylistViewModel.FromSqlRaw(sql, new SqlParameter("playlistId", playlistId.HasValue ? playlistId.Value : DBNull.Value)).ToListAsync();
         }
 
-        public async Task<List<PlaylistSongViewModel>> GetSongs(int playlistId, bool addStates = true)
+        public async Task<List<PlaylistSongViewModel>> GetPlaylistSongs(int playlistId)
         {
             var sql = "exec dbo.GetPlaylistSongs @playlistId";
-            var playlistSongs = await SongViewModel.FromSqlRaw(sql, new SqlParameter("playlistId", playlistId)).ToListAsync();
-
-            if (addStates)
-            {
-                playlistSongs.ForEach(ps => ps.PlaylistSongStates = PlaylistSongState.Where(pss => pss.PlaylistSongId == ps.PlaylistSongId).ToList());
-                playlistSongs.ForEach(ps => ps.SongStates = SongState.Where(ss => ss.SongId == ps.SongId).ToList());
-            }
+            var playlistSongs = await PlaylistSongViewModel.FromSqlRaw(sql, new SqlParameter("playlistId", playlistId)).ToListAsync();
 
             return playlistSongs;
-
         }
+
+        public async Task<List<SongViewModel>> GetSongs()
+        {
+            var sql = "exec dbo.GetSongs";
+            var songs = await SongViewModel.FromSqlRaw(sql).ToListAsync();
+
+            return songs;
+        }
+
         #endregion
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

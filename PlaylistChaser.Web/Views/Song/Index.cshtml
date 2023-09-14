@@ -1,0 +1,12 @@
+﻿@using PlaylistChaser.Web.Models.SearchModel;
+@model SongIndexModel
+@{
+    ViewData["Title"] = "Song Overview";
+}
+
+<div class="row">
+    <div class="col">
+        <h5>Songs</h5>
+        @await Component.InvokeAsync("SongsGrid", new { addSongStates = Model.AddSongStates })
+    </div>
+</div>

@@ -1,8 +1,7 @@
-﻿@using PlaylistChaser.Web.Models.ViewModel;
+﻿@using PlaylistChaser.Web.Models.SearchModel;
 @using static PlaylistChaser.Web.Util.BuiltInIds;
-@model IEnumerable<PlaylistViewModel>
+@model PlaylistIndexModel
 @{
-    ViewData["Title"] = "Home Page";
     ViewData["Title"] = "Home Page";
 }
 
@@ -53,7 +52,7 @@
 <div class="container mt-4">
     <section class="hero-section mt-4">
         <div class="card-grid">
-            @foreach (var playlist in Model)
+            @foreach (var playlist in Model.Playlists)
             {
                 <a class="pl_card" asp-action="Details" asp-route-id="@playlist.PlaylistId" data-pl-id="@playlist.PlaylistId">
                     <div class="card__background"
