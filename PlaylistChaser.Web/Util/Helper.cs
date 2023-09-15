@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Encodings.Web;
 
 namespace PlaylistChaser.Web.Util
 {
@@ -32,5 +33,15 @@ namespace PlaylistChaser.Web.Util
         {
             return helper.Action(action, controller, values);
         }
+
+        public static string GetString(this IHtmlContent content)
+        {
+            using (var writer = new StringWriter())
+            {
+                content.WriteTo(writer, HtmlEncoder.Default);
+                return writer.ToString();
+            }
+        }
+
     }
 }

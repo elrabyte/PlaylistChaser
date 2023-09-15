@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using PlaylistChaser.Web.Database;
 
 var builder = WebApplication.CreateBuilder(args);

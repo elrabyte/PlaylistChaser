@@ -70,6 +70,8 @@ namespace PlaylistChaser.Web.Controllers
             };
 
             ViewBag.SelectedSource = Sources.Youtube;
+            ViewBag.Sources = getSources();
+
             return View(model);
         }
         #endregion
@@ -770,6 +772,19 @@ namespace PlaylistChaser.Web.Controllers
                 return null;
             return File(thumbnail.FileContents, "image/jpeg");
         }
+
+        private List<(Sources source, string icon)> getSources()
+        {
+            var sources = new List<(Sources source, string icon)>();
+
+            foreach (Sources source in Enum.GetValues(typeof(Sources)))
+            {
+                var icon = db.Source.SingleOrDefault(s => s.Id == (int)source).IconHtml;
+                sources.Add((source, icon));
+            }
+            return sources;
+        }
+
 
         private Playlist infoToPlaylist(PlaylistAdditionalInfo info, PLaylistTypes playlistType, int? thumbnailId = null)
             => new Playlist { Name = info.Name, ChannelName = info.CreatorName, Description = info.Description, PlaylistTypeId = playlistType, ThumbnailId = thumbnailId };
