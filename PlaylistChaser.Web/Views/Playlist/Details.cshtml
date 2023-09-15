@@ -1,4 +1,5 @@
 ﻿@using PlaylistChaser.Web.Models.SearchModel;
+@using PlaylistChaser.Web.Util;
 @using static PlaylistChaser.Web.Util.BuiltInIds;
 @model PlaylistDetailsModel
 @{
@@ -97,15 +98,20 @@
         <div class="form-group row">
             @Html.LabelFor(m => m.Playlist.Name)
             @Html.DisplayFor(m => m.Playlist.Name)
+            @Html.BsLabelFor(m => m.Playlist.Name)
+            <div class="col-sm-10">
+                @Html.BsDisplayFor(m => m.Playlist.Name)
+            </div>
         </div>
         <div class="form-group row">
             @Html.LabelFor(m => m.Playlist.Description)
             @Html.DisplayFor(m => m.Playlist.Description)
+            @Html.BsLabelFor(m => m.Playlist.Description)
+            @Html.BsDisplayFor(m => m.Playlist.Description)
         </div>
 
             <a id="syncSongsThumbnailBtn" href="javascript:;" onclick="syncSongsThumbnail()" class="btn btn-primary">
                 Sync Songs-Thumbnail From Source
-            </a>
         <div class="btn-group" role="group" aria-label="Button group with nested dropdown">
             <div class="btn-group" role="group">
                 <button id="btnGroupSync" type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
@@ -132,5 +138,9 @@
     <div class="col">
         <h5>Songs</h5>
         @await Component.InvokeAsync("SongsGrid", new { playlistId = Model.Playlist.PlaylistId, addSongStates = Model.AddSongStates })
+            @Html.BsLabelFor(m => m.Playlist.SongsTotal)
+            @Html.BsDisplayFor(m => m.Playlist.SongsTotal)
+        </div>
+        @await Component.InvokeAsync("SongsGrid", new { playlistId = Model.Playlist.Id, addSongStates = Model.AddSongStates })
     </div>
 </div>

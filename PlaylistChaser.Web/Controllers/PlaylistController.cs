@@ -66,7 +66,7 @@ namespace PlaylistChaser.Web.Controllers
             var model = new PlaylistDetailsModel
             {
                 Playlist = playlist,
-                AddSongStates = true
+                AddSongStates = false
             };
 
             ViewBag.SelectedSource = Sources.Youtube;

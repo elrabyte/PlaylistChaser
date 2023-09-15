@@ -1,4 +1,7 @@
-﻿namespace PlaylistChaser.Web.Util
+﻿using Microsoft.AspNetCore.Html;
+using Microsoft.AspNetCore.Mvc;
+
+namespace PlaylistChaser.Web.Util
 {
     internal static class Helper
     {
@@ -23,6 +26,11 @@
             var configurationRoot = builder.Build();
 
             return configurationRoot.GetSection(sectionName).GetValue<string>(key);
+        }
+
+        public static string? Url(this IUrlHelper helper, string? action, string? controller, object? values)
+        {
+            return helper.Action(action, controller, values);
         }
     }
 }
