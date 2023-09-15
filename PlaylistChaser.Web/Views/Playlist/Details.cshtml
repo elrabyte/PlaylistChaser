@@ -4,7 +4,8 @@
 @model PlaylistDetailsModel
 @{
     ViewData["Title"] = "Details";
-    var sources = (Sources[])Enum.GetValues(typeof(Sources));
+    var sources = (List<(Sources source, string icon)>)ViewBag.Sources;
+    var selectedSource = (Sources)ViewBag.SelectedSource;
 }
 
 <script type="text/javascript">
@@ -83,14 +84,47 @@
     }
 </script>
 
+<div class="row">
+    <div class="col-6">
+        <div class="form-floating">
+            <select class="form-select" id="sourceSelector" aria-label="Floating label select example">
+                @foreach (var src in sources)
+                {
+                    var srcId = (int)src.source;
+                    var srcName = src.source.ToString();
+                    var html = $@"<option {(src.source == selectedSource ? "selected" : "")} value=""{srcId}"">{srcName}</option>";
+                    @Html.Raw(html)
+                }
+            </select>
+            <label for="sourceSelector">Select Source</label>
+        </div>
+    </div>
+</div>
 
-<select id="sourceSelector" class="form-select" aria-label="Select Source">
-    @foreach (var src in sources)
-    {
-        @Html.Raw("<option "+ (src == Sources.Youtube ? "selected" : "") + " value=\""+src.ToString()+"\">"+src.ToString()+"</option>")
-    }
-</select>
+<div class="btn disabled" id="sourceIcon"></div>
+<div class="btn-group" role="group" aria-label="Button group with nested dropdown">
+    <div class="btn-group" role="group">
+        <button id="btnGroupSync" type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" aria-describedby="basic-addon1">
+            Sync Playlist
+        </button>
+        <div class="dropdown-menu" aria-labelledby="btnGroupSync">
+            <a id="syncPlaylistFromBtn" class="dropdown-item" href="javascript:;" onclick="syncPlaylistFrom()">Sync Playlist From Sourcee</a>
+            <a id="syncPlaylistToBtn" class="dropdown-item" href="javascript:;" onclick="syncPlaylistTo()">Sync Playlist To Source</a>
+        </div>
+    </div>
+    @Controls.Button("Sync Songs-Thumbnail From Source","syncSongsThumbnail()","syncSongsThumbnailBtn", "btn-secondary")
+    <div class="btn-group" role="group">
+        <button id="btnGroupDelete" type="button" class="btn btn-danger dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+            Delete Playlist
+        </button>
+        <div class="dropdown-menu" aria-labelledby="btnGroupDelete">
+            <a id="deletePlaylistAtSourceBtn" class="dropdown-item" href="javascript:;" onclick="deletePlaylistAtSource()">Delete Playlist At Source</a>
+            <a id="deletePlaylistLocalBtn" class="dropdown-item" href="javascript:;" onclick="deletePlaylistLocal()">Delete Playlist Local</a>
+        </div>
+    </div>
+</div>
 
+@Helper.ModalPartial("playlistEdit", Helper.Url(Url,"_EditPartial", "Playlist", new { id = Model.Playlist.Id }))
 
 <h4>Playlist</h4>
 <div class="row">
@@ -105,28 +139,6 @@
             @Html.BsLabelFor(m => m.Playlist.Description)
             @Html.BsDisplayFor(m => m.Playlist.Description)
         </div>
-
-        <div class="btn-group" role="group" aria-label="Button group with nested dropdown">
-            <div class="btn-group" role="group">
-                <button id="btnGroupSync" type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                    Sync Playlist
-                </button>
-                <div class="dropdown-menu" aria-labelledby="btnGroupSync">
-                    <a id="syncPlaylistFromBtn" class="dropdown-item" href="javascript:;" onclick="syncPlaylistFromBtn()">Sync Playlist From Sourcee</a>
-                    <a id="syncPlaylistToBtn" class="dropdown-item" href="javascript:;" onclick="syncPlaylistToBtn()">Sync Playlist To Source</a>
-                </div>
-            </div>            
-            @Controls.Button("Sync Songs-Thumbnail From Source","syncSongsThumbnail()","syncSongsThumbnailBtn", "btn-secondary")
-            <div class="btn-group" role="group">
-                <button id="btnGroupDelete" type="button" class="btn btn-danger dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                    Delete Playlist
-                </button>
-                <div class="dropdown-menu" aria-labelledby="btnGroupDelete">
-                    <a id="deletePlaylistAtSourceBtn" class="dropdown-item" href="javascript:;" onclick="deletePlaylistAtSource()">Delete Playlist At Source</a>
-                    <a id="deletePlaylistLocalBtn" class="dropdown-item" href="javascript:;" onclick="deletePlaylistLocal()">Delete Playlist Local</a>
-                </div>
-            </div>
-        </div>
     </div>
 </div>
 <div class="row">
@@ -139,3 +151,15 @@
         @await Component.InvokeAsync("SongsGrid", new { playlistId = Model.Playlist.Id, addSongStates = Model.AddSongStates })
     </div>
 </div>
+
+<script type="text/javascript">
+    $(function(){
+        $("#sourceSelector").trigger("change");
+    })
+    const sourcesJs = [@Html.Raw(string.Join(',', sources.Select(s => "{ id:'" + (int)s.source + "', icon:\"" + s.icon + "\"}").ToList()))];
+    $("#sourceSelector").on("change", function (s, e) {
+        let sourceIcon = $("#sourceIcon");
+        let source = sourcesJs.find(({ id }) => id == s.target.value);
+        sourceIcon.html(source.icon);
+    })
+</script>

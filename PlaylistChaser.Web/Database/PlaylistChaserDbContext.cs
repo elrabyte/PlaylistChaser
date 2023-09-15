@@ -18,9 +18,11 @@ namespace PlaylistChaser.Web.Database
         public DbSet<Song> Song { get; set; }
         public DbSet<SongAdditionalInfo> SongAdditionalInfo { get; set; }
         public DbSet<SongState> SongState { get; set; }
+
         public DbSet<Thumbnail> Thumbnail { get; set; }
         public DbSet<CombinedPlaylistEntry> CombinedPlaylistEntry { get; set; }
         public DbSet<OAuth2Credential> OAuth2Credential { get; set; }
+        public DbSet<Source> Source { get; set; }
         #endregion
 
         #region SP ViewModels
