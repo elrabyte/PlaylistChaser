@@ -103,22 +103,28 @@
             @Html.DisplayFor(m => m.Playlist.Description)
         </div>
 
-        <div id="btn-header-row" class="btn-group btn-group-lg" role="group" aria-label="Control group">
-            <a id="syncPlaylistFromBtn" href="javascript:;" onclick="syncPlaylistFrom()" class="btn btn-primary">
-                Sync Playlist From Source
-            </a>
-            <a id="syncPlaylistToBtn" href="javascript:;" onclick="syncPlaylistTo()" class="btn btn-primary">
-                Sync Playlist To Source
-            </a>
             <a id="syncSongsThumbnailBtn" href="javascript:;" onclick="syncSongsThumbnail()" class="btn btn-primary">
                 Sync Songs-Thumbnail From Source
             </a>
-            <a id="deletePlaylistAtSourceBtn" href="javascript:;" onclick="deletePlaylistAtSource()" class="btn btn-primary">
-                Delete Playlist At Source
-            </a>
-            <a id="deletePlaylistLocalBtn" href="javascript:;" onclick="deletePlaylistLocal()" class="btn btn-primary">
-                Delete Playlist Local
-            </a>
+        <div class="btn-group" role="group" aria-label="Button group with nested dropdown">
+            <div class="btn-group" role="group">
+                <button id="btnGroupSync" type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                    Sync Playlist
+                </button>
+                <div class="dropdown-menu" aria-labelledby="btnGroupSync">
+                    <a id="syncPlaylistFromBtn" class="dropdown-item" href="javascript:;" onclick="syncPlaylistFromBtn()">Sync Playlist From Sourcee</a>
+                    <a id="syncPlaylistToBtn" class="dropdown-item" href="javascript:;" onclick="syncPlaylistToBtn()">Sync Playlist To Source</a>
+                </div>
+            </div>            
+            <div class="btn-group" role="group">
+                <button id="btnGroupDelete" type="button" class="btn btn-danger dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                    Delete Playlist
+                </button>
+                <div class="dropdown-menu" aria-labelledby="btnGroupDelete">
+                    <a id="deletePlaylistAtSourceBtn" class="dropdown-item" href="javascript:;" onclick="deletePlaylistAtSource()">Delete Playlist At Source</a>
+                    <a id="deletePlaylistLocalBtn" class="dropdown-item" href="javascript:;" onclick="deletePlaylistLocal()">Delete Playlist Local</a>
+                </div>
+            </div>
         </div>
     </div>
 </div>

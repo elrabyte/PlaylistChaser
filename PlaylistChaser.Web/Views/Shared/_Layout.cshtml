@@ -4,25 +4,31 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - PlaylistChaser</title>
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="~/css/main.min.css" />
-    <link rel="stylesheet" href="~/css/site.css" />
-    <!-- END -->
-    <!-- Node Modules CSS -->
+
+    <!-- jquery -->
+    <script src="~/node_modules/jquery/dist/jquery.min.js"></script>
+
+    <!-- popperjs -->
+    <script src="~/node_modules/@@popperjs/core/dist/umd/popper.min.js"></script>
+
+    <!-- bootstrap -->
+    <script src="~/node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="~/css/custom-bootstrap.min.css" /> @* replaces main bootstrap.css *@
+
+    <!--    bootstrap-icons -->
     <link rel="stylesheet" href="~/node_modules/bootstrap-icons/font/bootstrap-icons.min.css" />
+
+    <!--    bootstrap-table -->
     <link rel="stylesheet" href="~/node_modules/bootstrap-table/src/bootstrap-table.css" />
     <link rel="stylesheet" href="~/node_modules/bootstrap-table/src/extensions/filter-control/bootstrap-table-filter-control.css" />
-    <!-- END -->
-    <!-- Node Modules JS -->
-    <script src="~/node_modules/jquery/dist/jquery.min.js"></script>
     <script src="~/node_modules/bootstrap-table/src/bootstrap-table.js" type="module"></script>
     <script src="~/node_modules/bootstrap-table/src/extensions/filter-control/bootstrap-table-filter-control.js" type="module"></script>
-    <script src="~/node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- END -->
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="~/css/site.css" />
     <!-- Custom JS -->
     <script src="~/js/site.js" asp-append-version="true"></script>
     <script src="~/js/colorModeToggler.js" asp-append-version="true"></script>
-    <!-- END -->
 </head>
 <body>
     <!-- Header with Navigation -->
