@@ -85,14 +85,14 @@
 </script>
 
 <div class="row">
-    <div class="col-6">
+    <div class="col-2">
         <div class="form-floating">
             <select class="form-select" id="sourceSelector" aria-label="Floating label select example">
                 @foreach (var src in sources)
                 {
                     var srcId = (int)src.source;
                     var srcName = src.source.ToString();
-                    var html = $@"<option {(src.source == selectedSource ? "selected" : "")} value=""{srcId}"">{srcName}</option>";
+                    var html = $@"<option value=""{srcId}"">{srcName}</option>";
                     @Html.Raw(html)
                 }
             </select>
@@ -108,7 +108,7 @@
             Sync Playlist
         </button>
         <div class="dropdown-menu" aria-labelledby="btnGroupSync">
-            <a id="syncPlaylistFromBtn" class="dropdown-item" href="javascript:;" onclick="syncPlaylistFrom()">Sync Playlist From Sourcee</a>
+            <a id="syncPlaylistFromBtn" class="dropdown-item" href="javascript:;" onclick="syncPlaylistFrom()">Sync Playlist From Source</a>
             <a id="syncPlaylistToBtn" class="dropdown-item" href="javascript:;" onclick="syncPlaylistTo()">Sync Playlist To Source</a>
         </div>
     </div>
@@ -154,12 +154,11 @@
 
 <script type="text/javascript">
     $(function(){
-        $("#sourceSelector").trigger("change");
+        $("#sourceSelector").val(@((int)selectedSource)).change()
     })
     const sourcesJs = [@Html.Raw(string.Join(',', sources.Select(s => "{ id:'" + (int)s.source + "', icon:\"" + s.icon + "\"}").ToList()))];
     $("#sourceSelector").on("change", function (s, e) {
-        let sourceIcon = $("#sourceIcon");
         let source = sourcesJs.find(({ id }) => id == s.target.value);
-        sourceIcon.html(source.icon);
+        $("#sourceIcon").html(source.icon);
     })
 </script>
