@@ -15,12 +15,23 @@ namespace PlaylistChaser.Web.Util
         public static IHtmlContent BsDisplayFor<TModel, TResult>(this IHtmlHelper<TModel> htmlHelper, Expression<Func<TModel, TResult>> expression, object additionalViewData = null)
         {
             additionalViewData = additionalViewData ?? new { @class = "form-control" };
-            return htmlHelper.DisplayFor<TModel, TResult>(expression, additionalViewData);
+            var displayValue = htmlHelper.DisplayFor<TModel, TResult>(expression, additionalViewData).GetString();
+            
+            var html = $"<input type=\"text\" readonly class=\"form-control-plaintext\" value=\""+displayValue+"\">";
+            return new HtmlString(html);
         }
-        public static IHtmlContent Button(string caption, string onClick, string? id = null, string cssClass = "btn-primary", string role = "button")
+
+        public static IHtmlContent BsTextBoxFor<TModel, TResult>(this IHtmlHelper<TModel> htmlHelper, Expression<Func<TModel, TResult>> expression, object htmlAttributes = null)
         {
-            id = (id == null ? "" : $"id=\"{id}\"");
-            var html = $@"<a {id} class=""btn {cssClass}"" href=""javascript:;"" onclick=""{onClick}"" role=""{role}"">{caption}</a>";
+            htmlAttributes = htmlAttributes ?? new { @class = "form-control" };
+            return htmlHelper.TextBoxFor<TModel, TResult>(expression, htmlAttributes);
+        }
+
+        public static IHtmlContent Button(string caption, string onClick, string? id = null, string cssClass = "btn-primary", string iconName = null, string role = "button")
+        {
+            id = id == null ? "" : $"id=\"{id}\"";
+            var icon = iconName == null ? "" : $"<i class=\"bi bi-{iconName}\"></i> ";
+            var html = $@"<a {id} class=""btn {cssClass}"" href=""javascript:;"" onclick=""{onClick}"" role=""{role}"">{icon}{caption}</a>";
 
             return new HtmlString(html);
         }
