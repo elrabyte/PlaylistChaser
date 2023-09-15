@@ -9,27 +9,27 @@
 
 <script type="text/javascript">
     function syncSongsThumbnail() {
-        let url = "/Playlist/SyncSongsThumbnail/@Model.Playlist.PlaylistId";
+        let url = "/Playlist/SyncSongsThumbnail/@Model.Playlist.Id";
         let btn = $("#syncSongsThumbnailBtn");
         ajaxCall(url, btn);
     }
     function syncPlaylistFrom() {
-        let url = "/Playlist/SyncPlaylistFrom/@Model.Playlist.PlaylistId";
+        let url = "/Playlist/SyncPlaylistFrom/@Model.Playlist.Id";
         let btn = $("#syncPlaylistFromBtn");
         ajaxCall(url, btn);
     }
     function syncPlaylistTo() {
-        let url = "/Playlist/SyncPlaylistTo/@Model.Playlist.PlaylistId";
+        let url = "/Playlist/SyncPlaylistTo/@Model.Playlist.Id";
         let btn = $("#syncPlaylistToBtn");
         ajaxCall(url, btn);
     }
     function deletePlaylistAtSource() {
-        let url = "/Playlist/DeletePlaylistAtSource/@Model.Playlist.PlaylistId";
+        let url = "/Playlist/DeletePlaylistAtSource/@Model.Playlist.Id";
         let btn = $("#deletePlaylistAtSourceBtn");
         ajaxCall(url, btn);
     }
     function deletePlaylistLocal() {
-        let url = "/Playlist/DeletePlaylistLocal/@Model.Playlist.PlaylistId";
+        let url = "/Playlist/DeletePlaylistLocal/@Model.Playlist.Id";
         let btn = $("#deletePlaylistLocalBtn");
         ajaxCall(url, btn, function () { window.location.replace("/Playlist") });
     }
@@ -96,22 +96,16 @@
 <div class="row">
     <div class="col-md-10">
         <div class="form-group row">
-            @Html.LabelFor(m => m.Playlist.Name)
-            @Html.DisplayFor(m => m.Playlist.Name)
             @Html.BsLabelFor(m => m.Playlist.Name)
             <div class="col-sm-10">
                 @Html.BsDisplayFor(m => m.Playlist.Name)
             </div>
         </div>
         <div class="form-group row">
-            @Html.LabelFor(m => m.Playlist.Description)
-            @Html.DisplayFor(m => m.Playlist.Description)
             @Html.BsLabelFor(m => m.Playlist.Description)
             @Html.BsDisplayFor(m => m.Playlist.Description)
         </div>
 
-            <a id="syncSongsThumbnailBtn" href="javascript:;" onclick="syncSongsThumbnail()" class="btn btn-primary">
-                Sync Songs-Thumbnail From Source
         <div class="btn-group" role="group" aria-label="Button group with nested dropdown">
             <div class="btn-group" role="group">
                 <button id="btnGroupSync" type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
@@ -122,6 +116,7 @@
                     <a id="syncPlaylistToBtn" class="dropdown-item" href="javascript:;" onclick="syncPlaylistToBtn()">Sync Playlist To Source</a>
                 </div>
             </div>            
+            @Controls.Button("Sync Songs-Thumbnail From Source","syncSongsThumbnail()","syncSongsThumbnailBtn", "btn-secondary")
             <div class="btn-group" role="group">
                 <button id="btnGroupDelete" type="button" class="btn btn-danger dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
                     Delete Playlist
@@ -137,7 +132,7 @@
 <div class="row">
     <div class="col">
         <h5>Songs</h5>
-        @await Component.InvokeAsync("SongsGrid", new { playlistId = Model.Playlist.PlaylistId, addSongStates = Model.AddSongStates })
+        <div class="row">
             @Html.BsLabelFor(m => m.Playlist.SongsTotal)
             @Html.BsDisplayFor(m => m.Playlist.SongsTotal)
         </div>

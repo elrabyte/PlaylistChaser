@@ -54,11 +54,11 @@
         <div class="card-grid">
             @foreach (var playlist in Model.Playlists)
             {
-                <a class="pl_card" asp-action="Details" asp-route-id="@playlist.PlaylistId" data-pl-id="@playlist.PlaylistId">
+                <a class="pl_card" asp-action="Details" asp-route-id="@playlist.Id" data-pl-id="@playlist.Id">
                     <div class="card__background"
                          style="background-image: url('/Playlist/GetThumbnail?thumbnailId=@playlist.ThumbnailId')"></div>
                     <div class="card__content">
-                        <p class="card__category">@Html.DisplayFor(modelItem => playlist.AuthorName)</p>
+                        <p class="card__category">@Html.DisplayFor(modelItem => playlist.ChannelName)</p>
                         <h3 class="card__heading">@Html.DisplayFor(modelItem => playlist.Name)</h3>
                     </div>
                 </a>
