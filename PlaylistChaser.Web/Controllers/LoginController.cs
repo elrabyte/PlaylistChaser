@@ -69,12 +69,7 @@ namespace PlaylistChaser.Web.Controllers
                 var userId = 1;
 
                 var oAuth = db.OAuth2Credential.SingleOrDefault(a => a.UserId == userId && a.Provider == Sources.Youtube.ToString());
-                if (oAuth == null)
-                {
-                    var url = YoutubeApiHelper.getLoginUri(clientId, clientSecret, redirectUri).ToString();
-                    return new JsonResult(new { success = true, url = url });
-                }
-                else if (oAuth.TokenExpiration < DateTime.Now) //refresh token
+                if (oAuth.TokenExpiration > DateTime.Now) //refresh token
                 {
                     var newOAuth = await YoutubeApiHelper.GetOauthCredential(clientId, clientSecret, oAuth.RefreshToken, userId);
                     oAuth.AccessToken = newOAuth.AccessToken;
@@ -82,6 +77,11 @@ namespace PlaylistChaser.Web.Controllers
                     oAuth.TokenExpiration = newOAuth.TokenExpiration;
 
                     db.SaveChanges();
+                }
+                else
+                {
+                    var url = YoutubeApiHelper.getLoginUri(clientId, clientSecret, redirectUri).ToString();
+                    return new JsonResult(new { success = true, url = url });
                 }
 
                 return new JsonResult(new { success = true });
@@ -99,8 +99,18 @@ namespace PlaylistChaser.Web.Controllers
             var redirectUri = configuration["Youtube:RedirectUri"];
             var userId = 1;
 
-            var oAuth = await YoutubeApiHelper.GetOauthCredential(code, clientId, clientSecret, redirectUri, userId);
-            db.OAuth2Credential.Add(oAuth);
+            var oAuth = db.OAuth2Credential.SingleOrDefault(a => a.UserId == userId && a.Provider == Sources.Youtube.ToString());
+            if (oAuth == null)
+            {
+                oAuth = new Models.OAuth2Credential();
+                db.OAuth2Credential.Add(oAuth);
+            }
+            var newOAuth = await YoutubeApiHelper.GetOauthCredential(code, clientId, clientSecret, redirectUri, userId);
+
+            oAuth.AccessToken = newOAuth.AccessToken;
+            oAuth.RefreshToken = newOAuth.RefreshToken;
+            oAuth.TokenExpiration = newOAuth.TokenExpiration;
+
             db.SaveChanges();
 
             return RedirectToAction("Index", "Playlist");
