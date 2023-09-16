@@ -568,6 +568,11 @@ namespace PlaylistChaser.Web.Controllers
 
                 //delete at source
                 var info = db.PlaylistAdditionalInfo.Single(i => i.PlaylistId == id && i.SourceId == source);
+
+                //check if its own
+                if (!info.IsMine)
+                    return new JsonResult(new { success = false, message = "you don't own the playlist" });
+
                 switch (source)
                 {
                     case Sources.Youtube:
@@ -603,15 +608,17 @@ namespace PlaylistChaser.Web.Controllers
                 var playlist = db.Playlist.Single(p => p.Id == id);
 
                 //check if all sources where deleted
-                if (db.PlaylistAdditionalInfo.Any(i => i.PlaylistId == id))
-                    return new JsonResult(new { success = false, message = "Playlist still active at sources" });
+                if (db.PlaylistAdditionalInfo.Where(i => i.IsMine).Any(i => i.PlaylistId == id))
+                    return new JsonResult(new { success = false, message = "You still have Playlists at sources" });
+
+                //remove foreign playlistinfos
+                db.PlaylistAdditionalInfo.RemoveRange(db.PlaylistAdditionalInfo.Where(i => i.PlaylistId == id));
 
                 //delete from db
                 var playlistSongs = db.PlaylistSong.Where(ps => ps.PlaylistId == id);
-                //  remove songs states
+                //      remove their states
                 db.PlaylistSongState.RemoveRange(db.PlaylistSongState.Where(pss => playlistSongs.Select(ps => ps.Id).Contains(pss.PlaylistSongId))); ;
                 db.SaveChanges();
-                //  remove playlistsongs
                 db.PlaylistSong.RemoveRange(playlistSongs);
                 db.SaveChanges();
 
@@ -620,17 +627,7 @@ namespace PlaylistChaser.Web.Controllers
                 db.SaveChanges();
 
                 //  remove thumbnail
-                //  could be same as song thumbnail
-                if (!db.Song.Any(s => s.ThumbnailId == playlist.ThumbnailId))
-                {
-                    //remove thumbnail
-                    if (playlist.ThumbnailId != null)
-                    {
-                        db.Thumbnail.Remove(db.Thumbnail.Single(t => t.Id == playlist.ThumbnailId));
-                        db.SaveChanges();
-                    }
-                }
-
+                removePlaylistThumbnail(playlist.ThumbnailId);
 
                 //  remove songs that aren't used anymore
                 songCleanUp();
@@ -640,6 +637,23 @@ namespace PlaylistChaser.Web.Controllers
             {
                 return new JsonResult(new { success = false, message = ex.Message });
             }
+        }
+
+        /// <param name="thumbnailId"></param>
+        /// <returns>returns true if thumbnail was deleted</returns>
+        private bool removePlaylistThumbnail(int? thumbnailId)
+        {
+            if (thumbnailId != null)
+            {
+                //could be same as song thumbnail
+                if (!db.Song.Any(s => s.ThumbnailId == thumbnailId))
+                {
+                    db.Thumbnail.Remove(db.Thumbnail.Single(t => t.Id == thumbnailId));
+                    db.SaveChanges();
+                    return true;
+                }
+            }
+            return false;
         }
 
         /// <summary>
