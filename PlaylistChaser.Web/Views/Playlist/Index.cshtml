@@ -1,5 +1,7 @@
 ﻿@using PlaylistChaser.Web.Models.SearchModel;
 @using static PlaylistChaser.Web.Util.BuiltInIds;
+@using PlaylistChaser.Web.Util;
+
 @model PlaylistIndexModel
 @{
     ViewData["Title"] = "Home Page";
@@ -8,42 +10,36 @@
 <!-- Custom Site CSS -->
 <link rel="stylesheet" href="~/css/card.css" asp-append-version="true" />
 <!-- END -->
-
-<partial name="_AddYtPlModal" />
-<partial name="_CombineYtPlModal" />
+@Helper.ModalBareBonePartial("addSimplePlaylistPartial","Add Simple Plalyist", Helper.Url(Url, "_AddSimplePlaylistPartial", "Playlist", null))
+@Helper.ModalBareBonePartial("addCombinedPlaylistPartial","Add Combined Plalyist", Helper.Url(Url, "_AddCombinedPlaylistPartial", "Playlist", null))
 
 <div class="container mt-4">
     <div class="row">
         <div class="btn-group btn-group-lg" role="group" aria-label="Control group">
-            <a class="btn btn-primary"
-               data-bs-toggle="modal"
-               data-bs-target="#addYtPlModal">
-                <i class="bi bi-plus-circle btn-icon"></i>
-                Simple <i class="bi bi-youtube"></i> Playlist
+            <!--Add Simple Playlist-->
+            <a id="addSimplePlaylistBtn" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-plus-circle btn-icon"></i>Add Simple Playlist
             </a>
-            <a id="select-mode-btn"
-               class="btn btn-secondary">
-                <i class="bi bi-grid-fill btn-icon"></i>
-                Combine <i class="bi bi-youtube"></i> Playlist
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="javascript:;" onclick="addSimplePlaylistPartial.show('?source=@Sources.Youtube')"><i class="bi bi-youtube"></i> Youtube</a></li>
+                <li><a class="dropdown-item" href="javascript:;" onclick="addSimplePlaylistPartial.show('?source=@Sources.Spotify')"><i class="bi bi-spotify"></i> Spotify</a></li>
+            </ul>
+            <!--Add Combined Playlist-->
+            <a id="select-mode-btn" class="btn btn-secondary">
+                <i class="bi bi-grid-fill btn-icon"></i> Add Combined Playlist
             </a>
-            <a id="accept-select-btn"
-               class="btn btn-success d-none"
-               data-bs-toggle="modal"
-               data-bs-target="#combineYtPlModal">
-                <i class="bi bi-check-square btn-icon"></i>
-                Combine Selection
+            <a id="exit-select-mode-btn" class="btn btn-danger d-none">
+                <i class="bi bi-x-square btn-icon"></i> Exit Combine Mode
             </a>
-            <a id="exit-select-mode-btn"
-               class="btn btn-danger d-none">
-                <i class="bi bi-x-square btn-icon"></i>
-                Exit Combine Mode
+            <a id="accept-select-btn" class="btn btn-success d-none" href="javascript:;" onclick="addCombinedPlaylistPartial.show()">
+                <i class="bi bi-check-square btn-icon"></i> Combine Selection
             </a>
-            <a href="javascript:;" onclick="syncPlaylistThumbnailsFrom('@Sources.Youtube')"
+            <!--Sync all Playlist Thumbnails-->
+            <a id="syncPlaylistThumbnailsBtn" href="javascript:;" onclick="syncPlaylistThumbnailsFrom('@Sources.Youtube')"
                class="btn btn-tertiary"
                data-bs-toggle="tooltip"
                data-bs-title="Sync all Playlist Thumbnails">
-                <i class="bi bi-file-image btn-icon"></i>
-                Sync Thumbnails
+                <i class="bi bi-file-image btn-icon"></i> Sync Thumbnails
             </a>
         </div>
     </div>
@@ -79,25 +75,38 @@
             }
         });
         $("#select-mode-btn").click(function () {
+            enterSelectMode();
+        });
+        $("#exit-select-mode-btn").click(function () {
+            exitSelectMode();
+        });
+
+        function enterSelectMode() {
             selectMode = true;
             $("#exit-select-mode-btn").removeClass('d-none')
             $("#accept-select-btn").removeClass('d-none')
-            $("#select-mode-btn").addClass('d-none')
-        });
-        $("#exit-select-mode-btn").click(function () {
+            hideMainButtons();
+        }
+        function exitSelectMode() {
             selectMode = false;
             $("#exit-select-mode-btn").addClass('d-none')
             $("#accept-select-btn").addClass('d-none')
-            $("#select-mode-btn").removeClass('d-none')
+            showMainButtons();
             // Clear any selected cards when exiting select mode
             $(".pl_card.selected").removeClass("selected");
-        });
-        $("#create-combined-yt-btn").click(function () {
-            let name = $("#combinedYtPlName").val()
-            let selectedIds = getSelectedPlaylistIds();
-            createCombinedPlaylist(name, selectedIds, '@Sources.Youtube')
-        });
+        }
     });
+
+    function showMainButtons() {
+        $("#addSimplePlaylistBtn").removeClass('d-none')
+        $("#select-mode-btn").removeClass('d-none')
+        $("#syncPlaylistThumbnailsBtn").removeClass('d-none')
+    }
+    function hideMainButtons() {
+        $("#addSimplePlaylistBtn").addClass('d-none')
+        $("#select-mode-btn").addClass('d-none')
+        $("#syncPlaylistThumbnailsBtn").addClass('d-none')
+    }
 
     function getSelectedPlaylistIds() {
         var selectedIds = [];
@@ -141,26 +150,8 @@
         });
     }
 
-    //https://open.spotify.com/playlist/4zZpffTnguBELBde2Ar30Z?si=9caf6e2edf784070
-    function addSimplePlaylist(playlistUrl, source) {
-        let url = "/Playlist/AddSimplePlaylist/";
-        $.ajax({
-            type: "POST",
-            url: url,
-            data: { playlistUrl: playlistUrl, source: source },
-            success: function (data) {
-                if (!data.success)
-                    return alert(data.message)
-                else if (data.message)
-                    return alert(data.message)
-                location.reload();
-            },
-            dataType: "json"
-        });
-    }
-
     //auth
-    $(document).ready(function(){
+    $(document).ready(function () {
         loginToSpotify();
         loginToYoutube();
     })

@@ -567,23 +567,29 @@ namespace PlaylistChaser.Web.Controllers
                 var playlist = db.Playlist.Single(p => p.Id == id);
 
                 //delete at source
-                var info = db.PlaylistAdditionalInfo.Single(i => i.PlaylistId == id && i.SourceId == source);
+                var info = db.PlaylistAdditionalInfo.SingleOrDefault(i => i.PlaylistId == id && i.SourceId == source);
+                if (info == null)
+                    return new JsonResult(new { success = false, message = "you don't have a playlist at this source" });
 
                 //check if its own
                 if (!info.IsMine)
                     return new JsonResult(new { success = false, message = "you don't own the playlist" });
 
+                bool deleteSucceeded;
                 switch (source)
                 {
                     case Sources.Youtube:
-                        await ytHelper.DeletePlaylist(info.PlaylistIdSource);
+                        deleteSucceeded = await ytHelper.DeletePlaylist(info.PlaylistIdSource);
                         break;
                     case Sources.Spotify:
-                        await spottyHelper.DeletePlaylist(info.PlaylistIdSource);
+                        deleteSucceeded = await spottyHelper.DeletePlaylist(info.PlaylistIdSource);
                         break;
                     default:
                         throw new NotImplementedException(notImplementedForThatSource);
                 }
+
+                if (!deleteSucceeded)
+                    return new JsonResult(new { success = false, message = $"couldn't delete playlist on {source.ToString()}" });
 
                 //remove info
                 db.PlaylistAdditionalInfo.Remove(info);
@@ -608,13 +614,14 @@ namespace PlaylistChaser.Web.Controllers
                 var playlist = db.Playlist.Single(p => p.Id == id);
 
                 //check if all sources where deleted
-                if (db.PlaylistAdditionalInfo.Where(i => i.IsMine).Any(i => i.PlaylistId == id))
+                if (db.PlaylistAdditionalInfo.Where(i => i.PlaylistId == id && i.IsMine).Any())
                     return new JsonResult(new { success = false, message = "You still have Playlists at sources" });
 
                 //remove foreign playlistinfos
                 db.PlaylistAdditionalInfo.RemoveRange(db.PlaylistAdditionalInfo.Where(i => i.PlaylistId == id));
 
                 //delete from db
+                //  remove playlist songs 
                 var playlistSongs = db.PlaylistSong.Where(ps => ps.PlaylistId == id);
                 //      remove their states
                 db.PlaylistSongState.RemoveRange(db.PlaylistSongState.Where(pss => playlistSongs.Select(ps => ps.Id).Contains(pss.PlaylistSongId))); ;
