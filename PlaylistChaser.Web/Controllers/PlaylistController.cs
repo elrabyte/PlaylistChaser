@@ -2,7 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using PlaylistChaser.Web.Database;
 using PlaylistChaser.Web.Models;
-using PlaylistChaser.Web.Models.ViewModel;
+using PlaylistChaser.Web.Models.SearchModel;
 using PlaylistChaser.Web.Util.API;
 using static PlaylistChaser.Web.Util.BuiltInIds;
 using Playlist = PlaylistChaser.Web.Models.Playlist;
@@ -12,6 +12,8 @@ namespace PlaylistChaser.Web.Controllers
 {
     public class PlaylistController : BaseController
     {
+        public PlaylistController(IConfiguration configuration, PlaylistChaserDbContext db) : base(configuration, db) { }
+
         #region Properties
         private YoutubeApiHelper _ytHelper;
         private YoutubeApiHelper ytHelper
@@ -20,18 +22,8 @@ namespace PlaylistChaser.Web.Controllers
             {
                 if (_ytHelper == null)
                 {
-                    var oAuth = db.OAuth2Credential.SingleOrDefault(c => c.UserId == 1 && c.Provider == Sources.Youtube.ToString());
-
-                    if (oAuth != null)
-                    {
-                        _ytHelper = new YoutubeApiHelper(oAuth.AccessToken);
-                    }
-                    else
-                    {
-                        var ytClientId = configuration["Youtube:ClientId"];
-                        var ytClientSecret = configuration["Youtube:ClientSecret"];
-                        _ytHelper = new YoutubeApiHelper(ytClientId, ytClientSecret, new DatabaseDataStore(db));
-                    }
+                    var oAuth = db.OAuth2Credential.Single(c => c.UserId == 1 && c.Provider == Sources.Youtube.ToString());
+                    _ytHelper = new YoutubeApiHelper(oAuth.AccessToken);
                 }
                 return _ytHelper;
             }
@@ -50,37 +42,90 @@ namespace PlaylistChaser.Web.Controllers
                 return _spottyHelper;
             }
         }
-        #endregion
+        #endregion        
 
-        public PlaylistController(IConfiguration configuration, PlaylistChaserDbContext db) : base(configuration, db) { }
-
-        #region error
+        #region Error
         const string notImplementedForThatSource = "Not yet implemented for that source!";
         const string notImplementedForThatType = "Not yet implemented for that type!";
-
-        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-        public IActionResult Error()
-        {
-            return View(new ErrorViewModel { RequestId = System.Diagnostics.Activity.Current?.Id ?? HttpContext.TraceIdentifier });
-        }
-
         #endregion
 
         #region Views
         public async Task<ActionResult> Index()
         {
             var playlists = await db.GetPlaylists();
-            return View(playlists);
+
+            //get infos
+            playlists.ForEach(p => p.Infos = db.PlaylistAdditionalInfo.Where(i => i.PlaylistId == p.Id).ToList());
+
+            var model = new PlaylistIndexModel
+            {
+                Playlists = playlists
+            };
+
+            ViewBag.Sources = getSources();
+
+            return View(model);
         }
 
         public async Task<ActionResult> Details(int id)
         {
             var playlist = (await db.GetPlaylists(id)).Single();
-            playlist.Songs = await db.GetSongs(playlist.PlaylistId);
+            var model = new PlaylistDetailsModel
+            {
+                Playlist = playlist,
+                AddSongStates = false
+            };
 
-            ViewBag.SelectedSource = Sources.Youtube;
-            return View(playlist);
+            ViewBag.Sources = getSources();
+
+            return View(model);
         }
+
+        [HttpGet]
+        public ActionResult _EditPartial(int id)
+        {
+            var playlist = db.Playlist.Single(p => p.Id == id);
+            return PartialView(playlist);
+        }
+
+        [HttpPost]
+        public ActionResult _EditPartial(int? id, Playlist model)
+        {
+            try
+            {
+                var isNew = id == null;
+                Playlist playlist;
+                if (isNew)
+                {
+                    playlist = new Playlist();
+                    db.Playlist.Add(playlist);
+                }
+                else
+                    playlist = db.Playlist.Single(p => p.Id == id);
+
+                playlist.Name = model.Name;
+                playlist.Description = model.Description;
+
+                db.SaveChanges();
+
+                return new JsonResult(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                return new JsonResult(new { success = false, message = ex.Message });
+            }
+        }
+
+        public ActionResult _AddSimplePlaylistPartial(Sources source)
+            => PartialView(source);
+        public ActionResult _AddCombinedPlaylistPartial()
+        {
+            ViewBag.SelectedSource = Sources.Youtube;
+            ViewBag.Sources = getSources();
+            return PartialView();
+        }
+
+
         #endregion
 
         #region Index Functions
@@ -120,6 +165,7 @@ namespace PlaylistChaser.Web.Controllers
                 var newPlaylist = infoToPlaylist(info, PLaylistTypes.Simple);
                 //  set description
                 newPlaylist.Description += string.Format("\nPlaylist is from {0} by user {1}", source.ToString(), info.CreatorName);
+                newPlaylist.MainSourceId = source;
                 db.Playlist.Add(newPlaylist);
                 db.SaveChanges();
 
@@ -157,24 +203,33 @@ namespace PlaylistChaser.Web.Controllers
             var songInfos = db.SongAdditionalInfo.Where(i => i.SourceId == source);
             var newSongInfos = songsFromPlaylist.Where(s => !songInfos.Any(dbSong => dbSong.SongIdSource == s.SongIdSource)).ToList();
 
-            //add new songs and infos
-            newSongInfos.ForEach(i =>
+            //add new songs
+            var newSongs = new List<Song>();
+            foreach (var newSongInfo in newSongInfos)
             {
-                var newSong = infoToSong(i);
+                var newSong = infoToSong(newSongInfo);
                 db.Song.Add(newSong);
                 db.SaveChanges();
-                i.SongId = newSong.Id;
-                db.SongAdditionalInfo.Add(i);
+                newSongInfo.SongId = newSong.Id;
+                db.SongAdditionalInfo.Add(newSongInfo);
+                db.SaveChanges();
+                newSongs.Add(newSong);
+                
+            };
+            foreach (var newSong in newSongs)
+            {
                 //add state for each source
                 foreach (Sources src in Enum.GetValues(typeof(Sources)))
                     db.SongState.Add(new SongState { SongId = newSong.Id, SourceId = src, StateId = SongStates.NotChecked, LastChecked = DateTime.Now });
-
                 db.SaveChanges();
+
                 var state = db.SongState.Single(ss => ss.SongId == newSong.Id && ss.SourceId == source);
                 state.StateId = SongStates.Available;
                 state.LastChecked = DateTime.Now;
-            });
+            }
             db.SaveChanges();
+
+
 
             //add new songs to PlaylistSong
             var songsPopulated = songInfos.AsEnumerable() // Switch to client-side evaluation
@@ -192,8 +247,8 @@ namespace PlaylistChaser.Web.Controllers
             {
                 foreach (Sources src in Enum.GetValues(typeof(Sources)))
                     db.PlaylistSongState.Add(new PlaylistSongState { PlaylistSongId = ps.Id, SourceId = src, StateId = PlaylistSongStates.NotAdded, LastChecked = DateTime.Now });
-
                 db.SaveChanges();
+
                 var state = db.PlaylistSongState.Single(pss => pss.PlaylistSongId == ps.Id && pss.SourceId == source);
                 state.StateId = PlaylistSongStates.Added;
                 state.LastChecked = DateTime.Now;
@@ -208,62 +263,22 @@ namespace PlaylistChaser.Web.Controllers
         /// <param name="id">local playlist id</param>
         /// <returns></returns>
 
-        public ActionResult SyncPlaylistFrom(int id, Sources source)
+        public ActionResult SyncPlaylistFrom(int id, Sources? source = null)
         {
             try
             {
                 var playlist = db.Playlist.Single(p => p.Id == id);
-                var info = db.PlaylistAdditionalInfo.Single(i => i.PlaylistId == id && i.SourceId == source);
-
-                List<SongAdditionalInfo> songInfos = null;
-                //filtered
-                var plInfos = db.PlaylistAdditionalInfo.Where(i => i.SourceId == source);
-
-                switch (source)
+                switch (playlist.PlaylistTypeId)
                 {
-                    case Sources.Youtube:
-                        switch (playlist.PlaylistTypeId)
-                        {
-                            case PLaylistTypes.Simple:
-                                songInfos = ytHelper.GetPlaylistSongs(info.PlaylistIdSource);
-                                break;
-                            case PLaylistTypes.Combined:
-                                //sync all attached playlists
-                                var playlistIds = db.CombinedPlaylistEntry.Where(cp => cp.CombinedPlaylistId == id).Select(cp => cp.PlaylistId).ToList();
-                                foreach (var plInfo in plInfos.Where(i => playlistIds.Contains(i.PlaylistId)))
-                                    songInfos = ytHelper.GetPlaylistSongs(plInfo.PlaylistIdSource);
-
-                                break;
-                            default:
-                                throw new NotImplementedException(notImplementedForThatType);
-                        }
+                    case PLaylistTypes.Simple:
+                        syncPlaylistFromSimple(id, source.Value);
                         break;
-                    case Sources.Spotify:
-                        switch (playlist.PlaylistTypeId)
-                        {
-                            case PLaylistTypes.Simple:
-                                songInfos = spottyHelper.GetPlaylistSongs(info.PlaylistIdSource);
-
-                                break;
-                            default:
-                                throw new NotImplementedException(notImplementedForThatType);
-                        }
+                    case PLaylistTypes.Combined:
+                        syncPlaylistFromCombined(id);
                         break;
                     default:
-                        throw new NotImplementedException(notImplementedForThatSource);
+                        throw new NotImplementedException(notImplementedForThatType);
                 }
-
-                if (playlist.PlaylistTypeId == PLaylistTypes.Combined)
-                {
-                    //add songs to combined 
-                    syncCombinedPlaylistLocal(id);
-                }
-
-
-                //addSongsToPlaylist
-                addSongsToPlaylist(id, songInfos, source);
-
-
                 return new JsonResult(new { success = true });
             }
             catch (Exception ex)
@@ -272,6 +287,42 @@ namespace PlaylistChaser.Web.Controllers
             }
         }
 
+        private void syncPlaylistFromSimple(int id, Sources source)
+        {
+            var info = db.PlaylistAdditionalInfo.Single(i => i.PlaylistId == id && i.SourceId == source);
+
+            List<SongAdditionalInfo> songInfos = null;
+            //filtered
+            var plInfos = db.PlaylistAdditionalInfo.Where(i => i.SourceId == source);
+
+            switch (source)
+            {
+                case Sources.Youtube:
+                    songInfos = ytHelper.GetPlaylistSongs(info.PlaylistIdSource);
+                    break;
+                case Sources.Spotify:
+                    songInfos = spottyHelper.GetPlaylistSongs(info.PlaylistIdSource);
+                    break;
+                default:
+                    throw new NotImplementedException(notImplementedForThatSource);
+            }
+
+
+            //addSongsToPlaylist
+            addSongsToPlaylist(id, songInfos, source);
+        }
+
+        private void syncPlaylistFromCombined(int id)
+        {
+            //sync all attached playlists by their main source
+            var playlistIds = db.CombinedPlaylistEntry.Where(cp => cp.CombinedPlaylistId == id).Select(cp => cp.PlaylistId).ToList();
+            var playlists = db.Playlist.Where(p => playlistIds.Contains(p.Id));
+            foreach (var playlist in playlists)
+                syncPlaylistFromSimple(playlist.Id, playlist.MainSourceId);
+
+            //add songs to combined 
+            syncCombinedPlaylistLocal(id);
+        }
         public async Task<ActionResult> SyncPlaylistTo(int id, Sources source)
         {
             try
@@ -403,7 +454,8 @@ namespace PlaylistChaser.Web.Controllers
             var songInfos = db.SongAdditionalInfo.Where(i => i.SourceId == source);
 
             //only songs that weren't checked before
-            missingSongs = missingSongs.Where(s => songStates.Single(ss => ss.SongId == s.Id).StateId == SongStates.NotChecked);
+            //TODO: doesn't do it correctly
+            //missingSongs = missingSongs.Where(s => songStates.Single(ss => ss.SongId == s.Id).StateId == SongStates.NotChecked); 
 
             //check if songs exists
             (List<(int Id, string IdAtSource)> Exact, List<(int Id, string IdAtSource)> NotExact) foundSongs;
@@ -526,6 +578,7 @@ namespace PlaylistChaser.Web.Controllers
 
             //set infos
             var playlist = infoToPlaylist(info, PLaylistTypes.Combined);
+            playlist.MainSourceId = source;
 
             //add locally
             db.Playlist.Add(playlist);
@@ -574,18 +627,29 @@ namespace PlaylistChaser.Web.Controllers
                 var playlist = db.Playlist.Single(p => p.Id == id);
 
                 //delete at source
-                var info = db.PlaylistAdditionalInfo.Single(i => i.PlaylistId == id && i.SourceId == source);
+                var info = db.PlaylistAdditionalInfo.SingleOrDefault(i => i.PlaylistId == id && i.SourceId == source);
+                if (info == null)
+                    return new JsonResult(new { success = false, message = "you don't have a playlist at this source" });
+
+                //check if its own
+                if (!info.IsMine)
+                    return new JsonResult(new { success = false, message = "you don't own the playlist" });
+
+                bool deleteSucceeded;
                 switch (source)
                 {
                     case Sources.Youtube:
-                        await ytHelper.DeletePlaylist(info.PlaylistIdSource);
+                        deleteSucceeded = await ytHelper.DeletePlaylist(info.PlaylistIdSource);
                         break;
                     case Sources.Spotify:
-                        await spottyHelper.DeletePlaylist(info.PlaylistIdSource);
+                        deleteSucceeded = await spottyHelper.DeletePlaylist(info.PlaylistIdSource);
                         break;
                     default:
                         throw new NotImplementedException(notImplementedForThatSource);
                 }
+
+                if (!deleteSucceeded)
+                    return new JsonResult(new { success = false, message = $"couldn't delete playlist on {source.ToString()}" });
 
                 //remove info
                 db.PlaylistAdditionalInfo.Remove(info);
@@ -610,15 +674,18 @@ namespace PlaylistChaser.Web.Controllers
                 var playlist = db.Playlist.Single(p => p.Id == id);
 
                 //check if all sources where deleted
-                if (db.PlaylistAdditionalInfo.Any(i => i.PlaylistId == id))
-                    return new JsonResult(new { success = false, message = "Playlist still active at sources" });
+                if (db.PlaylistAdditionalInfo.Where(i => i.PlaylistId == id && i.IsMine).Any())
+                    return new JsonResult(new { success = false, message = "You still have Playlists at sources" });
+
+                //remove foreign playlistinfos
+                db.PlaylistAdditionalInfo.RemoveRange(db.PlaylistAdditionalInfo.Where(i => i.PlaylistId == id));
 
                 //delete from db
+                //  remove playlist songs 
                 var playlistSongs = db.PlaylistSong.Where(ps => ps.PlaylistId == id);
-                //  remove songs states
+                //      remove their states
                 db.PlaylistSongState.RemoveRange(db.PlaylistSongState.Where(pss => playlistSongs.Select(ps => ps.Id).Contains(pss.PlaylistSongId))); ;
                 db.SaveChanges();
-                //  remove playlistsongs
                 db.PlaylistSong.RemoveRange(playlistSongs);
                 db.SaveChanges();
 
@@ -627,17 +694,7 @@ namespace PlaylistChaser.Web.Controllers
                 db.SaveChanges();
 
                 //  remove thumbnail
-                //  could be same as song thumbnail
-                if (!db.Song.Any(s => s.ThumbnailId == playlist.ThumbnailId))
-                {
-                    //remove thumbnail
-                    if (playlist.ThumbnailId != null)
-                    {
-                        db.Thumbnail.Remove(db.Thumbnail.Single(t => t.Id == playlist.ThumbnailId));
-                        db.SaveChanges();
-                    }
-                }
-
+                removePlaylistThumbnail(playlist.ThumbnailId);
 
                 //  remove songs that aren't used anymore
                 songCleanUp();
@@ -647,6 +704,23 @@ namespace PlaylistChaser.Web.Controllers
             {
                 return new JsonResult(new { success = false, message = ex.Message });
             }
+        }
+
+        /// <param name="thumbnailId"></param>
+        /// <returns>returns true if thumbnail was deleted</returns>
+        private bool removePlaylistThumbnail(int? thumbnailId)
+        {
+            if (thumbnailId != null)
+            {
+                //could be same as song thumbnail
+                if (!db.Song.Any(s => s.ThumbnailId == thumbnailId))
+                {
+                    db.Thumbnail.Remove(db.Thumbnail.Single(t => t.Id == thumbnailId));
+                    db.SaveChanges();
+                    return true;
+                }
+            }
+            return false;
         }
 
         /// <summary>
@@ -772,7 +846,11 @@ namespace PlaylistChaser.Web.Controllers
         #endregion
 
         #region  Helper
-        public ActionResult GetThumbnail(int thumbnailId)
+
+        private List<Source> getSources()
+            => db.Source.OrderBy(i => i.Name).ToList();
+
+        public async Task<ActionResult> GetThumbnail(int thumbnailId)
         {
             var thumbnail = db.Thumbnail.SingleOrDefault(t => t.Id == thumbnailId);
             if (thumbnail == null)

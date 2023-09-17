@@ -86,6 +86,11 @@
     padding: var(--spacing-l);
     position: absolute;
     top: 0;
+    width: 100%;
+}
+
+.mainsource {
+    font-weight: bold;
 }
 
 .card__category {

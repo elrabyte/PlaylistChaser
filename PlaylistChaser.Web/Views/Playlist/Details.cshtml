@@ -1,45 +1,45 @@
-﻿@using PlaylistChaser.Web.Models.ViewModel;
+﻿@using PlaylistChaser.Web.Models.SearchModel;
+@using PlaylistChaser.Web.Util;
 @using static PlaylistChaser.Web.Util.BuiltInIds;
-@model PlaylistViewModel
+@model PlaylistDetailsModel
 @{
     ViewData["Title"] = "Details";
-    var sources = (Sources[])Enum.GetValues(typeof(Sources));
+    var sources = (List<Source>)ViewBag.Sources;
 }
 
 <script type="text/javascript">
-    function syncSongsThumbnail() {
-        let url = "/Playlist/SyncSongsThumbnail/@Model.PlaylistId";
+    function syncSongsThumbnail(source) {
+        let url = "/Playlist/SyncSongsThumbnail/@Model.Playlist.Id";
         let btn = $("#syncSongsThumbnailBtn");
-        ajaxCall(url, btn);
+        ajaxCall(url, btn, source);
     }
-    function syncPlaylistFrom() {
-        let url = "/Playlist/SyncPlaylistFrom/@Model.PlaylistId";
+    function syncPlaylistFrom(source) {
+        let url = "/Playlist/SyncPlaylistFrom/@Model.Playlist.Id";
         let btn = $("#syncPlaylistFromBtn");
-        ajaxCall(url, btn);
+        ajaxCall(url, btn, source);
     }
-    function syncPlaylistTo() {
-        let url = "/Playlist/SyncPlaylistTo/@Model.PlaylistId";
+    function syncPlaylistTo(source) {
+        let url = "/Playlist/SyncPlaylistTo/@Model.Playlist.Id";
         let btn = $("#syncPlaylistToBtn");
-        ajaxCall(url, btn);
+        ajaxCall(url, btn, source);
     }
-    function deletePlaylistAtSource() {
-        let url = "/Playlist/DeletePlaylistAtSource/@Model.PlaylistId";
+    function deletePlaylistAtSource(source) {
+        let url = "/Playlist/DeletePlaylistAtSource/@Model.Playlist.Id";
         let btn = $("#deletePlaylistAtSourceBtn");
-        ajaxCall(url, btn);
+        ajaxCall(url, btn, source);
     }
     function deletePlaylistLocal() {
-        let url = "/Playlist/DeletePlaylistLocal/@Model.PlaylistId";
+        let url = "/Playlist/DeletePlaylistLocal/@Model.Playlist.Id";
         let btn = $("#deletePlaylistLocalBtn");
-        ajaxCall(url, btn, function () { window.location.replace("/Playlist") });
+        ajaxCall(url, btn, null, function () { window.location.replace("/Playlist") });
     }
 
-    function ajaxCall(url, btn, onSuccessFunc) {
+    function ajaxCall(url, btn, source, onSuccessFunc) {
         if (url == null || btn == null)
             return alert("url or button not set");
 
         disableButtonRow();
         disableButton(btn);
-        let source = getSelectedSource();
 
         $.ajax({
             type: "POST",
@@ -51,7 +51,7 @@
                     enableButton(btn);
                     return alert(data.message)
                 }
-                if (onSuccessFunc == null)
+                if (typeof onSuccessFunc === 'undefined')
                     location.reload();
                 else
                     onSuccessFunc();
@@ -76,113 +76,98 @@
         btn.removeClass("disabled");
         btn.find(".loading-spinner").remove();
     }
-
-    function getSelectedSource() {
-        return $("#sourceSelector").val();
-    }
 </script>
 
+<h4>Playlist @Controls.Button("Edit","editPlaylist()",iconName:"pencil-square")</h4>
 
-<select id="sourceSelector" class="form-select" aria-label="Select Source">
-    @foreach (var src in sources)
-    {
-        @Html.Raw("<option "+ (src == Sources.Youtube ? "selected" : "") + " value=\""+src.ToString()+"\">"+src.ToString()+"</option>")
-    }
-</select>
-
-
-<h4>Playlist</h4>
 <div class="row">
     <div class="col-md-10">
         <div class="form-group row">
-            @Html.LabelFor(m => m.Name)
-            @Html.DisplayFor(m => m.Name)
+            @Html.BsLabelFor(m => m.Playlist.Name)
+            <div class="col-sm-10">
+                @Html.BsDisplayFor(m => m.Playlist.Name)
+            </div>
         </div>
         <div class="form-group row">
-            @Html.LabelFor(m => m.Description)
-            @Html.DisplayFor(m => m.Description)
-        </div>
-
-        <div id="btn-header-row" class="btn-group btn-group-lg" role="group" aria-label="Control group">
-            <a id="syncPlaylistFromBtn" href="javascript:;" onclick="syncPlaylistFrom()" class="btn btn-primary">
-                Sync Playlist From Source
-            </a>
-            <a id="syncPlaylistToBtn" href="javascript:;" onclick="syncPlaylistTo()" class="btn btn-primary">
-                Sync Playlist To Source
-            </a>
-            <a id="syncSongsThumbnailBtn" href="javascript:;" onclick="syncSongsThumbnail()" class="btn btn-primary">
-                Sync Songs-Thumbnail From Source
-            </a>
-            <a id="deletePlaylistAtSourceBtn" href="javascript:;" onclick="deletePlaylistAtSource()" class="btn btn-primary">
-                Delete Playlist At Source
-            </a>
-            <a id="deletePlaylistLocalBtn" href="javascript:;" onclick="deletePlaylistLocal()" class="btn btn-primary">
-                Delete Playlist Local
-            </a>
+            @Html.BsLabelFor(m => m.Playlist.Description)
+            <div class="col-sm-10">
+                @Html.BsDisplayFor(m => m.Playlist.Description)
+            </div>
         </div>
     </div>
 </div>
+
+<div id="btn-header-row" class="btn-group" role="group" aria-label="Button group with nested dropdown">
+    <!--Sync Playlist-->
+    <div class="btn-group">
+        <button type="button" class="btn btn-primary" onclick="syncPlaylistFrom('@Model.Playlist.MainSourceId')">
+            <i class="bi bi-cloud-download"></i> Sync Playlist
+        </button>
+    </div>
+
+    <!--Sync Playlist To-->
+    <div class="btn-group" role="group">
+        <button id="btnGroupSync" type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="bi bi-cloud-upload"></i> Sync Playlist To
+        </button>
+        <div class="dropdown-menu dropdown-menu-end" aria-labelledby="btnGroupSync">
+            @foreach (var source in sources)
+            {
+                <a class="dropdown-item" href="javascript:;" onclick="syncPlaylistTo('@source.Id')">@Html.Raw(source.IconHtml) @source.Name</a>
+            }
+        </div>
+    </div>
+    <!--Sync Songs-Thumbnail From-->
+    <div class="btn-group" role="group">
+        <button id="btnGroupSync" type="button" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="bi bi-file-arrow-down"></i> Sync Songs-Thumbnail From
+        </button>
+        <div class="dropdown-menu dropdown-menu-end" aria-labelledby="btnGroupSync">
+            @foreach (var source in sources)
+            {
+                <a class="dropdown-item" href="javascript:;" onclick="syncSongsThumbnail('@source.Id')">@Html.Raw(source.IconHtml) @source.Name</a>
+            }
+        </div>
+    </div>
+    <!--Delete Playlist-->
+    <div class="btn-group" role="group">
+        <button id="btnGroupDelete" type="button" class="btn btn-danger dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="bi bi-trash"></i> Delete Playlist
+        </button>
+        <div class="dropdown-menu dropdown-menu-end" aria-labelledby="btnGroupDelete">
+            <a id="deletePlaylistLocalBtn" class="dropdown-item" href="javascript:;" onclick="deletePlaylistLocal()">Delete Playlist Local</a>
+            <hr class="dropdown-divider">
+            @foreach (var source in sources)
+            {
+                <a class="dropdown-item" href="javascript:;" onclick="deletePlaylistAtSource('@source.Id')">@Html.Raw(source.IconHtml) @source.Name</a>
+            }
+        </div>
+    </div>
+</div>
+
+<hr />
+<h5>Songs</h5>
 <div class="row">
-    <div class="col">
-        <h5>Songs</h5>
-        <table class="table"
-               data-toggle="table"
-               data-search="true"
-               data-filter-control="true"
-               data-show-search-clear-button="true"
-               data-height="800">
-            <thead>
-                <tr>
-                    <th data-checkbox="true"></th>
-                    <th data-sortable="true">@Html.DisplayNameFor(m => m.Songs.First().SongName)</th>
-                    <th data-sortable="true">@Html.DisplayNameFor(m => m.Songs.First().ArtistName)</th>
-                    <th data-filter-control="select" data-sortable="true">@Html.DisplayNameFor(m => m.Songs.First().PlaylistSongStates)</t>
-                    <th data-filter-control="select" data-sortable="true">@Html.DisplayNameFor(m => m.Songs.First().SongStates)</th>
-                </tr>
-                <tr>
-                    <td>
-                        @Model.Songs.Count
-                    </td>
-                    <td colspan="4">&nbsp;</td>
-                </tr>
-            </thead>
-            <tbody>
-
-                @foreach (var song in Model.Songs)
-                {
-                    <tr>
-                        <td>
-                            <img src="/Playlist/GetThumbnail?thumbnailId=@song.ThumbnailId">
-                        </td>
-                        <td>
-                            @Html.DisplayFor(m => song.SongName)
-                        </td>
-                        <td>
-                            @Html.DisplayFor(m => song.ArtistName)
-                        </td>
-                        <td>
-                            @foreach (var state in song.PlaylistSongStates)
-                            {
-                                <div>@Html.Raw(state.IconHtml)@(" " + state.SourceId.ToString() + ": " + state.StateId.ToString())</div>
-                            }
-                        </td>
-                        <td>
-                            @foreach (var state in song.SongStates)
-                            {
-                                <div>@Html.Raw(state.IconHtml)@(" " + state.SourceId.ToString() + ": " + state.StateId.ToString())</div>
-                            }
-                        </td>
-                    </tr>
-                }
-            </tbody>
-            <tfoot>
-                <tr>
-                    <td>
-                        @Model.Songs.Count
-                    </td>
-                    <td colspan="4">&nbsp;</td>
-                </tr>
-            </tfoot>
-        </table>
+    <div class="col-md-10">
+        <div class="form-group row">
+            @Html.BsLabelFor(m => m.Playlist.SongsTotal)
+            <div class="col-sm-10">
+                @Html.BsDisplayFor(m => m.Playlist.SongsTotal)
+            </div>
+        </div>
     </div>
+    @await Component.InvokeAsync("SongsGrid", new { playlistId = Model.Playlist.Id, addSongStates = Model.AddSongStates })
 </div>
+
+
+@Helper.ModalPartial("playlistEdit", "Edit Playlist", Helper.Url(Url,"_EditPartial", "Playlist", new { id = Model.Playlist.Id }))
+
+<script type="text/javascript">    
+    playlistEdit.on("saved", function(){
+        location.reload();
+    })
+
+    function editPlaylist() {
+        playlistEdit.show();
+    }
+</script>

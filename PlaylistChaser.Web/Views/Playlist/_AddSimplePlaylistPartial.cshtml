@@ -1,0 +1,53 @@
+﻿@using PlaylistChaser.Web.Util;
+@using static PlaylistChaser.Web.Util.BuiltInIds;
+@model Sources
+
+
+<div class="modal-header p-5 pb-4 border-bottom-0">
+    <h1 class="fw-bold mb-0 fs-2">Add a Playlist</h1>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+<div class="modal-body p-5 pt-0">
+    <div class="form-floating mb-3">
+        <div class="input-group">
+            @switch (Model)
+            {
+                case Sources.Youtube:
+                    <div class="input-group-text text-yt-red"><i class="bi bi-youtube"></i></div>
+                    <input type="url" name="playlistUrl" class="form-control form-control-lg" id="playlistUrl" placeholder="youtu.be/playlist?list=...." required>
+                    break;
+                case Sources.Spotify:
+                    <div class="input-group-text text-sptf-green"><i class="bi bi-spotify"></i></div>
+                    <input type="url" name="playlistUrl" class="form-control form-control-lg" id="playlistUrl" placeholder="https://open.spotify.com/playlist/..." required>
+                    break;
+
+                default:
+                    break;
+            }
+        </div>
+    </div>
+    <button class="w-100 mb-2 btn btn-lg rounded-3 btn-primary" onclick="addSimplePlaylist()">
+        <i class="bi bi-patch-plus"></i> Add Playlist
+    </button>
+</div>
+
+
+<script type="text/javascript">
+    function addSimplePlaylist() {
+    
+        let url = "@Helper.Url(Url,"AddSimplePlaylist", "Playlist", null)";
+        $.ajax({
+            type: "POST",
+            url: url,
+            data: { playlistUrl: $("#playlistUrl").val(), source: '@Model.ToString()' },
+            success: function (data) {
+                if (!data.success)
+                    return alert(data.message)
+                else if (data.message)
+                    return alert(data.message)
+                location.reload();
+            },
+            dataType: "json"
+        });
+    }
+</script>

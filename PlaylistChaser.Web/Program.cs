@@ -13,24 +13,21 @@ builder.Services.AddSession();
 
 
 // Add configuration sources
+var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+environment ??= "Production"; //TODO: do it in right
 builder.Configuration
        .SetBasePath(builder.Environment.ContentRootPath)
-       .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
+       .AddJsonFile($"appsettings.{environment}.json", optional: false, reloadOnChange: true);
 
-#if DEBUG == false
 builder.Services.AddDbContext<PlaylistChaserDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("ServerConnectionString")));
-#else
-builder.Services.AddDbContext<PlaylistChaserDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("LocalConnectionString")));
-#endif
 
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
-    app.UseExceptionHandler("/Playlist/Error");
+    //app.UseExceptionHandler("/Playlist/Error");
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }

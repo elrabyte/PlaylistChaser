@@ -1,0 +1,29 @@
+﻿@using PlaylistChaser.Web.Util;
+@model PlaylistChaser.Web.Models.Playlist
+
+<div class="row">
+    <div class="col-12">
+        <form asp-action="_EditPartial">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <input type="hidden" asp-for="Id" />
+
+            <div class="form-group">
+                @Html.BsLabelFor(model => model.Name)
+                @Html.BsTextBoxFor(m => m.Name)
+            </div>
+            <div class="form-group">
+                @Html.BsLabelFor(model => model.Description)
+                @Html.BsTextBoxFor(m => m.Description)
+            </div>
+            <div class="form-group">
+                @Controls.SubmitButton()
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}
