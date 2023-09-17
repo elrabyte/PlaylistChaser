@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations.Schema;
 using static PlaylistChaser.Web.Util.BuiltInIds;
 
 namespace PlaylistChaser.Web.Models.ViewModel
@@ -13,5 +14,8 @@ namespace PlaylistChaser.Web.Models.ViewModel
     
         public string PlaylistTypeName { get; set; }
         public int SongsTotal { get; set; }
+        public Sources? MainSourceId { get; set; }
+        [NotMapped]
+        public List<PlaylistAdditionalInfo> Infos { get; set; }
     }
 }

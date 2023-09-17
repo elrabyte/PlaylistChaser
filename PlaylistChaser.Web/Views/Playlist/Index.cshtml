@@ -5,6 +5,7 @@
 @model PlaylistIndexModel
 @{
     ViewData["Title"] = "Home Page";
+    var sources = (List<Source>)ViewBag.Sources;
 }
 
 <!-- Custom Site CSS -->
@@ -51,11 +52,30 @@
             @foreach (var playlist in Model.Playlists)
             {
                 <a class="pl_card" asp-action="Details" asp-route-id="@playlist.Id" data-pl-id="@playlist.Id">
-                    <div class="card__background"
-                         style="background-image: url('/Playlist/GetThumbnail?thumbnailId=@playlist.ThumbnailId')"></div>
+                    <div class="card__background" style="background-image: url('/Playlist/GetThumbnail?thumbnailId=@playlist.ThumbnailId')"></div>
                     <div class="card__content">
-                        <p class="card__category">@Html.DisplayFor(modelItem => playlist.ChannelName)</p>
-                        <h3 class="card__heading">@Html.DisplayFor(modelItem => playlist.Name)</h3>
+                        <p class="card__category">@(playlist.ChannelName)</p>
+                        <h3 class="card__heading">@(playlist.Name)</h3>
+                        <footer class="card__footer">
+                            @foreach (var source in sources)
+                            {
+                                var info = playlist.Infos.SingleOrDefault(i => (int)i.SourceId == source.Id);
+                                if (info != null)
+                                {
+                                    <div class="row @(info.SourceId == playlist.MainSourceId ? "mainsource" : "")">
+                                        <div class="col-5">
+                                            @Html.Raw(source.IconHtml) @info.SourceId.ToString()
+                                        </div>
+                                        @if (info.IsMine)
+                                        {
+                                            <div class="col">
+                                                <i class="bi bi-person-fill"></i>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            }
+                        </footer>
                     </div>
                 </a>
             }
@@ -115,22 +135,6 @@
             selectedIds.push(playlistId);
         });
         return selectedIds;
-    }
-
-    function createCombinedPlaylist(playlistName, playlistIds, source) {
-        let url = "/Playlist/CreateCombinedPlaylist";
-        $.ajax({
-            type: "POST",
-            url: url,
-            data: { playlistName: playlistName, playlistIds: playlistIds.toString(), source: source },
-            success: function (data) {
-                if (!data.success)
-                    return console.error(data.message);
-
-                location.reload();
-            },
-            dataType: "json"
-        });
     }
 
     function syncPlaylistThumbnailsFrom(source) {

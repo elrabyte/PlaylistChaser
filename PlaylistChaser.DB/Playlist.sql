@@ -6,7 +6,9 @@
     [ChannelName] NVARCHAR(255) NOT NULL, 
     [PlaylistTypeId] INT NOT NULL, 
     [ThumbnailId] INT NULL, 
+    [MainSourceId] INT NULL, 
     CONSTRAINT [FK_Playlist_PlaylistType] FOREIGN KEY ([PlaylistTypeId]) REFERENCES [PlaylistType]([Id]), 
-    CONSTRAINT [FK_Playlist_Thumbnail] FOREIGN KEY ([ThumbnailId]) REFERENCES [Thumbnail]([Id])
+    CONSTRAINT [FK_Playlist_Thumbnail] FOREIGN KEY ([ThumbnailId]) REFERENCES [Thumbnail]([Id]), 
+    CONSTRAINT [FK_Playlist_Source] FOREIGN KEY ([MainSourceId]) REFERENCES [Source]([Id])
 )
 

@@ -28,14 +28,23 @@ namespace PlaylistChaser.Web.Util
             return htmlHelper.TextBoxFor<TModel, TResult>(expression, htmlAttributes);
         }
 
-        public static IHtmlContent Button(string caption, string onClick, string? id = null, string cssClass = "btn-primary", string iconName = null, string role = "button")
+        public static IHtmlContent Button(string caption, string? onClickFunction = null, string? id = null, string cssClass = "btn-primary", string? iconName = null, string role = "button", string type = "button")
         {
             id = id == null ? "" : $"id=\"{id}\"";
             var icon = iconName == null ? "" : $"<i class=\"bi bi-{iconName}\"></i> ";
-            var html = $@"<a {id} class=""btn {cssClass}"" href=""javascript:;"" onclick=""{onClick}"" role=""{role}"">{icon}{caption}</a>";
+            var onClick = onClickFunction == null ? "" : $"href='javascript:;' onclick='{onClickFunction}'";
+            var html = $@"<a {id} 
+                             class=""btn {cssClass}"" 
+                             {onClick}
+                             role=""{role}"">
+                          {icon}{caption}</a>";
 
             return new HtmlString(html);
         }
+
+        public static IHtmlContent SubmitButton(string caption = "Save")
+            => Button(caption, id: "submitBtn", iconName: "save", role: "submit", type: "submit");
+
         public static IHtmlContent EnumSelect<T>(string caption, string id = null, string @class = null)
         {
             var enumValues = Enum.GetValues(typeof(T)).Cast<T>();

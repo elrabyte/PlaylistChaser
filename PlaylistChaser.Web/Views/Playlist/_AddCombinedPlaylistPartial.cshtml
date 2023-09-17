@@ -46,9 +46,24 @@
     $("#create-combined-yt-btn").click(function () {
         let name = $("#combinedYtPlName").val()
         let selectedIds = getSelectedPlaylistIds();
-        debugger;
         createCombinedPlaylist(name, selectedIds, '@Sources.Youtube')
     });
-    var test;
+    
+    function createCombinedPlaylist(playlistName, playlistIds, source) {
+
+        let url = "@Helper.Url(Url,"CreateCombinedPlaylist","Playlist")";
+        $.ajax({
+            type: "POST",
+            url: url,
+            data: { playlistName: playlistName, playlistIds: playlistIds.toString(), source: source },
+            success: function (data) {
+                if (!data.success)
+                    return console.error(data.message);
+
+                location.reload();
+            },
+            dataType: "json"
+        });
+    }
 </script>
 <!-- END -->

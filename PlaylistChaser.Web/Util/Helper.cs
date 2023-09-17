@@ -29,7 +29,7 @@ namespace PlaylistChaser.Web.Util
             return configurationRoot.GetSection(sectionName).GetValue<string>(key);
         }
 
-        public static string? Url(this IUrlHelper helper, string? action, string? controller, object? values)
+        public static string? Url(this IUrlHelper helper, string? action, string? controller, object? values = null)
         {
             return helper.Action(action, controller, values);
         }
@@ -110,7 +110,13 @@ namespace PlaylistChaser.Web.Util
                                 {name}.loaded = true;
                                 //move submit button to footer
                                 let submitBtn = $(""#{containerName}"").find(""#submitBtn"");
-                                submitBtn.appendTo("".modal-footer"");
+                                if(submitBtn.length === 1) {{
+                                    submitBtn.appendTo("".modal-footer"");
+                                    //if no onclick
+                                    if(typeof submitBtn[0].onclick != 'undefined') {{
+                                        {name}.setOnclickToSubmitBtn(submitBtn);
+                                    }}
+                                }}
                             }});
                         }},
                         show: function(params) {{
@@ -128,17 +134,23 @@ namespace PlaylistChaser.Web.Util
                         off: function(event, handler) {{
                             return $(""#{modalName}"").off(event, handler);
                         }},
+                        setOnclickToSubmitBtn: function(submitBtn) {{
+                            submitBtn.click({name}.submit);
+                        }},
                         submit: function(){{
-                            let url = '';
                             let form = $(""#{containerName} form"");
+                            let url = form[0].action;
                             //get form vals
                             //fire event
                             $.ajax({{
                                 type: ""POST"",
                                 url: url,
+                                data: form.serialize(),
                                 success: function (data) {{
                                     if (!data.success)
-                                        return console.error(data.message);
+                                        return alert(data.message);
+                                    {name}.hide();
+                                    $(""#{modalName}"").trigger('saved');
                                 }},
                                 dataType: ""json""
                             }});

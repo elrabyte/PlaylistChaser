@@ -4,10 +4,10 @@ AS
 BEGIN
 	set nocount on;
 
-	create table #playlist (Id int, Name nvarchar(max), Description nvarchar(max), ChannelName nvarchar(max), PlaylistTypeId int, PlaylistTypeName nvarchar(255), ThumbnailId int, SongsTotal int);
+	create table #playlist (Id int, Name nvarchar(max), Description nvarchar(max), ChannelName nvarchar(max), PlaylistTypeId int, PlaylistTypeName nvarchar(255), ThumbnailId int, SongsTotal int, MainSourceId int);
 
-	insert into #playlist (Id, Name, Description, ChannelName, PlaylistTypeId, PlaylistTypeName, ThumbnailId, SongsTotal)
-		 select p.Id,p.Name,p.Description, p.ChannelName, pt.Id, pt.name, p.ThumbnailId, 0
+	insert into #playlist (Id, Name, Description, ChannelName, PlaylistTypeId, PlaylistTypeName, ThumbnailId, SongsTotal, MainSourceId)
+		 select p.Id,p.Name,p.Description, p.ChannelName, pt.Id, pt.name, p.ThumbnailId, 0, p.MainSourceId
 		   from Playlist p
 		  inner join dbo.PlaylistType pt
 			 on pt.Id = p.PlaylistTypeId
