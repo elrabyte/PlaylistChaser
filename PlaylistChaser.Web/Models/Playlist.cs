@@ -16,6 +16,6 @@ namespace PlaylistChaser.Web.Models
         [Required]
         public PLaylistTypes PlaylistTypeId { get; set; }
         public string? Description { get; set; }
-        public Sources MainSourceId { get; set; }
+        public Sources? MainSourceId { get; set; }
     }
 }

@@ -318,7 +318,7 @@ namespace PlaylistChaser.Web.Controllers
             var playlistIds = db.CombinedPlaylistEntry.Where(cp => cp.CombinedPlaylistId == id).Select(cp => cp.PlaylistId).ToList();
             var playlists = db.Playlist.Where(p => playlistIds.Contains(p.Id));
             foreach (var playlist in playlists)
-                syncPlaylistFromSimple(playlist.Id, playlist.MainSourceId);
+                syncPlaylistFromSimple(playlist.Id, playlist.MainSourceId.Value);
 
             //add songs to combined 
             syncCombinedPlaylistLocal(id);
@@ -342,8 +342,9 @@ namespace PlaylistChaser.Web.Controllers
 
                 //check if songs exists
                 findSongs(missingSongs, source);
-
-                var missingSongsIdsAtSource = songInfos.Where(i => missingSongs.Any(s => s.Id == i.SongId)).Select(i => i.SongIdSource).ToList();
+                
+                var missingSongIds = missingSongs.Select(s => s.Id).ToList();
+                var missingSongsIdsAtSource = missingSongIds.Select(id => songInfos.Single(i => i.SongId == id)).Select(i => i.SongIdSource).ToList();
 
                 //create info - first time for that source
                 var info = db.PlaylistAdditionalInfo.SingleOrDefault(i => i.PlaylistId == id && i.SourceId == source);
@@ -455,7 +456,7 @@ namespace PlaylistChaser.Web.Controllers
 
             //only songs that weren't checked before
             //TODO: doesn't do it correctly
-            //missingSongs = missingSongs.Where(s => songStates.Single(ss => ss.SongId == s.Id).StateId == SongStates.NotChecked); 
+            missingSongs = missingSongs.Where(s => songStates.Single(ss => ss.SongId == s.Id).StateId == SongStates.NotChecked); 
 
             //check if songs exists
             (List<(int Id, string IdAtSource)> Exact, List<(int Id, string IdAtSource)> NotExact) foundSongs;
