@@ -56,7 +56,7 @@ namespace PlaylistChaser.Web.Util
                     </div>
                 </div>";
 
-            html += getModalPartialScript(name, modalName, containerName, title, partialUrl);
+            html += getModalPartialScript(name, modalName, containerName, partialUrl);
 
             return new HtmlString(html);
         }
@@ -82,11 +82,11 @@ namespace PlaylistChaser.Web.Util
                     </div>
                 </div>";
 
-            html += getModalPartialScript(name, modalName, containerName, title, partialUrl);
+            html += getModalPartialScript(name, modalName, containerName, partialUrl);
 
             return new HtmlString(html);
         }
-        private static string getModalPartialScript(string name, string modalName, string containerName, string title, string partialUrl)
+        private static string getModalPartialScript(string name, string modalName, string containerName, string partialUrl)
         {
             return $@"
                 <script type=""text/javascript"">

@@ -1,0 +1,101 @@
+﻿@using PlaylistChaser.Web.Models.SearchModel;
+@using PlaylistChaser.Web.Util;
+
+@{
+    ViewData["Title"] = "Admin Overview";
+}
+
+
+<div class="row">
+    <div id="navColumn" class="col-2">
+        <div class="d-flex flex-column">
+            <ul class="nav nav-pills flex-column mb-auto">
+                <li class="nav-item">
+                    <a href="javascript:;" onclick="loadSourcePartial()" class="nav-link link-body-emphasis active">Source</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <div class="col-5">
+        <div id="divGrid"></div>
+    </div>
+    <div class="col-5">
+        <div id="divEdit"></div>
+    </div>
+</div>
+
+<script type="text/javascript">
+    $(function () {
+        let firstEntry = $("#navColumn .nav-item a");
+        firstEntry.addClass("active");
+        firstEntry.click();
+    })
+
+    function setClickEventGrid(onClick) {
+        let rows = $("#divGrid tbody tr");
+
+        rows.each(function (index) {
+            $(this).on("click", function () {
+                let id = $(this).data("id");
+                onClick(id);
+            });
+        });
+
+    }
+    function loadGridPartial(url, onClick) {
+        $.get(url, null, function (data, status, jqXHR) {
+            if (data.success == false || status != "success") {
+                return console.error("error while loading partial");
+            }
+            $("#divGrid").html(data);
+            setClickEventGrid(onClick);
+        });
+    }
+
+    function loadEditPartial(url, id) {
+        $.get(url, { id: id }, function (data, status, jqXHR) {
+            if (data.success == false || status != "success") {
+                return console.error("error while loading partial");
+            }
+            $("#divEdit").html(data);
+            setOnclickToSubmitBtn();
+        });
+    }
+
+    function loadSourcePartial() {
+        let urlGrid = "@Helper.Url(Url,"_SourceGridPartial","Admin")";
+        loadGridPartial(urlGrid, loadSourceEditPartial);
+    }
+
+    function loadSourceEditPartial(id) {
+        let urlEdit = "@Helper.Url(Url,"_SourceEditPartial","Admin")";
+        loadEditPartial(urlEdit, id);
+    }
+
+    function setOnclickToSubmitBtn() {
+        $("#divEdit #submitBtn").click(submit);
+    }
+    $("#divEdit").on("saved", function() {
+        $("#divEdit").html("");
+        loadSourcePartial();
+    });
+
+    function submit() {
+        let form = $("#divEdit form");
+        let url = form[0].action;
+        //get form vals
+        //fire event
+        $.ajax({
+            type: "POST",
+            url: url,
+            data: form.serialize(),
+            success: function (data) {
+                if (!data.success)
+                    return alert(data.message);
+
+                $("#divEdit").trigger("saved");
+            },
+            dataType: "json"
+        });
+    }
+</script>
