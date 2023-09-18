@@ -1,0 +1,25 @@
+﻿@using PlaylistChaser.Web.Models.ViewModel;
+@model List<Source>
+
+<table class="table"
+       data-toggle="table">
+    <thead>
+        <tr>
+            <th data-sortable="true">@Html.DisplayNameFor(m => m.First().Name)</th>
+            <th data-sortable="true">@Html.DisplayNameFor(m => m.First().IconHtml)</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var source in Model)
+        {
+            <tr data-id="@source.Id">
+                <td>
+                    @Html.DisplayFor(m => source.Name)
+                </td>
+                <td>
+                    @Html.Raw(source.IconHtml)
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
