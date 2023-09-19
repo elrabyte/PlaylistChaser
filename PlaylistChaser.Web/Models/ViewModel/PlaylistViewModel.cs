@@ -11,7 +11,7 @@ namespace PlaylistChaser.Web.Models.ViewModel
         public int? ThumbnailId { get; set; }
         public PLaylistTypes PlaylistTypeId { get; set; }
         public string? Description { get; set; }
-    
+
         public string PlaylistTypeName { get; set; }
         public int SongsTotal { get; set; }
         public Sources? MainSourceId { get; set; }

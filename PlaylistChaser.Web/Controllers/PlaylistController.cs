@@ -55,7 +55,7 @@ namespace PlaylistChaser.Web.Controllers
             var playlists = await db.GetPlaylists();
 
             //get infos
-            playlists.ForEach(p => p.Infos = db.PlaylistAdditionalInfo.Where(i => i.PlaylistId == p.Id).ToList());
+            playlists.ForEach(p => p.Infos = db.PlaylistAdditionalInfo.Where(i => i.PlaylistId == p.Id).ToList());            
 
             var model = new PlaylistIndexModel
             {
@@ -81,6 +81,8 @@ namespace PlaylistChaser.Web.Controllers
             return View(model);
         }
 
+
+        #region Partials
         [HttpGet]
         public ActionResult _EditPartial(int id)
         {
@@ -125,7 +127,12 @@ namespace PlaylistChaser.Web.Controllers
             return PartialView();
         }
 
-
+        public ActionResult _PlaylistSongStatesSummaryPartial(int id)
+        {
+            var playlistSongStates = db.PlaylistSongState.Where(pss => db.PlaylistSong.Where(ps => ps.PlaylistId == id).Select(ps => ps.Id).Contains(pss.PlaylistSongId));
+            return PartialView(playlistSongStates.GroupBy(pss  => pss.SourceId).AsEnumerable().OrderBy(pss => pss.Key.ToString()).ToList());
+        }
+        #endregion
         #endregion
 
         #region Index Functions

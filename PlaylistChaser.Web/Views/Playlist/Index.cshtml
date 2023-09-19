@@ -11,8 +11,8 @@
 <!-- Custom Site CSS -->
 <link rel="stylesheet" href="~/css/card.css" asp-append-version="true" />
 <!-- END -->
-@Helper.ModalBareBonePartial("addSimplePlaylistPartial","Add Simple Plalyist", Helper.Url(Url, "_AddSimplePlaylistPartial", "Playlist", null))
-@Helper.ModalBareBonePartial("addCombinedPlaylistPartial","Add Combined Plalyist", Helper.Url(Url, "_AddCombinedPlaylistPartial", "Playlist", null))
+@Helper.ModalBareBonePartial("addSimplePlaylistPartial", Helper.Url(Url, "_AddSimplePlaylistPartial", "Playlist"))
+@Helper.ModalBareBonePartial("addCombinedPlaylistPartial", Helper.Url(Url, "_AddCombinedPlaylistPartial", "Playlist"))
 
 <div class="container mt-4">
     <div class="row">
