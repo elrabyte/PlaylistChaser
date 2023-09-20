@@ -152,7 +152,7 @@
 </div>
 
 <div class="row">
-    @await Component.InvokeAsync("SongsGrid", new { playlistId = Model.Playlist.Id, addSongStates = Model.AddSongStates })
+    @Helper.ReloadablePartial("playlistSongsGridPartial",Url.Url("_PlaylistSongsGridPartial","Song", new { playlistId = Model.Playlist.Id, addSongStates = Model.AddSongStates }),true)
 </div>
 
 

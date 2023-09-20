@@ -182,20 +182,19 @@ namespace PlaylistChaser.Web.Util
                 <script type=""text/javascript"">
                     var {name} = {{
                         __namespace: true,
-                        loaded: false,
                         params: null,
                         init: function() {{
                             {name}.loadBody();
                         }},
                         load: function(params) {{
                             {name}.params = params;
-                            if({name}.loaded == false)
-                                {name}.init();
+                            {name}.init();
                         }},
                         unload: function() {{
                             $(""#{containerName}"").html("""");
                         }},
                         loadBody: function () {{
+                            $(""#{containerName}"").html(""Loading..."");
                             let url = ""{partialUrl}"";
                             if(typeof {name}.params !== 'undefined')
                                 url = url + {name}.params
@@ -205,7 +204,6 @@ namespace PlaylistChaser.Web.Util
                                 }}
 
                                 $(""#{containerName}"").html(data);
-                                {name}.loaded = true;
                                 
                                 let submitBtn = $(""#{containerName}"").find(""#submitBtn"");
                                 if(submitBtn.length === 1) {{

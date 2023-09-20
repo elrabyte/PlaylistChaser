@@ -73,7 +73,7 @@ namespace PlaylistChaser.Web.Controllers
             var model = new PlaylistDetailsModel
             {
                 Playlist = playlist,
-                AddSongStates = false
+                AddSongStates = true
             };
 
             ViewBag.Sources = getSources();
