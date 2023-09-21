@@ -13,12 +13,15 @@ namespace PlaylistChaser.Web.Database
         public DbSet<Playlist> Playlist { get; set; }
         public IQueryable<Playlist> PlaylistReadOnly
             => Playlist.AsNoTracking();
+
         public DbSet<PlaylistAdditionalInfo> PlaylistAdditionalInfo { get; set; }
         public IQueryable<PlaylistAdditionalInfo> PlaylistAdditionalInfoReadOnly
             => PlaylistAdditionalInfo.AsNoTracking();
+
         public DbSet<PlaylistSong> PlaylistSong { get; set; }
         public IQueryable<PlaylistSong> PlaylistSongReadOnly
             => PlaylistSong.AsNoTracking();
+
         public DbSet<PlaylistSongState> PlaylistSongState { get; set; }
         public IQueryable<PlaylistSongState> PlaylistSongStateReadOnly
             => PlaylistSongState.AsNoTracking();
@@ -26,6 +29,7 @@ namespace PlaylistChaser.Web.Database
         public DbSet<Song> Song { get; set; }
         public IQueryable<Song> SongReadOnly
             => Song.AsNoTracking();
+
         public DbSet<SongAdditionalInfo> SongAdditionalInfo { get; set; }
         public IQueryable<SongAdditionalInfo> SongAdditionalInfoReadOnly
             => SongAdditionalInfo.AsNoTracking();
@@ -33,12 +37,15 @@ namespace PlaylistChaser.Web.Database
         public DbSet<Thumbnail> Thumbnail { get; set; }
         public IQueryable<Thumbnail> ThumbnailReadOnly
             => Thumbnail.AsNoTracking();
+
         public DbSet<CombinedPlaylistEntry> CombinedPlaylistEntry { get; set; }
         public IQueryable<CombinedPlaylistEntry> CombinedPlaylistEntryReadOnly
             => CombinedPlaylistEntry.AsNoTracking();
+
         public DbSet<OAuth2Credential> OAuth2Credential { get; set; }
         public IQueryable<OAuth2Credential> OAuth2CredentialReadOnly
             => OAuth2Credential.AsNoTracking();
+
         public DbSet<Source> Source { get; set; }
         public IQueryable<Source> SourceReadOnly
             => Source.AsNoTracking();

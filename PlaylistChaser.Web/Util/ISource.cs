@@ -18,7 +18,7 @@ namespace PlaylistChaser.Web.Util
         /// <param name="playlistId">playlistId at source</param>
         /// <returns></returns>
         internal List<SongAdditionalInfo> GetPlaylistSongs(string playlistId);
-        internal FoundSongs FindSongs(List<(int SongId, string ArtistName, string SongName)> songs);
+        internal FoundSongs FindSongIds(List<FindSong> songs);
 
         internal Task<bool> UpdatePlaylist(string IdAtSource, string? playlistName = null, string? playlistDescription = null, bool isPublic = true);
         #endregion

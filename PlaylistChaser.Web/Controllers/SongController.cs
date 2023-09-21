@@ -225,68 +225,43 @@ namespace PlaylistChaser.Web.Controllers
             }
         }
 
-        public FoundSongs FindSongs(List<Song> missingSongs, Sources source)
+        public async Task<FoundSongs> FindSongs(List<Song> missingSongs, Sources source)
         {
-
-            //filtered tables
-            var songInfos = db.SongAdditionalInfoReadOnly.Where(ss => ss.SourceId == source);
-
             //create info if not available
             createInfosForMissingSongs(missingSongs, source);
 
             //only songs that weren't checked before
-            var missingSongsList = missingSongs.Where(s => songInfos.Single(ss => ss.SongId == s.Id).StateId ==  SongStates.NotChecked);
+            var missingSongsList = missingSongs.Where(s => db.SongAdditionalInfoReadOnly.Single(ss => ss.SongId == s.Id && ss.SourceId == source).StateId == SongStates.NotChecked);
 
             if (!missingSongsList.Any())
                 return null;
 
             //check if songs exists
             FoundSongs foundSongs;
+            var findSongs = missingSongsList.Select(s => new FindSong(s.Id, s.ArtistName, s.SongName)).ToList();
             switch (source)
             {
                 case Sources.Youtube:
-                    foundSongs = ytHelper.FindSongs(missingSongsList.Select(s => (s.Id, s.ArtistName, s.SongName)).ToList());
+                    foundSongs = ytHelper.FindSongIds(findSongs);
                     break;
                 case Sources.Spotify:
-                    //var spottyHelper = new SpotifyApiHelper(HttpContext);
-                    foundSongs = spottyHelper.FindSongs(missingSongsList.Select(s => (s.Id, s.ArtistName, s.SongName)).ToList());
+                    foundSongs = spottyHelper.FindSongIds(findSongs);
                     break;
                 default:
                     throw new NotImplementedException(ErrorHelper.NotImplementedForThatSource);
             }
+
             foreach (var foundSong in foundSongs.Exact)
                 addFoundSong(foundSong, source, SongStates.Available);
 
             foreach (var foundSong in foundSongs.NotExact)
                 addFoundSong(foundSong, source, SongStates.MaybeAvailable);
 
-
-            ////set not found songs as NotAvailable
-            //var stillMissingSongIds = missingSongs.Where(s => !foundSongs.Exact.Select(fs => fs.Id).Contains(s.Id)
-            //                                                  && !foundSongs.NotExact.Select(fs => fs.Id).Contains(s.Id)).Select(s => s.Id).ToList();
-
-            //stillMissingSongIds.ForEach(i =>
-            //{
-            //    //add song state
-            //    var songState = songInfos.SingleOrDefault(ss => ss.SongId == i);
-            //    if (songState == null)
-            //    {
-            //        songState = new SongState { SongId = i, SourceId = source, StateId = SongStates.NotAvailable, LastChecked = DateTime.Now };
-            //        db.SongState.Add(songState);
-            //    }
-            //    else
-            //    {
-            //        songState.StateId = SongStates.NotAvailable;
-            //        songState.LastChecked = DateTime.Now;
-            //    }
-            //    db.SaveChanges();
-            //});
-
             return foundSongs;
         }
         private void createInfosForMissingSongs(List<Song> missingSongs, Sources source)
         {
-            var songIdsNoInfo = missingSongs.Select(s => s.Id).Where(id => !db.SongAdditionalInfoReadOnly .Any(i => i.SongId == id)).ToList();
+            var songIdsNoInfo = missingSongs.Select(s => s.Id).Where(id => !db.SongAdditionalInfoReadOnly.Any(i => i.SongId == id)).ToList();
             foreach (var songId in songIdsNoInfo)
             {
                 var newSongInfo = new SongAdditionalInfo()
@@ -303,21 +278,50 @@ namespace PlaylistChaser.Web.Controllers
 
         private void addFoundSong(FoundSong foundSong, Sources source, SongStates newState)
         {
-            var song = db.SongReadOnly.Single(s => s.Id == foundSong.Id);
-
             //add songInfo
-            var songInfo = Helper.SongToInfo(song, foundSong.IdAtSource, source);
+            var songInfo = db.SongAdditionalInfo.SingleOrDefault(i => i.SongId == foundSong.Id && i.SourceId == source);
+
+            if (songInfo == null)
+            {
+                songInfo = new SongAdditionalInfo
+                {
+                    SongId = foundSong.Id,
+                    SourceId = source
+                };
+                db.SongAdditionalInfo.Add(songInfo);
+            }            
+
             songInfo.StateId = newState;
             songInfo.LastChecked = DateTime.Now;
-            if (songInfo.ArtistName != null)
-            {
-                db.SongAdditionalInfo.Add(songInfo);
-                db.SaveChanges();
-            }
-            else  //e.g. Private video
-                newState = SongStates.NotAvailable;
 
             db.SaveChanges();
+        }
+
+        internal List<Song> AddSongsToDb(List<SongAdditionalInfo> songsToAdd, Sources source)
+        {
+            var addedSongs = new List<Song>();
+
+            //check if songs are already in db
+            //TODO: for now only check if it wasnt added from same source
+            //      on youtube songname & artist name dont have to be a unique combination
+            //      fuck you anguish with your stupid ass song titles
+            var songInfos = db.SongAdditionalInfoReadOnly.Where(i => i.SourceId == source);
+            var newSongInfos = songsToAdd.Where(s => !songInfos.Any(dbSong => dbSong.SongIdSource == s.SongIdSource)).ToList();
+
+            //add new songs
+            foreach (var newSongInfo in newSongInfos)
+            {
+                var newSong = Helper.InfoToSong(newSongInfo);
+                db.Song.Add(newSong);
+                db.SaveChanges();
+                newSongInfo.SongId = newSong.Id;
+                newSongInfo.StateId = SongStates.Available;
+                newSongInfo.LastChecked = DateTime.Now;
+                db.SongAdditionalInfo.Add(newSongInfo);
+            };
+            db.SaveChanges();
+
+            return addedSongs;
         }
     }
 }

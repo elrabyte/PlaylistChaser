@@ -1,10 +1,6 @@
-﻿using Google.Apis.Auth.OAuth2;
-using Microsoft.Identity.Client.Platforms.Features.DesktopOs.Kerberos;
-using PlaylistChaser.Web.Models;
+﻿using PlaylistChaser.Web.Models;
 using SpotifyAPI.Web;
-using System.Diagnostics;
 using System.Text.RegularExpressions;
-using System.Web.Providers.Entities;
 using static PlaylistChaser.Web.Util.BuiltInIds;
 
 namespace PlaylistChaser.Web.Util.API
@@ -78,7 +74,7 @@ namespace PlaylistChaser.Web.Util.API
         #region Queries
 
         #region Song
-        public FoundSongs FindSongs(List<(int SongId, string ArtistName, string SongName)> songs)
+        public FoundSongs FindSongIds(List<FindSong> songs)
         {
             var foundSongsExact = new List<FoundSong>();
             var foundSongs = new List<FoundSong>();

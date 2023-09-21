@@ -133,9 +133,7 @@ namespace PlaylistChaser.Web.Controllers
         #endregion
         #endregion
 
-        #region Index Functions
-        #region Search
-
+        #region Add Playlists
         public async Task<ActionResult> AddSimplePlaylist(string playlistUrl, Sources source)
         {
             try
@@ -193,36 +191,9 @@ namespace PlaylistChaser.Web.Controllers
             }
         }
 
+        #endregion
 
-        /// <summary>
-        /// add songs if not already and connect to playlist
-        /// </summary>
-        /// <param name="playlistId"></param>
-        /// <param name="songsFromPlaylist"></param>
-        private void addSongsToPlaylist(int playlistId, List<Song> songsToAdd, Sources source)
-        {
-            //add new songs to PlaylistSong
-            var curPlaylistSongIds = db.PlaylistSongReadOnly.Where(ps => ps.PlaylistId == playlistId).Select(ps => ps.SongId).ToList();
-            var newPLaylistSongIds = songsToAdd.Select(s => s.Id).ToList();
-            var newPlaylistSongs = newPLaylistSongIds.Select(i => new PlaylistSong { PlaylistId = playlistId, SongId = i }).ToList();
-            db.PlaylistSong.AddRange(newPlaylistSongs);
-            db.SaveChanges();
-
-            //add PlaylistSongState
-            //  add state for each source
-            newPlaylistSongs.ForEach(ps =>
-            {
-                foreach (Sources src in Enum.GetValues(typeof(Sources)))
-                    db.PlaylistSongState.Add(new PlaylistSongState { PlaylistSongId = ps.Id, SourceId = src, StateId = PlaylistSongStates.NotAdded, LastChecked = DateTime.Now });
-                db.SaveChanges();
-
-                var state = db.PlaylistSongState.Single(pss => pss.PlaylistSongId == ps.Id && pss.SourceId == source);
-                state.StateId = PlaylistSongStates.Added;
-                state.LastChecked = DateTime.Now;
-            });
-            db.SaveChanges();
-
-        }
+        #region Sync Playlist From
 
         /// <summary>
         /// brings the local db up to date with the youtube playlist
@@ -281,30 +252,36 @@ namespace PlaylistChaser.Web.Controllers
         }
 
         private List<Song> addSongsToDb(List<SongAdditionalInfo> songsFromPlaylist, Sources source)
+            => songController.AddSongsToDb(songsFromPlaylist, source);
+
+        /// <summary>
+        /// add songs if not already and connect to playlist
+        /// </summary>
+        /// <param name="playlistId"></param>
+        /// <param name="songsFromPlaylist"></param>
+        private void addSongsToPlaylist(int playlistId, List<Song> songsToAdd, Sources source)
         {
-            var addedSongs = new List<Song>();
-
-            //check if songs are already in db
-            //TODO: for now only check if it wasnt added from same source
-            //      on youtube songname & artist name dont have to be a unique combination
-            //      fuck you anguish with your stupid ass song titles
-            var songInfos = db.SongAdditionalInfoReadOnly.Where(i => i.SourceId == source);
-            var newSongInfos = songsFromPlaylist.Where(s => !songInfos.Any(dbSong => dbSong.SongIdSource == s.SongIdSource)).ToList();
-
-            //add new songs
-            foreach (var newSongInfo in newSongInfos)
-            {
-                var newSong = Helper.InfoToSong(newSongInfo);
-                db.Song.Add(newSong);
-                db.SaveChanges();
-                newSongInfo.SongId = newSong.Id;
-                newSongInfo.StateId = SongStates.Available;
-                newSongInfo.LastChecked = DateTime.Now;
-                db.SongAdditionalInfo.Add(newSongInfo);
-            };
+            //add new songs to PlaylistSong
+            var curPlaylistSongIds = db.PlaylistSongReadOnly.Where(ps => ps.PlaylistId == playlistId).Select(ps => ps.SongId).ToList();
+            var newPLaylistSongIds = songsToAdd.Select(s => s.Id).ToList();
+            var newPlaylistSongs = newPLaylistSongIds.Select(i => new PlaylistSong { PlaylistId = playlistId, SongId = i }).ToList();
+            db.PlaylistSong.AddRange(newPlaylistSongs);
             db.SaveChanges();
 
-            return addedSongs;
+            //add PlaylistSongState
+            //  add state for each source
+            newPlaylistSongs.ForEach(ps =>
+            {
+                foreach (Sources src in Enum.GetValues(typeof(Sources)))
+                    db.PlaylistSongState.Add(new PlaylistSongState { PlaylistSongId = ps.Id, SourceId = src, StateId = PlaylistSongStates.NotAdded, LastChecked = DateTime.Now });
+                db.SaveChanges();
+
+                var state = db.PlaylistSongState.Single(pss => pss.PlaylistSongId == ps.Id && pss.SourceId == source);
+                state.StateId = PlaylistSongStates.Added;
+                state.LastChecked = DateTime.Now;
+            });
+            db.SaveChanges();
+
         }
 
         private void syncPlaylistFromCombined(int id)
@@ -318,6 +295,10 @@ namespace PlaylistChaser.Web.Controllers
             //add songs to combined 
             syncCombinedPlaylistLocal(id);
         }
+
+        #endregion
+
+        #region Sync Playlist To
         public async Task<ActionResult> SyncPlaylistTo(int id, Sources source)
         {
             try
@@ -347,7 +328,7 @@ namespace PlaylistChaser.Web.Controllers
                     return new JsonResult(new { success = true, message = "Already up to date!" });
 
                 //check if songs exists
-                var res = findSongs(missingSongs, source);
+                var res = await findSongs(missingSongs, source);
 
                 var missingSongIds = missingSongs.Select(s => s.Id).ToList();
                 var missingSongsIdsAtSource = missingSongIds.Select(id => songInfos.Single(i => i.SongId == id).SongIdSource).ToList();
@@ -408,6 +389,9 @@ namespace PlaylistChaser.Web.Controllers
                 return new JsonResult(new { success = false, message = ex.Message });
             }
         }
+
+        private async Task<FoundSongs> findSongs(List<Song> missingSongs, Sources source)
+            => await songController.FindSongs(missingSongs, source);
         private string getPlaylistDescriptionText(string playlistDescription, int uploadedSongsCount, int totalSongsCount)
             => playlistDescription + string.Format("\nFound {0}/{1} Songs, {2}", uploadedSongsCount.ToString(), totalSongsCount.ToString(), DateTime.Now.ToString());
 
@@ -442,10 +426,7 @@ namespace PlaylistChaser.Web.Controllers
                 db.SaveChanges();
             });
         }
-
-        private FoundSongs findSongs(List<Song> missingSongs, Sources source)
-            => songController.FindSongs(missingSongs, source);
-        #endregion
+        #endregion         
 
         #region Create Playlist
         public async Task<ActionResult> CreateCombinedPlaylist(string playlistName, string playlistIds, Sources source)
@@ -502,10 +483,6 @@ namespace PlaylistChaser.Web.Controllers
         }
 
         #endregion
-
-        #endregion
-
-        #region Details Functions
 
         #region Delete
 
@@ -725,8 +702,6 @@ namespace PlaylistChaser.Web.Controllers
                 return new JsonResult(new { success = false, message = ex.Message });
             }
         }
-
-        #endregion
 
         #endregion
 

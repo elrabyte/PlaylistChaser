@@ -7,6 +7,9 @@ using Google.Apis.YouTube.v3;
 using Google.Apis.YouTube.v3.Data;
 using PlaylistChaser.Web.Models;
 using System.Text.RegularExpressions;
+using YoutubeExplode;
+using YoutubeExplode.Common;
+using YoutubeExplode.Playlists;
 using static PlaylistChaser.Web.Util.BuiltInIds;
 using Playlist = Google.Apis.YouTube.v3.Data.Playlist;
 
@@ -15,6 +18,7 @@ namespace PlaylistChaser.Web.Util.API
     internal class YoutubeApiHelper : ISource
     {
         private YouTubeService ytService;
+        private YoutubeClient ytServiceReadOnly;
         static string[] scopes = { YouTubeService.Scope.Youtube };
         internal YoutubeApiHelper(string accessToken)
         {
@@ -27,6 +31,7 @@ namespace PlaylistChaser.Web.Util.API
                 HttpClientInitializer = new AccessTokenInitializer(accessToken),
                 ApplicationName = "PlaylistChaser"
             });
+            ytServiceReadOnly = new YoutubeClient();
         }
 
         /// <summary>
@@ -132,46 +137,31 @@ namespace PlaylistChaser.Web.Util.API
         }
 
         /// <summary>
-        /// returns the song thumbnail as a base64 string
-        /// </summary>
-        /// <param name="id">youtube song id</param>
-        /// <returns></returns>
-        internal async Task<byte[]> GetSongThumbnail(string id)
-        {
-            var listRequest = ytService.Videos.List("snippet");
-            listRequest.Id = id;
-            var resp = listRequest.Execute();
-            var song = resp.Items.Single().Snippet;
-
-            return await Helper.GetImageByUrl(song.Thumbnails.Standard.Url);
-        }
-
-        /// <summary>
         /// returns a list with a thumbnail for each song
         /// </summary>
         /// <param name="playlistId">youtube playlist id</param>
         /// <returns></returns>
         internal async Task<Dictionary<string, byte[]>> GetSongsThumbnailByPlaylist(string playlistId)
         {
-            var ytSongs = getPlaylistSongs(playlistId);
-            var songThumbnails = new Dictionary<string, byte[]>();
-
-            foreach (var ytSong in ytSongs)
-            {
-                if (!songThumbnails.ContainsKey(ytSong.ResourceId.VideoId))
-                    songThumbnails.Add(ytSong.ResourceId.VideoId, ytSong.Thumbnails.Default__ == null ? null : await Helper.GetImageByUrl(ytSong.Thumbnails.Default__.Url));
-            }
-            return songThumbnails;
-        }
-        public async Task<Dictionary<string, byte[]>> GetSongsThumbnailBySongIds(List<string> songIds)
-        {
-            var ytSongs = getSongs(songIds);
+            var ytSongs = await getPlaylistSongsReadOnly(playlistId);
             var songThumbnails = new Dictionary<string, byte[]>();
 
             foreach (var ytSong in ytSongs)
             {
                 if (!songThumbnails.ContainsKey(ytSong.Id))
-                    songThumbnails.Add(ytSong.Id, ytSong.Snippet.Thumbnails.Default__ == null ? null : await Helper.GetImageByUrl(ytSong.Snippet.Thumbnails.Default__.Url));
+                    songThumbnails.Add(ytSong.Id, ytSong.Thumbnails.Any() ? null : await Helper.GetImageByUrl(ytSong.Thumbnails.OrderBy(t => t.Resolution).First().Url));
+            }
+            return songThumbnails;
+        }
+        public async Task<Dictionary<string, byte[]>> GetSongsThumbnailBySongIds(List<string> songIds)
+        {
+            var ytSongs = await getSongsReadOnly(songIds);
+            var songThumbnails = new Dictionary<string, byte[]>();
+
+            foreach (var ytSong in ytSongs)
+            {
+                if (!songThumbnails.ContainsKey(ytSong.Id))
+                    songThumbnails.Add(ytSong.Id, ytSong.Thumbnails.Any() ? null : await Helper.GetImageByUrl(ytSong.Thumbnails.OrderBy(t => t.Resolution).First().Url));
             }
             return songThumbnails;
         }
@@ -183,7 +173,6 @@ namespace PlaylistChaser.Web.Util.API
         /// <returns></returns>
         private Playlist getPlaylist(string id)
         {
-
             var listRequest = ytService.Playlists.List("snippet,status");
             listRequest.Id = id;
             var playlist = listRequest.Execute().Items.Single();
@@ -226,6 +215,11 @@ namespace PlaylistChaser.Web.Util.API
             }
             return songs;
         }
+        private async Task<IReadOnlyList<PlaylistVideo>> getPlaylistSongsReadOnly(string playlistId)
+        {
+            var searchResults = await ytServiceReadOnly.Playlists.GetVideosAsync(playlistId);
+            return searchResults;
+        }
 
         private List<Video> getSongs(List<string> songIds)
         {
@@ -247,6 +241,15 @@ namespace PlaylistChaser.Web.Util.API
                 var resp = listRequest.Execute();
 
                 songs.AddRange(resp.Items);
+            }
+            return songs;
+        }
+        private async Task<List<YoutubeExplode.Videos.Video>> getSongsReadOnly(List<string> songIds)
+        {
+            var songs = new List<YoutubeExplode.Videos.Video>();
+            foreach (var songId in songIds)
+            {
+                songs.Add(await ytServiceReadOnly.Videos.GetAsync(songId));
             }
             return songs;
         }
@@ -348,7 +351,7 @@ namespace PlaylistChaser.Web.Util.API
         #region Interface Implementations
         public PlaylistAdditionalInfo GetPlaylistById(string playlistId)
             => toPlaylistModel(getPlaylist(playlistId));
-        public FoundSongs FindSongs(List<(int SongId, string ArtistName, string SongName)> songs)
+        public FoundSongs FindSongIds(List<FindSong> songs)
         {
             var foundSongsExact = new List<FoundSong>();
             var foundSongs = new List<FoundSong>();
@@ -356,7 +359,7 @@ namespace PlaylistChaser.Web.Util.API
             {
                 foreach (var song in songs)
                 {
-                    var videoId = searchSongExact(song.ArtistName, song.SongName);
+                    var videoId = searchSongExact(song.ArtistName, song.SongName).Result;
                     foundSongsExact.Add(new FoundSong(song.SongId, videoId));
                 }
                 return new FoundSongs(foundSongsExact, foundSongs);
@@ -413,15 +416,23 @@ namespace PlaylistChaser.Web.Util.API
         }
         #endregion
 
-        private string searchSongExact(string artistName, string songName)
-        {
-            // Search for the song using artist name and song name
-            var searchListRequest = ytService.Search.List("snippet");
-            searchListRequest.Q = $"{artistName} {songName}"; // Combine artist name and song name
-            searchListRequest.Type = "youtube#video";
-            searchListRequest.MaxResults = 1; // Number of results to retrieve
+        //private string searchSongExact(string artistName, string songName)
+        //{
+        //    // Search for the song using artist name and song name
+        //    var searchListRequest = ytService.Search.List("snippet");
+        //    searchListRequest.Q = $"{artistName} {songName}"; // Combine artist name and song name
+        //    searchListRequest.Type = "youtube#video";
+        //    searchListRequest.MaxResults = 1; // Number of results to retrieve
 
-            return searchListRequest.Execute().Items.First().Id.VideoId; //first instead of single, because for some reason it sometimes returns more than 1 result
+        //    return searchListRequest.Execute().Items.First().Id.VideoId; //first instead of single, because for some reason it sometimes returns more than 1 result
+        //}
+        private async Task<string> searchSongExact(string artistName, string songName)
+        {
+
+            // Search for the song using artist name and song name
+            var query = $"{artistName} {songName}"; // Combine artist name and song name
+            var searchListRequest = await ytServiceReadOnly.Search.GetVideosAsync(query);
+            return (string)searchListRequest.FirstOrDefault()?.Id;
         }
     }
 }
