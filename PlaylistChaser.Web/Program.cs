@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using PlaylistChaser.Web.Controllers;
 using PlaylistChaser.Web.Database;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -21,6 +22,8 @@ builder.Configuration
 
 builder.Services.AddDbContext<PlaylistChaserDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("ServerConnectionString")));
+
+builder.Services.AddScoped<SongController>();
 
 var app = builder.Build();
 

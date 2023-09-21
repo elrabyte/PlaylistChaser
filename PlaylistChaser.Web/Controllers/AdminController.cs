@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using PlaylistChaser.Web.Database;
 using PlaylistChaser.Web.Models;
+using System.Data.Entity;
 
 namespace PlaylistChaser.Web.Controllers
 {
@@ -14,12 +15,12 @@ namespace PlaylistChaser.Web.Controllers
 
 
         public ActionResult _SourceGridPartial()
-            => PartialView(db.Source.ToList());
+            => PartialView(db.SourceReadOnly.ToList());
 
         [HttpGet]
         public ActionResult _SourceEditPartial(int id)
         {
-            var model = db.Source.Single(s => s.Id == id);
+            var model = db.SourceReadOnly.Single(s => s.Id == id);
             return PartialView(model);
         }
         [HttpPost]

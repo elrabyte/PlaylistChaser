@@ -2,6 +2,7 @@
 using Microsoft.Identity.Client.Platforms.Features.DesktopOs.Kerberos;
 using PlaylistChaser.Web.Models;
 using SpotifyAPI.Web;
+using System.Diagnostics;
 using System.Text.RegularExpressions;
 using System.Web.Providers.Entities;
 using static PlaylistChaser.Web.Util.BuiltInIds;
@@ -77,10 +78,10 @@ namespace PlaylistChaser.Web.Util.API
         #region Queries
 
         #region Song
-        public (List<(int Id, string IdAtSource)> Exact, List<(int Id, string IdAtSource)> NotExact) FindSongs(List<(int SongId, string ArtistName, string SongName)> songs)
+        public FoundSongs FindSongs(List<(int SongId, string ArtistName, string SongName)> songs)
         {
-            var foundSongsExact = new List<(int Id, string SpotifyId)>();
-            var foundSongs = new List<(int Id, string SpotifyId)>();
+            var foundSongsExact = new List<FoundSong>();
+            var foundSongs = new List<FoundSong>();
             try
             {
                 foreach (var song in songs)
@@ -95,11 +96,11 @@ namespace PlaylistChaser.Web.Util.API
                             foundSongs.Add(new(song.SongId, spotifySong.Id));
                     }
                 }
-                return (foundSongsExact, foundSongs);
+                return new FoundSongs(foundSongsExact, foundSongs);
             }
             catch (Exception ex)
             {
-                return (foundSongsExact, foundSongs);
+                return new FoundSongs(foundSongsExact, foundSongs);
             }
         }
 

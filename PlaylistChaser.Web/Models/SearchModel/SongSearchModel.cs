@@ -7,7 +7,8 @@ namespace PlaylistChaser.Web.Models.SearchModel
         public string? SongName { get; set; }
         public string? ArtistName { get; set; }
         public Sources? Source { get; set; }
-
+        public int? Limit { get; set; }
         public SongStates? SongState { get; set; }
+        public int PageSize { get; set; }
     }
 }

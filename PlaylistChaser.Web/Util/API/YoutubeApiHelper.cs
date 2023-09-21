@@ -348,22 +348,22 @@ namespace PlaylistChaser.Web.Util.API
         #region Interface Implementations
         public PlaylistAdditionalInfo GetPlaylistById(string playlistId)
             => toPlaylistModel(getPlaylist(playlistId));
-        public (List<(int Id, string IdAtSource)> Exact, List<(int Id, string IdAtSource)> NotExact) FindSongs(List<(int SongId, string ArtistName, string SongName)> songs)
+        public FoundSongs FindSongs(List<(int SongId, string ArtistName, string SongName)> songs)
         {
-            var foundSongsExact = new List<(int Id, string SpotifyId)>();
-            var foundSongs = new List<(int Id, string SpotifyId)>();
+            var foundSongsExact = new List<FoundSong>();
+            var foundSongs = new List<FoundSong>();
             try
             {
                 foreach (var song in songs)
                 {
                     var videoId = searchSongExact(song.ArtistName, song.SongName);
-                    foundSongsExact.Add(new(song.SongId, videoId));
+                    foundSongsExact.Add(new FoundSong(song.SongId, videoId));
                 }
-                return (foundSongsExact, foundSongs);
+                return new FoundSongs(foundSongsExact, foundSongs);
             }
             catch (Exception)
             {
-                return (foundSongsExact, foundSongs);
+                return new FoundSongs(foundSongsExact, foundSongs);
             }
         }
         #endregion

@@ -78,7 +78,6 @@
     <Build Include="State.sql" />
     <Build Include="NewDbScripts\InBuiltValues\InsertStates.sql" />
     <Build Include="PlaylistSongState.sql" />
-    <Build Include="SongState.sql" />
     <Build Include="PlaylistAdditionalInfo.sql" />
     <Build Include="SongAdditionalInfo.sql" />
     <Build Include="OAuth2Credential.sql" />

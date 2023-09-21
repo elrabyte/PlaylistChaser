@@ -47,7 +47,6 @@ namespace PlaylistChaser.Test
         {
             CreatorName = "RickAstleyVEVO",
             Description = "Videos from the dapper British pop-soul singer.\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nrick astley, never gonna give you up, together forever",
-            Id = null,
             IsMine = false,
             PlaylistId = 0,
             PlaylistIdSource = PLAYLIST_ID,

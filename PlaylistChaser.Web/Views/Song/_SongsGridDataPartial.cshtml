@@ -41,7 +41,7 @@
                     {
                         <td>
                             @{
-                                var state = song.SongStates.SingleOrDefault(ss => ss.SourceId == (Sources)source.Id);
+                                var state = song.SongInfos.SingleOrDefault(ss => ss.SourceId == (Sources)source.Id);
                                 if (state != null)
                                 {
                                     @(state.StateId.ToString())

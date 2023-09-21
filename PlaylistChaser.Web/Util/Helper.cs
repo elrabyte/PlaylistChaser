@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Mvc;
+using PlaylistChaser.Web.Models;
 using System.Text.Encodings.Web;
+using static PlaylistChaser.Web.Util.BuiltInIds;
 
 namespace PlaylistChaser.Web.Util
 {
@@ -249,6 +251,19 @@ namespace PlaylistChaser.Web.Util
 
             return new HtmlString(html);
         }
+        #endregion
+
+        #region Models
+        internal static Playlist InfoToPlaylist(PlaylistAdditionalInfo info, PLaylistTypes playlistType, int? thumbnailId = null)
+        => new Playlist { Name = info.Name, ChannelName = info.CreatorName, Description = info.Description, PlaylistTypeId = playlistType, ThumbnailId = thumbnailId };
+        internal static PlaylistAdditionalInfo PlaylistToInfo(Playlist playlist, Sources source, bool isMine = true)
+            => new PlaylistAdditionalInfo { Name = playlist.Name, CreatorName = playlist.ChannelName, Description = playlist.Description, IsMine = isMine, PlaylistId = playlist.Id, SourceId = source };
+
+        internal static SongAdditionalInfo SongToInfo(Song song, string songIdSource, Sources sourceId, string url = null)
+            => new SongAdditionalInfo { Name = song.SongName, ArtistName = song.ArtistName, SongId = song.Id, SongIdSource = songIdSource, SourceId = sourceId, Url = url };
+
+        internal static Song InfoToSong(SongAdditionalInfo info, int? thumbnailId = null)
+            => new Song { SongName = info.Name, ArtistName = info.ArtistName, ThumbnailId = thumbnailId };
         #endregion
     }
 }

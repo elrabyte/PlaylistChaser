@@ -3,11 +3,12 @@
 @using static PlaylistChaser.Web.Util.BuiltInIds;
 @model List<PlaylistSongViewModel>
 
-<table class="table"
+<table id="playlistSongsGrid"
+       class="table"
        data-toggle="table"
        data-checkbox-header="true"
-       data-click-to-select="true"
        data-multiple-select-row="true"
+       data-click-to-select="true"
        data-height="800">
     <thead>
         <tr>
@@ -60,7 +61,7 @@
                         </td>
                         <td>
                             @{
-                                var state = song.SongStates.SingleOrDefault(ss => ss.SourceId == (Sources)source.Id);
+                                var state = song.SongInfos.SingleOrDefault(ss => ss.SourceId == (Sources)source.Id);
                                 if (state != null)
                                 {
                                     @(state.StateId.ToString())
@@ -95,9 +96,4 @@
     $(function () {
         $("table").bootstrapTable();
     })
-    function getSelectedIds() {
-        return $.map($("table tr.selected"), function (selectedRow) {
-            return $(selectedRow).data('id');
-        });
-    }
 </script>

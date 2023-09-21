@@ -4,7 +4,9 @@
 @using static PlaylistChaser.Web.Util.BuiltInIds;
 @model PlaylistSongSearchModel
 
-
+@{
+    var sources = (List<Source>)ViewBag.Sources;
+}
 
 <div class="col-12">
     <form id="searchForm">
@@ -21,8 +23,20 @@
             @Html.BsTextBoxFor(m => m.Source)
         </div>
         <div class="form-group">
+            @Html.BsLabelFor(m => m.PlaylistSongState)
+            @Html.BsTextBoxFor(m => m.PlaylistSongState)
+        </div>
+        <div class="form-group">
             @Html.BsLabelFor(m => m.SongState)
             @Html.BsTextBoxFor(m => m.SongState)
+        </div>
+        <div class="form-group">
+            @Html.BsLabelFor(m => m.Limit)
+            @Html.BsTextBoxFor(m => m.Limit)
+        </div>
+        <div class="form-group">
+            @Html.BsLabelFor(m => m.PageSize)
+            @Html.BsTextBoxFor(m => m.PageSize)
         </div>
         <div class="form-group">
             @Controls.Button("search", "searchSongs()")
@@ -30,7 +44,25 @@
     </form>
 </div>
 
-@Helper.ReloadablePartial("songsGrid", Url.Url("_PlaylistSongsGridDataPartial", "Song", new { PlaylistId = Model.PlaylistId}))
+<div class="float-end">
+    <div class="dropdown">
+        <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="bi bi-gear"></i>
+        </button>
+        <ul class="dropdown-menu">
+            @foreach (var src in sources)
+            {
+                <li>
+                    <span class="dropdown-header">@Html.Raw(src.DisplayName)</span>
+                </li>
+                <li><a class="dropdown-item" href="javascript:;" onclick="findAllSongs('@src.Id')">Find all songs</a></li>
+                <li><a class="dropdown-item" href="javascript:;" onclick="findSelectedSongs('@src.Id')">Find selected songs</a></li>
+            }
+        </ul>
+    </div>
+</div>
+
+@Helper.ReloadablePartial("playlistSongsGrid", Url.Url("_PlaylistSongsGridDataPartial", "Song", new { PlaylistId = Model.PlaylistId }))
 
 <script type="text/javascript">
 
@@ -38,24 +70,47 @@
         changePage(1);
     })
     var addSongStates = @(ViewBag.AddSongStates.ToString().ToLower());
-    var pageSize = @(ViewBag.PageSize);
 
     var pageNumber;
     function changePage(pageNum) {
         pageNumber = pageNum;
-        let skip = pageSize * (pageNumber - 1);
-        loadSongsGrid(addSongStates, skip, pageSize);
         //change active buttons
         $(".page-btn").removeClass("active");
         $("#page" + pageNum + "Btn").addClass("active");
+        searchSongs();
     }
 
-    function loadSongsGrid(addSongStates, skip, limit, searchModel) {
-        songsGrid.load("&addSongStates=" + addSongStates + "&skip=" + skip + "&limit=" + limit + "&seachModel=" + searchModel);
+    function loadPlaylistSongsGrid(addSongStates, skip, pageSize, searchModel) {
+        playlistSongsGrid.load("&addSongStates=" + addSongStates + "&skip=" + skip + "&pageSize=" + pageSize + "&seachModel=" + searchModel);
     }
 
     function searchSongs() {
+        let pageSize = $("#PageSize").val();
         let skip = pageSize * (pageNumber - 1);
-        loadSongsGrid(addSongStates, skip, pageSize, $("#searchForm").serialize());
+        loadPlaylistSongsGrid(addSongStates, skip, pageSize, $("#searchForm").serialize());
+    }
+
+    function getSelectedIds() {
+        return $.map($("table tr.selected"), function (selectedRow) {
+            return $(selectedRow).data('id');
+        });
+    }
+
+    function findAllSongs(sourceId) {
+        let url = '@Url.Url("FindSongs", "Song", new {playlistId = Model.PlaylistId})'
+        $.post(url, { source: sourceId }, function (data, status, jqXHR) {
+            debugger;
+        });
+    }
+
+    function findSelectedSongs(sourceId) {
+        let selectedIds = getSelectedIds();
+        if (selectedIds.length <= 0) {
+            return alert("no rows selected")
+        }
+        let url = '@Url.Url("FindSongs", "Song")';
+        $.post(url, { source: sourceId, songIds: selectedIds.toString() }, function (data, status, jqXHR) {
+            debugger;
+        });
     }
 </script>
