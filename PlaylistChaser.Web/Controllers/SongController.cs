@@ -1,4 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 using PlaylistChaser.Web.Database;
 using PlaylistChaser.Web.Models;
 using PlaylistChaser.Web.Models.SearchModel;
@@ -41,7 +43,8 @@ namespace PlaylistChaser.Web.Controllers
         }
         #endregion
 
-        public SongController(IConfiguration configuration, PlaylistChaserDbContext db) : base(configuration, db) { }
+        public SongController(IConfiguration configuration, PlaylistChaserDbContext db, IHubContext<ProgressHub> hubContext)
+            : base(configuration, db, hubContext) { }
 
         #region Views
 
@@ -225,10 +228,10 @@ namespace PlaylistChaser.Web.Controllers
             }
         }
 
-        public async Task<FoundSongs> FindSongs(List<Song> missingSongs, Sources source)
+        public async Task<List<FoundSong>> FindSongs(List<Song> missingSongs, Sources source)
         {
             //create info if not available
-            createInfosForMissingSongs(missingSongs, source);
+            createInfosForMissingSongs(source, missingSongs);
 
             //only songs that weren't checked before
             var missingSongsList = missingSongs.Where(s => db.SongAdditionalInfoReadOnly.Single(ss => ss.SongId == s.Id && ss.SourceId == source).StateId == SongStates.NotChecked);
@@ -237,31 +240,39 @@ namespace PlaylistChaser.Web.Controllers
                 return null;
 
             //check if songs exists
-            FoundSongs foundSongs;
             var findSongs = missingSongsList.Select(s => new FindSong(s.Id, s.ArtistName, s.SongName)).ToList();
-            switch (source)
+
+            int nFound = 0;
+            var foundSongs = new List<FoundSong>();
+            FoundSong foundSong;
+
+            await progressHub.InitProgressToast("Finding Songs...", findSongs.Count);
+            foreach (var findSong in findSongs)
             {
-                case Sources.Youtube:
-                    foundSongs = ytHelper.FindSongIds(findSongs);
-                    break;
-                case Sources.Spotify:
-                    foundSongs = spottyHelper.FindSongIds(findSongs);
-                    break;
-                default:
-                    throw new NotImplementedException(ErrorHelper.NotImplementedForThatSource);
+                switch (source)
+                {
+                    case Sources.Youtube:
+                        foundSong = ytHelper.FindSongId(findSong);
+                        break;
+                    case Sources.Spotify:
+                        foundSong = spottyHelper.FindSongId(findSong);
+                        break;
+                    default:
+                        throw new NotImplementedException(ErrorHelper.NotImplementedForThatSource);
+                }
+
+                addFoundSong(source, foundSong, foundSong.ExactMatch ? SongStates.Available : SongStates.MaybeAvailable);
+                await progressHub.UpdateProgressToast(nFound, $"{++nFound} / {findSongs.Count} found.");
+                foundSongs.Add(foundSong);
             }
-
-            foreach (var foundSong in foundSongs.Exact)
-                addFoundSong(foundSong, source, SongStates.Available);
-
-            foreach (var foundSong in foundSongs.NotExact)
-                addFoundSong(foundSong, source, SongStates.MaybeAvailable);
+            await progressHub.EndProgressToast();
 
             return foundSongs;
         }
-        private void createInfosForMissingSongs(List<Song> missingSongs, Sources source)
+
+        private void createInfosForMissingSongs(Sources source, List<Song> missingSongs)
         {
-            var songIdsNoInfo = missingSongs.Select(s => s.Id).Where(id => !db.SongAdditionalInfoReadOnly.Any(i => i.SongId == id)).ToList();
+            var songIdsNoInfo = missingSongs.Select(s => s.Id).Where(id => !db.SongAdditionalInfoReadOnly.Any(i => i.SourceId == source && i.SongId == id)).ToList();
             foreach (var songId in songIdsNoInfo)
             {
                 var newSongInfo = new SongAdditionalInfo()
@@ -276,21 +287,18 @@ namespace PlaylistChaser.Web.Controllers
             db.SaveChanges();
         }
 
-        private void addFoundSong(FoundSong foundSong, Sources source, SongStates newState)
+        private void addFoundSong(Sources source, FoundSong foundSong, SongStates newState)
         {
             //add songInfo
             var songInfo = db.SongAdditionalInfo.SingleOrDefault(i => i.SongId == foundSong.Id && i.SourceId == source);
 
             if (songInfo == null)
             {
-                songInfo = new SongAdditionalInfo
-                {
-                    SongId = foundSong.Id,
-                    SourceId = source
-                };
+                songInfo = new SongAdditionalInfo();
                 db.SongAdditionalInfo.Add(songInfo);
-            }            
-
+            }
+            songInfo.SongIdSource = foundSong.IdAtSource;
+            songInfo.SourceId = source;
             songInfo.StateId = newState;
             songInfo.LastChecked = DateTime.Now;
 

@@ -12,6 +12,7 @@ builder.Services.AddDistributedMemoryCache();
 
 builder.Services.AddSession();
 
+builder.Services.AddSignalR();
 
 // Add configuration sources
 var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
@@ -50,6 +51,8 @@ app.UseRouting();
 app.UseAuthorization();
 
 app.UseSession();
+
+app.MapHub<ProgressHub>("/progressHub");
 
 app.MapControllerRoute(
     name: "default",

@@ -1,13 +1,14 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using PlaylistChaser.Web.Database;
 using PlaylistChaser.Web.Models;
-using System.Data.Entity;
 
 namespace PlaylistChaser.Web.Controllers
 {
     public class AdminController : BaseController
     {
-        public AdminController(IConfiguration configuration, PlaylistChaserDbContext db) : base(configuration, db) { }
+        public AdminController(IConfiguration configuration, PlaylistChaserDbContext db, IHubContext<ProgressHub> hubContext)
+            : base(configuration, db, hubContext) { }
 
         public ActionResult Index()
             => View();

@@ -273,44 +273,24 @@ namespace PlaylistChaser.Web.Util.API
             newPlaylist = await ytService.Playlists.Insert(newPlaylist, "snippet,status").ExecuteAsync();
             return toPlaylistModel(newPlaylist);
         }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="playlistId"></param>
-        /// <param name="songIds"></param>
-        /// <returns>song ids at source </returns>
-        public List<string> AddSongsToPlaylist(string playlistId, List<string> songIds)
+        public bool AddSongToPlaylist(string playlistId, string songId)
         {
-            var uploadedSongs = new List<string>();
-            if (songIds.Count == 0) return uploadedSongs;
-
             try
             {
-                foreach (var songId in songIds)
-                {
-                    var playlistItem = new PlaylistItem();
-                    playlistItem.Snippet = new PlaylistItemSnippet();
-                    playlistItem.Snippet.PlaylistId = playlistId;
-                    playlistItem.Snippet.ResourceId = new ResourceId();
-                    playlistItem.Snippet.ResourceId.Kind = "youtube#video";
-                    playlistItem.Snippet.ResourceId.VideoId = songId;
+                var playlistItem = new PlaylistItem();
+                playlistItem.Snippet = new PlaylistItemSnippet();
+                playlistItem.Snippet.PlaylistId = playlistId;
+                playlistItem.Snippet.ResourceId = new ResourceId();
+                playlistItem.Snippet.ResourceId.Kind = "youtube#video";
+                playlistItem.Snippet.ResourceId.VideoId = songId;
 
-                    var request = ytService.PlaylistItems.Insert(playlistItem, "snippet");
-                    var response = request.Execute();
-                    uploadedSongs.Add(songId);
-                }
-                return uploadedSongs;
+                var request = ytService.PlaylistItems.Insert(playlistItem, "snippet");
+                var response = request.Execute();
+                return true;
             }
-            catch (Google.GoogleApiException ex)
+            catch (Exception)
             {
-                if (ex.Message == "The service youtube has thrown an exception. HttpStatusCode is Forbidden. The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.")
-                {
-                    //exceeded daily requests limit 
-                    var a = 1;
-                }
-
-                return uploadedSongs;
+                return false;
             }
         }
 
@@ -351,22 +331,16 @@ namespace PlaylistChaser.Web.Util.API
         #region Interface Implementations
         public PlaylistAdditionalInfo GetPlaylistById(string playlistId)
             => toPlaylistModel(getPlaylist(playlistId));
-        public FoundSongs FindSongIds(List<FindSong> songs)
+        public FoundSong FindSongId(FindSong song)
         {
-            var foundSongsExact = new List<FoundSong>();
-            var foundSongs = new List<FoundSong>();
             try
             {
-                foreach (var song in songs)
-                {
-                    var videoId = searchSongExact(song.ArtistName, song.SongName).Result;
-                    foundSongsExact.Add(new FoundSong(song.SongId, videoId));
-                }
-                return new FoundSongs(foundSongsExact, foundSongs);
+                var videoId = searchSongExact(song.ArtistName, song.SongName).Result;
+                return new FoundSong(song.SongId, videoId, true);
             }
             catch (Exception)
             {
-                return new FoundSongs(foundSongsExact, foundSongs);
+                return null;
             }
         }
         #endregion

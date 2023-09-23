@@ -99,7 +99,7 @@
     function findAllSongs(sourceId) {
         let url = '@Url.Url("FindSongs", "Song", new {playlistId = Model.PlaylistId})'
         $.post(url, { source: sourceId }, function (data, status, jqXHR) {
-            debugger;
+            searchSongs();
         });
     }
 
@@ -110,7 +110,7 @@
         }
         let url = '@Url.Url("FindSongs", "Song")';
         $.post(url, { source: sourceId, songIds: selectedIds.toString() }, function (data, status, jqXHR) {
-            debugger;
+            searchSongs();
         });
     }
 </script>

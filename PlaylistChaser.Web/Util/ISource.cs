@@ -5,35 +5,22 @@ namespace PlaylistChaser.Web.Util
     internal interface ISource
     {
         #region Playlist
-
         internal PlaylistAdditionalInfo GetPlaylistById(string playlistId);
         internal Task<PlaylistAdditionalInfo> CreatePlaylist(string playlistName, string? description = null, bool isPublic = true);
+        internal Task<bool> UpdatePlaylist(string IdAtSource, string? playlistName = null, string? playlistDescription = null, bool isPublic = true);
         internal Task<bool> DeletePlaylist(string youtubePlaylistId);
         #endregion
 
         #region Song
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="playlistId">playlistId at source</param>
-        /// <returns></returns>
         internal List<SongAdditionalInfo> GetPlaylistSongs(string playlistId);
-        internal FoundSongs FindSongIds(List<FindSong> songs);
-
-        internal Task<bool> UpdatePlaylist(string IdAtSource, string? playlistName = null, string? playlistDescription = null, bool isPublic = true);
+        internal FoundSong FindSongId(FindSong song);
+        internal bool AddSongToPlaylist(string playlistId, string songId);
         #endregion
 
-        #region get Thumbnail
+        #region Get Thumbnail
         internal Task<byte[]> GetPlaylistThumbnail(string id);
         internal Task<Dictionary<string, byte[]>> GetSongsThumbnailBySongIds(List<string> songIds);
         #endregion
 
-        /// <summary>
-        /// add songs to source
-        /// </summary>
-        /// <param name="playlistId">playlist id at source</param>
-        /// <param name="songIds">song ids at source</param>
-        /// <returns>uploaded song ids</returns>
-        internal List<string> AddSongsToPlaylist(string playlistId, List<string> songIds);
     }
 }
