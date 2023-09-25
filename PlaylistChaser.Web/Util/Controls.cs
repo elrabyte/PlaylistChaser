@@ -12,6 +12,12 @@ namespace PlaylistChaser.Web.Util
             htmlAttributes = htmlAttributes ?? new { @class = "col-sm-2 col-form-label" };
             return htmlHelper.LabelFor<TModel, TResult>(expression, htmlAttributes);
         }
+        public static IHtmlContent BsLabel(this IHtmlHelper htmlHelper, string displayValue, string? displayFor = null)
+        {
+            displayFor = displayFor == null ? "" : $"for=\"{displayFor}\"";
+            var html = $@"<label class=""col-sm-2 col-form-label"" {displayFor}>{displayValue}</label>";
+            return new HtmlString(html);
+        }
 
         public static IHtmlContent BsDisplayFor<TModel, TResult>(this IHtmlHelper<TModel> htmlHelper, Expression<Func<TModel, TResult>> expression, object additionalViewData = null)
         {
@@ -19,6 +25,12 @@ namespace PlaylistChaser.Web.Util
             var displayValue = htmlHelper.DisplayFor<TModel, TResult>(expression, additionalViewData).GetString();
 
             var html = $"<input type=\"text\" readonly class=\"form-control-plaintext\" value=\"" + displayValue + "\">";
+            return new HtmlString(html);
+        }
+
+        public static IHtmlContent BsDisplay(this IHtmlHelper htmlHelper, string displayValue)
+        {
+            var html = $"<input type=\"text\" readonly class=\"form-control form-control-plaintext\" value=\"" + displayValue + "\">";
             return new HtmlString(html);
         }
 

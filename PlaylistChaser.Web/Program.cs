@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using PlaylistChaser.Web.Controllers;
 using PlaylistChaser.Web.Database;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -11,6 +12,7 @@ builder.Services.AddDistributedMemoryCache();
 
 builder.Services.AddSession();
 
+builder.Services.AddSignalR();
 
 // Add configuration sources
 var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
@@ -21,6 +23,8 @@ builder.Configuration
 
 builder.Services.AddDbContext<PlaylistChaserDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("ServerConnectionString")));
+
+builder.Services.AddScoped<SongController>();
 
 var app = builder.Build();
 
@@ -47,6 +51,8 @@ app.UseRouting();
 app.UseAuthorization();
 
 app.UseSession();
+
+app.MapHub<ProgressHub>("/progressHub");
 
 app.MapControllerRoute(
     name: "default",

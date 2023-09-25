@@ -1,0 +1,84 @@
+﻿@using PlaylistChaser.Web.Models.ViewModel;
+@using PlaylistChaser.Web.Util;
+@using static PlaylistChaser.Web.Util.BuiltInIds;
+@model List<SongViewModel>
+
+<table class="table"
+       data-toggle="table"
+       data-checkbox-header="true"
+       data-click-to-select="true"
+       data-multiple-select-row="true"
+       data-height="800">   
+    <thead>
+        <tr>
+            <th data-checkbox="true"></th>
+            <th data-sortable="true">@Html.DisplayNameFor(m => m.First().SongName)</th>
+            <th data-sortable="true">@Html.DisplayNameFor(m => m.First().ArtistName)</th>
+            @if (ViewBag.AddSongStates)
+            {
+                foreach (Source source in ViewBag.Sources)
+                {
+                    <th data-filter-control="select" data-sortable="true">@Html.Raw(source.DisplayName)</th>
+                }
+            }
+        </tr>
+    </thead>
+    <tbody>
+
+        @foreach (var song in Model)
+        {
+            <tr data-id="@song.Id">
+                <td></td>
+                <td>
+                    @Html.DisplayFor(m => song.SongName)
+                </td>
+                <td>
+                    @Html.DisplayFor(m => song.ArtistName)
+                </td>
+                @if (ViewBag.AddSongStates)
+                {
+                    @foreach (Source source in ViewBag.Sources)
+                    {
+                        <td>
+                            @{
+                                var state = song.SongInfos.SingleOrDefault(ss => ss.SourceId == (Sources)source.Id);
+                                if (state != null)
+                                {
+                                    @(state.StateId.ToString())
+                                }
+                            }
+                        </td>
+                    }
+                }
+            </tr>
+        }
+    </tbody>
+</table>
+<nav aria-label="Page navigation example">
+    <ul class="pagination">
+        <li class="page-item">
+            <a class="page-link" href="javascript:;" onclick="changePage(pageNumber-1)" aria-label="Previous">
+                <span aria-hidden="true">&laquo;</span>
+            </a>
+        </li>
+        @for (int i = 1; i <= ViewBag.NumPages; i++)
+        {
+            <li id="page@(i)Btn" class="page-btn page-item"><a class="page-link" href="javascript:;" onclick="changePage(@(i))">@(i)</a></li>
+        }
+        <li class="page-item">
+            <a class="page-link" href="javascript:;" onclick="changePage(pageNumber+1)" aria-label="Next">
+                <span aria-hidden="true">&raquo;</span>
+            </a>
+        </li>
+    </ul>
+</nav>
+<script type="text/javascript">
+    $(function(){
+        $("table").bootstrapTable();
+    })
+    function getSelectedIds() {
+        return $.map($("table tr.selected"), function (selectedRow) {
+            return $(selectedRow).data('id');
+        });
+    }
+</script>

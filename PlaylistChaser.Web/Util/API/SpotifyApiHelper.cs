@@ -1,9 +1,6 @@
-﻿using Google.Apis.Auth.OAuth2;
-using Microsoft.Identity.Client.Platforms.Features.DesktopOs.Kerberos;
-using PlaylistChaser.Web.Models;
+﻿using PlaylistChaser.Web.Models;
 using SpotifyAPI.Web;
 using System.Text.RegularExpressions;
-using System.Web.Providers.Entities;
 using static PlaylistChaser.Web.Util.BuiltInIds;
 
 namespace PlaylistChaser.Web.Util.API
@@ -77,29 +74,26 @@ namespace PlaylistChaser.Web.Util.API
         #region Queries
 
         #region Song
-        public (List<(int Id, string IdAtSource)> Exact, List<(int Id, string IdAtSource)> NotExact) FindSongs(List<(int SongId, string ArtistName, string SongName)> songs)
+
+        public FoundSong FindSongId(FindSong song)
         {
-            var foundSongsExact = new List<(int Id, string SpotifyId)>();
-            var foundSongs = new List<(int Id, string SpotifyId)>();
             try
             {
-                foreach (var song in songs)
+                var spotifySong = searchSongExact(SearchRequest.Types.Track, song.ArtistName, song.SongName).Result;
+                if (spotifySong != null)
+                    return new FoundSong(song.SongId, spotifySong.Id, true);
+                else
                 {
-                    var spotifySong = searchSongExact(SearchRequest.Types.Track, song.ArtistName, song.SongName).Result;
+                    spotifySong = searchSong(SearchRequest.Types.Track, song.SongName).Result;
                     if (spotifySong != null)
-                        foundSongsExact.Add(new(song.SongId, spotifySong.Id));
-                    else
-                    {
-                        spotifySong = searchSong(SearchRequest.Types.Track, song.SongName).Result;
-                        if (spotifySong != null)
-                            foundSongs.Add(new(song.SongId, spotifySong.Id));
-                    }
+                        return new FoundSong(song.SongId, spotifySong.Id, false);
                 }
-                return (foundSongsExact, foundSongs);
+                return null;
+
             }
             catch (Exception ex)
             {
-                return (foundSongsExact, foundSongs);
+                return null;
             }
         }
 
@@ -270,25 +264,36 @@ namespace PlaylistChaser.Web.Util.API
             return songs;
         }
 
-        public List<string> AddSongsToPlaylist(string playlistId, List<string> songIds)
+
+        /// <summary>
+        ///can add max. 100 songs per request
+        /// </summary>
+        public bool AddSongsToPlaylistBatch(string playlistId, List<string> songIds)
         {
-            var uploadedSongs = new List<string>();
             try
             {
-                //can add max. 100 songs per request
-                var rounds = Math.Ceiling(songIds.Count / 100d);
-                for (int i = 0; i < rounds; i++)
-                {
-                    var curSongids = songIds.Skip(i * 100).Take(100);
-                    var trackUris = curSongids.Select(i => string.Format("spotify:track:{0}", i)).ToList();
-                    var response = spotify.Playlists.AddItems(playlistId, new PlaylistAddItemsRequest(trackUris)).Result;
-                    uploadedSongs.AddRange(curSongids);
-                }
-                return uploadedSongs;
+                var trackUris = songIds.Select(i => $"spotify:track:{i}").ToList();
+                var response = spotify.Playlists.AddItems(playlistId, new PlaylistAddItemsRequest(trackUris)).Result;
+                return true;
             }
             catch (Exception ex)
             {
-                return uploadedSongs;
+                return false;
+            }
+        }
+
+        public bool AddSongToPlaylist(string playlistId, string songId)
+        {
+            try
+            {
+                var trackUri = new List<string> { $"spotify:track:{songId}" };
+                var response = spotify.Playlists.AddItems(playlistId, new PlaylistAddItemsRequest(trackUri)).Result;
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                return false;
             }
         }
 

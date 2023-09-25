@@ -1,5 +1,6 @@
 ﻿CREATE PROCEDURE [dbo].[GetPlaylistSongs]
-	@playlistId int
+	@playlistId int,
+	@limit int = null
 AS
 BEGIN
 	set nocount on;
@@ -13,5 +14,16 @@ BEGIN
 			 on s.Id = ps.SongId
 		  where ps.PlaylistId = @playlistId
 
-	select * from #playlistSong
+	if (@limit is not null)
+	begin
+		select top (@limit) * 
+		  from #playlistSong
+		 order by PlaylistSongId desc
+	end;
+	else
+	begin
+		select * 
+		  from #playlistSong
+		 order by PlaylistSongId desc
+	end
 END;

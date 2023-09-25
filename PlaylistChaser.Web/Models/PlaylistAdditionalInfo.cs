@@ -6,11 +6,9 @@ namespace PlaylistChaser.Web.Models
 {
     public class PlaylistAdditionalInfo
     {
-        [Key, DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public int? Id { get; set; }
-        [Required]
+        [Key, Column(Order = 1)]
         public int PlaylistId { get; set; }
-        [Required]
+        [Key, Column(Order = 2)]
         public Sources SourceId { get; set; }
         [Required]
         public string PlaylistIdSource { get; set; }

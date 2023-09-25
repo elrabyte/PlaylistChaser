@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Mvc;
+using PlaylistChaser.Web.Models;
 using System.Text.Encodings.Web;
+using static PlaylistChaser.Web.Util.BuiltInIds;
 
 namespace PlaylistChaser.Web.Util
 {
@@ -43,7 +45,8 @@ namespace PlaylistChaser.Web.Util
             }
         }
 
-        public static IHtmlContent ModalBareBonePartial(string name, string title, string partialUrl)
+        #region ModalPartal
+        public static IHtmlContent ModalBareBonePartial(string name, string partialUrl)
         {
             var modalName = $"{name}Modal";
             var containerName = $"{name}Container";
@@ -171,5 +174,96 @@ namespace PlaylistChaser.Web.Util
                 </script>
             ";
         }
+        #endregion
+
+        #region ReloadablePartial
+        public static IHtmlContent ReloadablePartial(string name, string partialUrl, bool loadInitial = false)
+        {
+            var containerName = $"{name}Container";
+            var html = $@"<div id=""{containerName}""></div>
+                <script type=""text/javascript"">
+                    var {name} = {{
+                        __namespace: true,
+                        params: null,
+                        init: function() {{
+                            {name}.loadBody();
+                        }},
+                        load: function(params) {{
+                            {name}.params = params;
+                            {name}.init();
+                        }},
+                        unload: function() {{
+                            $(""#{containerName}"").html("""");
+                        }},
+                        loadBody: function () {{
+                            $(""#{containerName}"").html(""Loading..."");
+                            let url = ""{partialUrl}"";
+                            if(typeof {name}.params !== 'undefined')
+                                url = url + {name}.params
+                            $.get(url, null, function (data, status, jqXHR) {{
+                                if (data.success == false || status != ""success"") {{ 
+                                    return console.error(""error while loading partial!""); 
+                                }}
+
+                                $(""#{containerName}"").html(data);
+                                
+                                let submitBtn = $(""#{containerName}"").find(""#submitBtn"");
+                                if(submitBtn.length === 1) {{
+                                    submitBtn.appendTo("".modal-footer"");
+                                    //if no onclick
+                                    if(typeof submitBtn[0].onclick != 'undefined') {{
+                                        {name}.setOnclickToSubmitBtn(submitBtn);
+                                    }}
+                                }}
+                            }});
+                        }},
+                        setOnclickToSubmitBtn: function(submitBtn) {{
+                            submitBtn.click({name}.submit);
+                        }},
+                        submit: function(){{
+                            let form = $(""#{containerName} form"");
+                            let url = form[0].action;
+                            //get form vals
+                            //fire event
+                            $.ajax({{
+                                type: ""POST"",
+                                url: url,
+                                data: form.serialize(),
+                                success: function(data) {{
+                                        if (!data.success)
+                                            return alert(data.message);
+
+                                    $(""#{containerName}"").trigger(""saved"");
+                                    }},
+                                dataType: ""json""
+                            }});
+                        }}                        
+                    }};";
+            if (loadInitial)
+            {
+                html += $@"
+                    $(function() {{
+                        {name}.load();
+                    }})";
+            }
+
+            html += "</script>";
+
+            return new HtmlString(html);
+        }
+        #endregion
+
+        #region Models
+        internal static Playlist InfoToPlaylist(PlaylistAdditionalInfo info, PLaylistTypes playlistType, int? thumbnailId = null)
+        => new Playlist { Name = info.Name, ChannelName = info.CreatorName, Description = info.Description, PlaylistTypeId = playlistType, ThumbnailId = thumbnailId };
+        internal static PlaylistAdditionalInfo PlaylistToInfo(Playlist playlist, Sources source, bool isMine = true)
+            => new PlaylistAdditionalInfo { Name = playlist.Name, CreatorName = playlist.ChannelName, Description = playlist.Description, IsMine = isMine, PlaylistId = playlist.Id, SourceId = source };
+
+        internal static SongAdditionalInfo SongToInfo(Song song, string songIdSource, Sources sourceId, string url = null)
+            => new SongAdditionalInfo { Name = song.SongName, ArtistName = song.ArtistName, SongId = song.Id, SongIdSource = songIdSource, SourceId = sourceId, Url = url };
+
+        internal static Song InfoToSong(SongAdditionalInfo info, int? thumbnailId = null)
+            => new Song { SongName = info.Name, ArtistName = info.ArtistName, ThumbnailId = thumbnailId };
+        #endregion
     }
 }
