@@ -8,42 +8,6 @@
     var sources = (List<Source>)ViewBag.Sources;
 }
 
-<div class="col-12">
-    <form id="searchForm">
-        <div class="form-group">
-            @Html.BsLabelFor(m => m.SongName)
-            @Html.BsTextBoxFor(m => m.SongName)
-        </div>
-        <div class="form-group">
-            @Html.BsLabelFor(m => m.ArtistName)
-            @Html.BsTextBoxFor(m => m.ArtistName)
-        </div>
-        <div class="form-group">
-            @Html.BsLabelFor(m => m.Source)
-            @Html.BsTextBoxFor(m => m.Source)
-        </div>
-        <div class="form-group">
-            @Html.BsLabelFor(m => m.PlaylistSongState)
-            @Html.BsTextBoxFor(m => m.PlaylistSongState)
-        </div>
-        <div class="form-group">
-            @Html.BsLabelFor(m => m.SongState)
-            @Html.BsTextBoxFor(m => m.SongState)
-        </div>
-        <div class="form-group">
-            @Html.BsLabelFor(m => m.Limit)
-            @Html.BsTextBoxFor(m => m.Limit)
-        </div>
-        <div class="form-group">
-            @Html.BsLabelFor(m => m.PageSize)
-            @Html.BsTextBoxFor(m => m.PageSize)
-        </div>
-        <div class="form-group">
-            @Controls.Button("search", "searchSongs()")
-        </div>
-    </form>
-</div>
-
 <div class="float-end">
     <div class="dropdown">
         <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -62,7 +26,8 @@
     </div>
 </div>
 
-@Helper.ReloadablePartial("playlistSongsGrid", Url.Url("_PlaylistSongsGridDataPartial", "Song", new { PlaylistId = Model.PlaylistId }))
+@Partials.ReloadablePartial("playlistSongsGrid", Url.Url("_PlaylistSongsGridDataPartial", "Song", new { PlaylistId = Model.PlaylistId }))
+@Partials.ModalPartial("songInfosEdit","Edit Songinfos", Url.Url("_SongInfosEditPartial", "Song"))
 
 <script type="text/javascript">
 
@@ -89,28 +54,40 @@
         let skip = pageSize * (pageNumber - 1);
         loadPlaylistSongsGrid(addSongStates, skip, pageSize, $("#searchForm").serialize());
     }
+</script>
 
+<!--#region dropdown actions-->
+<script type="text/javascript">
     function getSelectedIds() {
         return $.map($("table tr.selected"), function (selectedRow) {
             return $(selectedRow).data('id');
         });
     }
 
-    function findAllSongs(sourceId) {
+    function findAllSongs(source) {
         let url = '@Url.Url("FindSongs", "Song", new {playlistId = Model.PlaylistId})'
-        $.post(url, { source: sourceId }, function (data, status, jqXHR) {
+        $.post(url, { source: source }, function (data, status, jqXHR) {
             searchSongs();
         });
     }
 
-    function findSelectedSongs(sourceId) {
+    function findSelectedSongs(source) {
         let selectedIds = getSelectedIds();
         if (selectedIds.length <= 0) {
             return alert("no rows selected")
         }
         let url = '@Url.Url("FindSongs", "Song")';
-        $.post(url, { source: sourceId, songIds: selectedIds.toString() }, function (data, status, jqXHR) {
+        $.post(url, { source: source, songIds: selectedIds.toString() }, function (data, status, jqXHR) {
             searchSongs();
         });
     }
 </script>
+<!--#endregion-->
+<!--#region dropdown actions-->
+<script type="text/javascript">
+    function playlistSongsGrid_dblCliked(row, element, field) {
+        let songId = element._data.id;
+        songInfosEdit.show("?songId=" + songId);
+    }
+</script>
+<!--#endregion-->

@@ -3,12 +3,15 @@
 @using static PlaylistChaser.Web.Util.BuiltInIds;
 @model List<SongViewModel>
 
+@{
+    var sources = (List<Source>)ViewBag.Sources;
+}
 <table class="table"
        data-toggle="table"
        data-checkbox-header="true"
        data-click-to-select="true"
        data-multiple-select-row="true"
-       data-height="800">   
+       data-height="800">
     <thead>
         <tr>
             <th data-checkbox="true"></th>
@@ -16,7 +19,7 @@
             <th data-sortable="true">@Html.DisplayNameFor(m => m.First().ArtistName)</th>
             @if (ViewBag.AddSongStates)
             {
-                foreach (Source source in ViewBag.Sources)
+                foreach (var source in sources)
                 {
                     <th data-filter-control="select" data-sortable="true">@Html.Raw(source.DisplayName)</th>
                 }
@@ -37,11 +40,11 @@
                 </td>
                 @if (ViewBag.AddSongStates)
                 {
-                    @foreach (Source source in ViewBag.Sources)
+                    @foreach (var source in sources)
                     {
                         <td>
                             @{
-                                var state = song.SongInfos.SingleOrDefault(ss => ss.SourceId == (Sources)source.Id);
+                                var state = song.SongStates.SingleOrDefault(ss => ss.SourceId == (Sources)source.Id);
                                 if (state != null)
                                 {
                                     @(state.StateId.ToString())
@@ -73,7 +76,7 @@
     </ul>
 </nav>
 <script type="text/javascript">
-    $(function(){
+    $(function () {
         $("table").bootstrapTable();
     })
     function getSelectedIds() {

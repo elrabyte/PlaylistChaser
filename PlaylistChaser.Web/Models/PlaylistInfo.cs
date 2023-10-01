@@ -4,7 +4,7 @@ using static PlaylistChaser.Web.Util.BuiltInIds;
 
 namespace PlaylistChaser.Web.Models
 {
-    public class PlaylistAdditionalInfo
+    public class PlaylistInfo
     {
         [Key, Column(Order = 1)]
         public int PlaylistId { get; set; }
@@ -19,7 +19,10 @@ namespace PlaylistChaser.Web.Models
         [Required]
         public bool IsMine { get; set; }
         public string? Description { get; set; }
-        public string? Url{ get; set; }
+        [Required]
+        public string Url { get; set; }
+        [Required]
+        public DateTime LastSynced { get; set; }
 
     }
 }

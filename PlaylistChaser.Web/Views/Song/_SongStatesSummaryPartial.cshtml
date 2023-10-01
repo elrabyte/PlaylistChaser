@@ -1,0 +1,30 @@
+﻿@using PlaylistChaser.Web.Util;
+@using PlaylistChaser.Web.Models;
+@using static PlaylistChaser.Web.Util.BuiltInIds;
+@model List<IGrouping<Sources,SongState>>
+
+@{
+    var songsTotalCount = Model.Max(m => m.Count());
+    var sources = (List<Source>)ViewBag.Sources;
+}
+
+<div class="row">
+    <div class="col-md-10">
+        <h5>Songs states</h5>
+
+        @foreach (var songStates in Model)
+        {
+            var source = sources.Single(s => s.Id == (int)songStates.Key);
+            var songsAvailable = songStates.Count(s => s.StateId == SongStates.Available);
+            var songsNotChecked = songStates.Count(s => s.StateId == SongStates.NotChecked);
+            <div class="form-group row align-items-center">
+                <div class="col-sm-2">
+                    @Html.Raw(source.DisplayName)
+                </div>
+                <div class="col-sm-10">
+                    @Html.BsDisplay($"Available: {songsAvailable} / {songsTotalCount}")
+                </div>
+            </div>
+        }
+    </div>
+</div>

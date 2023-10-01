@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using PlaylistChaser.Web.Database;
 using PlaylistChaser.Web.Models;
 using PlaylistChaser.Web.Models.SearchModel;
@@ -8,11 +9,15 @@ using PlaylistChaser.Web.Util;
 using PlaylistChaser.Web.Util.API;
 using System.Data.Entity;
 using static PlaylistChaser.Web.Util.BuiltInIds;
+using static PlaylistChaser.Web.Util.Helper;
 
 namespace PlaylistChaser.Web.Controllers
 {
     public class SongController : BaseController
     {
+        public SongController(IConfiguration configuration, PlaylistChaserDbContext db, IHubContext<ProgressHub> hubContext, IMemoryCache memoryCache)
+            : base(configuration, db, hubContext, memoryCache) { }
+
         #region Properties
         private YoutubeApiHelper _ytHelper;
         private YoutubeApiHelper ytHelper
@@ -21,7 +26,7 @@ namespace PlaylistChaser.Web.Controllers
             {
                 if (_ytHelper == null)
                 {
-                    var oAuth = db.OAuth2CredentialReadOnly.Single(c => c.UserId == 1 && c.Provider == Sources.Youtube.ToString());
+                    var oAuth = db.GetCachedList(db.OAuth2Credential).Single(c => c.UserId == 1 && c.Provider == Sources.Youtube.ToString());
                     _ytHelper = new YoutubeApiHelper(oAuth.AccessToken);
                 }
                 return _ytHelper;
@@ -35,7 +40,7 @@ namespace PlaylistChaser.Web.Controllers
             {
                 if (_spottyHelper == null)
                 {
-                    var oAuth = db.OAuth2CredentialReadOnly.Single(c => c.UserId == 1 && c.Provider == Sources.Spotify.ToString());
+                    var oAuth = db.GetCachedList(db.OAuth2Credential).Single(c => c.UserId == 1 && c.Provider == Sources.Spotify.ToString());
                     _spottyHelper = new SpotifyApiHelper(oAuth.AccessToken);
                 }
                 return _spottyHelper;
@@ -43,11 +48,9 @@ namespace PlaylistChaser.Web.Controllers
         }
         #endregion
 
-        public SongController(IConfiguration configuration, PlaylistChaserDbContext db, IHubContext<ProgressHub> hubContext)
-            : base(configuration, db, hubContext) { }
-
         #region Views
 
+        #region View
         public async Task<ActionResult> Index()
         {
             var model = new SongIndexModel
@@ -56,14 +59,55 @@ namespace PlaylistChaser.Web.Controllers
             };
             return View(model);
         }
+        #endregion
 
-        #region Partial
+        #region Partials
 
-        public ActionResult _PlaylistSongsGridPartial(int playlistId, bool addSongStates, int? limit = null, int pageSize = 50)
+        #region Edit
+
+        [HttpGet]
+        public ActionResult _EditPartial(int id)
+        {
+            var song = db.GetCachedList(db.Song).Single(s => s.Id == id);
+            return PartialView(song);
+        }
+        [HttpPost]
+        public ActionResult _EditPartial(int id, Song uiSong)
+        {
+            var song = db.Song.Single(s => s.Id == id);
+
+            song.SongName = uiSong.SongName;
+            song.ArtistName = uiSong.ArtistName;
+
+            db.SaveChanges();
+            return JsonResponse();
+        }
+
+        [HttpGet]
+        public ActionResult _SongInfoEditPartial(Sources source, int songId)
+        {
+            var songInfo = db.GetCachedList(db.SongInfo).Single(s => s.SourceId == source && s.SongId == songId);
+            return PartialView(songInfo);
+        }
+        [HttpPost]
+        public ActionResult _SongInfoEditPartial(Sources sourceId, int songId, SongInfo uiSongInfo)
+        {
+            var songInfo = db.SongInfo.Single(s => s.SourceId == sourceId && s.SongId == songId);
+            songInfo.Name = uiSongInfo.Name;
+            songInfo.ArtistName = uiSongInfo.ArtistName;
+            songInfo.SongIdSource = uiSongInfo.SongIdSource;            
+            songInfo.Url = uiSongInfo.Url;
+
+            db.SaveChanges();
+            return JsonResponse();
+        }
+        #endregion
+
+        #region Grid
+        public ActionResult _PlaylistSongsGridPartial(int playlistId, bool addSongStates, int? limit = null, int? pageSize = null)
         {
             ViewBag.AddSongStates = addSongStates;
             ViewBag.PageSize = pageSize;
-            ViewBag.Sources = db.GetSources();
 
             var searchModel = new PlaylistSongSearchModel
             {
@@ -73,9 +117,14 @@ namespace PlaylistChaser.Web.Controllers
             };
             return PartialView(searchModel);
         }
-
         public async Task<ActionResult> _PlaylistSongsGridDataPartial(PlaylistSongSearchModel searchModel, bool addSongStates, int skip)
         {
+            var pageSize = searchModel.PageSize;
+
+            var filteredSources = new List<Sources>();
+            if (searchModel.Source.HasValue)
+                filteredSources.Add(searchModel.Source.Value);
+
             var songs = await db.GetPlaylistSongs(searchModel.PlaylistId, searchModel.Limit);
 
             //filter
@@ -89,17 +138,22 @@ namespace PlaylistChaser.Web.Controllers
 
             if (!filterSongStates)
             {
-                ViewBag.NumPages = Math.Ceiling(filteredSongs.Count() / (double)searchModel.PageSize);
-                filteredSongs = filteredSongs.Skip(skip).Take(searchModel.PageSize).ToList();
+                if (!pageSize.HasValue)
+                    ViewBag.NumPages = 1;
+                else
+                {
+                    ViewBag.NumPages = Math.Ceiling(filteredSongs.Count() / (double)pageSize.Value);
+                    filteredSongs = filteredSongs.Skip(skip).Take(pageSize.Value).ToList();
+                }
             }
 
             if (addSongStates)
             {
-                var playlistSongs = db.PlaylistSongReadOnly.Where(ps => ps.PlaylistId == searchModel.PlaylistId);
+                var playlistSongs = db.GetCachedList(db.PlaylistSong).Where(ps => ps.PlaylistId == searchModel.PlaylistId);
                 var songIds = playlistSongs.Select(s => s.SongId).ToList();
                 var playlistSongIds = playlistSongs.Select(s => s.Id).ToList();
-                var songInfos = db.SongAdditionalInfoReadOnly.Where(ss => songIds.Contains(ss.SongId));
-                var playlistSongStates = db.PlaylistSongStateReadOnly.Where(pss => playlistSongIds.Contains(pss.PlaylistSongId));
+                var songInfos = db.GetCachedList(db.SongInfo).Where(ss => songIds.Contains(ss.SongId));
+                var playlistSongStates = db.GetCachedList(db.PlaylistSongState).Where(pss => playlistSongIds.Contains(pss.PlaylistSongId));
 
                 if (filterSongStates)
                 {
@@ -108,8 +162,9 @@ namespace PlaylistChaser.Web.Controllers
                         songInfos = songInfos.Where(ss => ss.SourceId == searchModel.Source);
                         playlistSongStates = playlistSongStates.Where(pss => pss.SourceId == searchModel.Source);
                     }
+                    //filter out 
                     if (searchModel.SongState != null)
-                        songInfos = songInfos.Where(ss => ss.StateId == searchModel.SongState);
+                        songInfos = songInfos.Where(si => db.GetCachedList(db.SongState).Single(ss => ss.SourceId == si.SourceId && ss.SongId == si.SongId).StateId == searchModel.SongState);
                     if (searchModel.PlaylistSongState != null)
                         playlistSongStates = playlistSongStates.Where(pss => pss.StateId == searchModel.PlaylistSongState);
 
@@ -117,25 +172,29 @@ namespace PlaylistChaser.Web.Controllers
                     //filter songs
                     filteredSongs = filteredSongs.Where(s => songInfos.Select(ss => ss.SongId).Contains(s.SongId));
 
-                    ViewBag.NumPages = Math.Ceiling(filteredSongs.Count() / (double)searchModel.PageSize);
-                    filteredSongs = filteredSongs.Skip(skip).Take(searchModel.PageSize).ToList();
-
+                    if (!pageSize.HasValue)
+                        ViewBag.NumPages = 1;
+                    else
+                    {
+                        ViewBag.NumPages = Math.Ceiling(filteredSongs.Count() / (double)pageSize.Value);
+                        filteredSongs = filteredSongs.Skip(skip).Take(pageSize.Value).ToList();
+                    }
                 }
 
                 foreach (var song in filteredSongs)
                 {
-                    var songStatess = songInfos.Where(ss => ss.SongId == song.SongId).ToList();
-                    song.SongInfos = songStatess;
+                    song.SongStates = db.GetCachedList(db.SongState).Where(ss => ss.SongId == song.SongId).ToList();
                     song.PlaylistSongStates = playlistSongStates.Where(ss => ss.PlaylistSongId == song.PlaylistSongId).ToList();
                 }
 
             }
 
             ViewBag.AddSongStates = addSongStates;
-            ViewBag.Sources = db.GetSources();
+            ViewBag.FilteredSources = db.GetSources(filteredSources);
 
             return PartialView(filteredSongs.ToList());
         }
+
         public ActionResult _SongsGridPartial(bool addSongStates, int limit, int pageSize = 50)
         {
             ViewBag.AddSongStates = addSongStates;
@@ -168,52 +227,82 @@ namespace PlaylistChaser.Web.Controllers
 
             if (addSongStates)
             {
-                var songInfos = db.SongAdditionalInfoReadOnly;
+                var songInfos = db.GetCachedList(db.SongInfo);
+                var songStates = db.GetCachedList(db.SongState);
                 if (filterSongStates)
                 {
                     if (searchModel.Source != null)
-                        songInfos = songInfos.Where(ss => ss.SourceId == searchModel.Source);
+                    {
+                        songInfos = songInfos.Where(ss => ss.SourceId == searchModel.Source).ToList();
+                        songStates = songStates.Where(ss => ss.SourceId == searchModel.Source).ToList();
+                    }
                     if (searchModel.SongState != null)
-                        songInfos = songInfos.Where(ss => ss.StateId == searchModel.SongState);
+                    {
+                        songInfos = songInfos.Where(si => db.GetCachedList(db.SongState).Single(ss => ss.SourceId == si.SourceId && ss.SongId == si.SongId).StateId == searchModel.SongState).ToList();
+                        songStates = songStates.Where(ss => ss.StateId == searchModel.SongState).ToList();
+                    }
 
 
                     //filter songs
                     filteredSongs = filteredSongs.Where(s => songInfos.Select(ss => ss.SongId).Contains(s.Id));
+                    filteredSongs = filteredSongs.Where(s => songStates.Select(ss => ss.SongId).Contains(s.Id));
 
                     ViewBag.NumPages = Math.Ceiling(filteredSongs.Count() / (double)limit);
                     filteredSongs = filteredSongs.Skip(skip).Take(limit).ToList();
                 }
 
                 foreach (var song in filteredSongs)
-                    song.SongInfos = songInfos.Where(ss => ss.SongId == song.Id).ToList();
+                {
+                    song.SongStates = songStates.Where(ss => ss.SongId == song.Id).ToList();
+                }
             }
 
             ViewBag.AddSongStates = addSongStates;
-            ViewBag.Sources = db.GetSources();
 
             return PartialView(filteredSongs.ToList());
         }
-        #endregion
 
         #endregion
 
+        public ActionResult _SongStatesSummaryPartial(int playlistId)
+        {
+            var songIds = db.GetCachedList(db.PlaylistSong).Where(ps => ps.PlaylistId == playlistId).Select(ps => ps.SongId);
+            var songStates = db.GetCachedList(db.SongState).Where(ss => songIds.Contains(ss.SongId));
+            var model = songStates.GroupBy(pss => pss.SourceId).AsEnumerable().OrderBy(pss => pss.Key.ToString()).ToList();
+            return PartialView(model);
+        }
+
+        public ActionResult _SongInfosEditPartial(int songId)
+        {
+            var songInfos = db.GetCachedList(db.SongInfo).Where(s => s.SongId == songId).ToList();
+            return PartialView(songInfos);
+        }
+
+        #endregion
+
+        #endregion
+
+        #region Find songs
         [HttpPost]
         public ActionResult FindSongs(Sources source, string? songIds = null, int? playlistId = null)
         {
             try
             {
-                IQueryable<Song> songs;
+                List<Song> songs;
 
                 if (songIds != null)
                 {
                     var songIdsList = songIds.Split(',').Select(i => int.Parse(i));
-                    songs = db.SongReadOnly.Where(s => songIdsList.Contains(s.Id));
-                    songs = songs.Where(s => db.SongAdditionalInfoReadOnly.Single(ss => ss.SongId == s.Id).StateId == SongStates.NotChecked);
+                    songs = db.GetCachedList(db.Song).Where(s => songIdsList.Contains(s.Id)).ToList();
+
+                    //get all songs that weren't checked before
+                    songs = songs.Where(s => db.SongState.SingleOrDefault(ss => ss.SourceId == source && ss.SongId == s.Id) == null
+                                             || db.SongState.SingleOrDefault(ss => ss.SourceId == source && ss.SongId == s.Id).StateId == SongStates.NotChecked).ToList();
                 }
                 else if (playlistId != null)
                 {
-                    var songIdsList = db.PlaylistSongReadOnly.Where(ps => ps.PlaylistId == playlistId).Select(ps => ps.SongId);
-                    songs = db.SongReadOnly.Where(s => songIdsList.Contains(s.Id));
+                    var songIdsList = db.GetCachedList(db.PlaylistSong).Where(ps => ps.PlaylistId == playlistId).Select(ps => ps.SongId);
+                    songs = db.GetCachedList(db.Song).Where(s => songIdsList.Contains(s.Id)).ToList();
                 }
                 else
                     return new JsonResult(new { success = false, message = "no songIds or playlistId passed" });
@@ -230,106 +319,139 @@ namespace PlaylistChaser.Web.Controllers
 
         public async Task<List<FoundSong>> FindSongs(List<Song> missingSongs, Sources source)
         {
-            //create info if not available
-            createInfosForMissingSongs(source, missingSongs);
+            var toastId = GetToastId();
+            await progressHub.InitProgressToast("Find Songs", toastId, true);
 
             //only songs that weren't checked before
-            var missingSongsList = missingSongs.Where(s => db.SongAdditionalInfoReadOnly.Single(ss => ss.SongId == s.Id && ss.SourceId == source).StateId == SongStates.NotChecked);
+            var missingSongsList = missingSongs.Where(s => db.SongState.SingleOrDefault(ss => ss.SongId == s.Id && ss.SourceId == source) == null
+                                                           || db.SongState.Single(ss => ss.SongId == s.Id && ss.SourceId == source).StateId == SongStates.NotChecked);
 
             if (!missingSongsList.Any())
+            {
+                await progressHub.EndProgressToast(toastId);
                 return null;
+            }
 
             //check if songs exists
             var findSongs = missingSongsList.Select(s => new FindSong(s.Id, s.ArtistName, s.SongName)).ToList();
 
             int nFound = 0;
+            int nSkipped = 0;
             var foundSongs = new List<FoundSong>();
             FoundSong foundSong;
-
-            await progressHub.InitProgressToast("Finding Songs...", findSongs.Count);
+            var timeElapsedList = new List<int>();
             foreach (var findSong in findSongs)
             {
+                if (IsCancelled(toastId, out var startTime)) break;
+
                 switch (source)
                 {
                     case Sources.Youtube:
-                        foundSong = ytHelper.FindSongId(findSong);
+                        foundSong = ytHelper.FindSong(findSong);
                         break;
                     case Sources.Spotify:
-                        foundSong = spottyHelper.FindSongId(findSong);
+                        foundSong = spottyHelper.FindSong(findSong);
                         break;
                     default:
                         throw new NotImplementedException(ErrorHelper.NotImplementedForThatSource);
                 }
 
-                addFoundSong(source, foundSong, foundSong.ExactMatch ? SongStates.Available : SongStates.MaybeAvailable);
-                await progressHub.UpdateProgressToast(nFound, $"{++nFound} / {findSongs.Count} found.");
+                var newSongInfo = foundSong.NewSongInfo;
+                var success = addFoundSongToDb(newSongInfo.SongId, newSongInfo.Name, newSongInfo.ArtistName, newSongInfo.SourceId, newSongInfo.SongIdSource, newSongInfo.Url);
+                var msgDisplay = ToastMessageDisplay(success, findSongs.Count, startTime, ref timeElapsedList, ref nFound, ref nSkipped);
+
+                await progressHub.UpdateProgressToast("Finding songs...", nFound, findSongs.Count, msgDisplay, toastId, true);
+
                 foundSongs.Add(foundSong);
             }
-            await progressHub.EndProgressToast();
+            await progressHub.EndProgressToast(toastId);
 
             return foundSongs;
         }
+        #endregion
 
-        private void createInfosForMissingSongs(Sources source, List<Song> missingSongs)
+        #region Add song to db
+        private bool addFoundSongToDb(int songId, string songName, string artistName, Sources source, string songIdSource, string url)
         {
-            var songIdsNoInfo = missingSongs.Select(s => s.Id).Where(id => !db.SongAdditionalInfoReadOnly.Any(i => i.SourceId == source && i.SongId == id)).ToList();
-            foreach (var songId in songIdsNoInfo)
+            try
             {
-                var newSongInfo = new SongAdditionalInfo()
+                if (db.GetCachedList(db.SongInfo).Any(i => i.SongId == songId && i.SourceId == source))
+                    return false; // already in db
+
+                if (db.GetCachedList(db.SongInfo).Any(i => i.SongIdSource == songIdSource && i.SourceId == source))
+                    return false; // already in db
+
+                //add song info
+                var newSongInfo = new SongInfo { SongId = songId, SourceId = source, SongIdSource = songIdSource, Name = songName, ArtistName = artistName, Url = url };
+                db.SongInfo.Add(newSongInfo);
+
+                //add song state
+                var newSongState = new SongState { SongId = songId, SourceId = source, StateId = SongStates.Available, LastChecked = DateTime.Now };
+                db.SongState.AddRange(newSongState);
+
+                db.SaveChanges();
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+
+            }
+        }
+
+        internal List<Song> AddSongsToDb(List<SongInfo> songsToAdd)
+        {
+            {
+                var addedSongs = new List<Song>();
+
+                //check if songs are already in db
+                //TODO: for now only check if it wasnt added from same source
+                //      on youtube songname & artist name dont have to be a unique combination
+                //      fuck you anguish with your stupid ass song titles
+
+
+                //remove duplicates
+                songsToAdd = songsToAdd.DistinctBy(i => i.SongIdSource).ToList();
+
+                //add song
+                foreach (var newSong in songsToAdd)
                 {
-                    SongId = songId,
-                    SourceId = source,
-                    StateId = SongStates.NotChecked,
-                    LastChecked = DateTime.Now
+                    //skip already added
+                    if (db.GetCachedList(db.SongInfo).Any(s => s.SourceId == newSong.SourceId && s.SongIdSource == newSong.SongIdSource))
+                        continue;
+
+                    var success = addSongs(newSong.Name, newSong.ArtistName, newSong.SourceId, newSong.SongIdSource, newSong.Url);
                 };
-                db.SongAdditionalInfo.Add(newSongInfo);
+
+                return addedSongs;
             }
-            db.SaveChanges();
         }
-
-        private void addFoundSong(Sources source, FoundSong foundSong, SongStates newState)
+        private bool addSongs(string songName, string artistName, Sources source, string songIdSource, string url)
         {
-            //add songInfo
-            var songInfo = db.SongAdditionalInfo.SingleOrDefault(i => i.SongId == foundSong.Id && i.SourceId == source);
-
-            if (songInfo == null)
+            try
             {
-                songInfo = new SongAdditionalInfo();
-                db.SongAdditionalInfo.Add(songInfo);
-            }
-            songInfo.SongIdSource = foundSong.IdAtSource;
-            songInfo.SourceId = source;
-            songInfo.StateId = newState;
-            songInfo.LastChecked = DateTime.Now;
-
-            db.SaveChanges();
-        }
-
-        internal List<Song> AddSongsToDb(List<SongAdditionalInfo> songsToAdd, Sources source)
-        {
-            var addedSongs = new List<Song>();
-
-            //check if songs are already in db
-            //TODO: for now only check if it wasnt added from same source
-            //      on youtube songname & artist name dont have to be a unique combination
-            //      fuck you anguish with your stupid ass song titles
-            var songInfos = db.SongAdditionalInfoReadOnly.Where(i => i.SourceId == source);
-            var newSongInfos = songsToAdd.Where(s => !songInfos.Any(dbSong => dbSong.SongIdSource == s.SongIdSource)).ToList();
-
-            //add new songs
-            foreach (var newSongInfo in newSongInfos)
-            {
-                var newSong = Helper.InfoToSong(newSongInfo);
+                //add song
+                var newSong = new Song { SongName = songName, ArtistName = artistName };
                 db.Song.Add(newSong);
                 db.SaveChanges();
-                newSongInfo.SongId = newSong.Id;
-                newSongInfo.StateId = SongStates.Available;
-                newSongInfo.LastChecked = DateTime.Now;
-                db.SongAdditionalInfo.Add(newSongInfo);
-            };
-            db.SaveChanges();
 
-            return addedSongs;
+                //add song info
+                var newSongInfo = new SongInfo { SongId = newSong.Id, SourceId = source, SongIdSource = songIdSource, Name = songName, ArtistName = artistName, Url = url };
+                db.SongInfo.Add(newSongInfo);
+
+                //add song state
+                var newSongState = new SongState { SongId = newSong.Id, SourceId = source, StateId = SongStates.Available, LastChecked = DateTime.Now };
+                db.SongState.AddRange(newSongState);
+
+                db.SaveChanges();
+
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
+        #endregion       
     }
 }

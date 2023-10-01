@@ -11,36 +11,69 @@
 <!-- Custom Site CSS -->
 <link rel="stylesheet" href="~/css/card.css" asp-append-version="true" />
 <!-- END -->
-@Helper.ModalBareBonePartial("addSimplePlaylistPartial", Helper.Url(Url, "_AddSimplePlaylistPartial", "Playlist"))
-@Helper.ModalBareBonePartial("addCombinedPlaylistPartial", Helper.Url(Url, "_AddCombinedPlaylistPartial", "Playlist"))
+@Partials.ModalBareBonePartial("addSimplePlaylistPartial", Url.Url( "_AddSimplePlaylistPartial", "Playlist"))
+@Partials.ModalBareBonePartial("addCombinedPlaylistPartial", Url.Url( "_AddCombinedPlaylistPartial", "Playlist"))
 
-<div class="container mt-4">
+<div class="container  mt-4">
     <div class="row">
-        <div class="btn-group btn-group-lg" role="group" aria-label="Control group">
+        <div id="btn-header-row" class="btn-group" role="group" style="white-space:nowrap">
             <!--Add Simple Playlist-->
-            <a id="addSimplePlaylistBtn" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                <i class="bi bi-plus-circle btn-icon"></i>Add Simple Playlist
+            @{
+                var actionText = "Add Simple Playlist";
+            }
+            <a id="addSimplePlaylistBtn" class="btn btn-primary dropdown-toggle d-none d-sm-block" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-plus-circle"></i> @actionText
+            </a>
+            <a id="addSimplePlaylistBtn" class="btn btn-primary dropdown-toggle d-block d-sm-none" data-bs-toggle="dropdown" aria-expanded="false" title="@(actionText)">
+                <i class="bi bi-plus-circle"></i>
             </a>
             <ul class="dropdown-menu dropdown-menu-end">
                 <li><a class="dropdown-item" href="javascript:;" onclick="addSimplePlaylistPartial.show('?source=@Sources.Youtube')"><i class="bi bi-youtube"></i> Youtube</a></li>
                 <li><a class="dropdown-item" href="javascript:;" onclick="addSimplePlaylistPartial.show('?source=@Sources.Spotify')"><i class="bi bi-spotify"></i> Spotify</a></li>
             </ul>
             <!--Add Combined Playlist-->
-            <a id="select-mode-btn" class="btn btn-secondary">
-                <i class="bi bi-grid-fill btn-icon"></i> Add Combined Playlist
+            @{
+                actionText = "Add Combined Playlist";
+            }
+            <a id="select-mode-btn" class="btn btn-secondary d-none d-md-block">
+                <i class="bi bi-grid-fill"></i> @actionText
             </a>
+            <a id="select-mode-btn" class="btn btn-secondary d-block d-md-none" title="@actionText">
+                <i class="bi bi-grid-fill"></i>
+            </a>
+
+            <!--Sync Playlists-->
+            @{
+                actionText = "Sync Playlists";
+            }
+            <a id="syncPlaylistsBtn" class="btn btn-secondary d-none d-md-block" href="javascript:;" onclick="syncPlaylists()">
+                <i class="bi bi-cloud-download"></i> @actionText
+            </a>
+            <a id="syncPlaylistsBtn" class="btn btn-secondary d-block d-md-none" href="javascript:;" onclick="syncPlaylists()" title="@actionText">
+                <i class="bi bi-cloud-download"></i>
+            </a>
+
+            <!--Sync all Playlist Thumbnails-->
+            @{
+                actionText = "Sync Thumbnails";
+            }
+            <a id="syncPlaylistThumbnailsBtn" class="btn btn-tertiary d-none d-lg-block" href="javascript:;" onclick="syncPlaylistThumbnailsFrom()">
+                <i class="bi bi-file-image"></i> @actionText
+            </a>
+            <a id="syncPlaylistThumbnailsBtn" class="btn btn-tertiary d-block d-lg-none" href="javascript:;" onclick="syncPlaylistThumbnailsFrom()" title="@actionText">
+                <i class="bi bi-file-image"></i>
+            </a>
+
+
+
+        </div>
+        <!--combine mode-->
+        <div id="combine-mode-section" class="btn-group" role="group" style="white-space:nowrap">
             <a id="exit-select-mode-btn" class="btn btn-danger d-none">
                 <i class="bi bi-x-square btn-icon"></i> Exit Combine Mode
             </a>
             <a id="accept-select-btn" class="btn btn-success d-none" href="javascript:;" onclick="addCombinedPlaylistPartial.show()">
                 <i class="bi bi-check-square btn-icon"></i> Combine Selection
-            </a>
-            <!--Sync all Playlist Thumbnails-->
-            <a id="syncPlaylistThumbnailsBtn" href="javascript:;" onclick="syncPlaylistThumbnailsFrom('@Sources.Youtube')"
-               class="btn btn-tertiary"
-               data-bs-toggle="tooltip"
-               data-bs-title="Sync all Playlist Thumbnails">
-                <i class="bi bi-file-image btn-icon"></i> Sync Thumbnails
             </a>
         </div>
     </div>
@@ -51,27 +84,50 @@
         <div class="card-grid">
             @foreach (var playlist in Model.Playlists)
             {
-                <a class="pl_card" asp-action="Details" asp-route-id="@playlist.Id" data-pl-id="@playlist.Id">
+                var pl_card_classes = "";
+                switch (playlist.PlaylistTypeId)
+                {
+                    case PLaylistTypes.Simple:
+                        pl_card_classes += " playlisttype-simple";
+                        break;
+                    case PLaylistTypes.Combined:
+                        pl_card_classes += " playlisttype-combined";
+                        break;
+                    default:
+                        break;
+                }
+
+                <a class="pl_card @(pl_card_classes)" asp-action="Details" asp-route-id="@playlist.Id" data-pl-id="@playlist.Id">
                     <div class="card__background" style="background-image: url('/Playlist/GetThumbnail?thumbnailId=@playlist.ThumbnailId')"></div>
                     <div class="card__content">
-                        <p class="card__category">@(playlist.ChannelName)</p>
-                        <h3 class="card__heading">@(playlist.Name)</h3>
+                        <h5 class="card_subTitle">@(playlist.ChannelName) @Html.Raw(playlist.PlaylistTypeId == PLaylistTypes.Combined ? "<i class=\"bi bi-grid-fill\" style=\"float: right;\"></i>" : "")</h5>
+                        <h4 class="card_heading">@(playlist.Name)</h4>
                         <footer class="card__footer">
                             @foreach (var source in sources)
                             {
                                 var info = playlist.Infos.SingleOrDefault(i => (int)i.SourceId == source.Id);
                                 if (info != null)
                                 {
-                                    <div class="row @(info.SourceId == playlist.MainSourceId ? "mainsource" : "")">
-                                        <div class="col-5">
-                                            @Html.Raw(source.IconHtml) @info.SourceId.ToString()
+                                    var isMine = info.IsMine;
+                                    var isMainSource = info.SourceId == playlist.MainSourceId;
+                                    var sourceRowClasses = "";
+                                    if (isMainSource)
+                                        sourceRowClasses += " mainsource";
+
+                                    <div class="row source @(sourceRowClasses)">
+                                        <div class="col-2" style="@($"color:#{source.ColorHex};")" title="@source.Name.ToString()">
+                                            @Html.Raw(source.IconHtml)
                                         </div>
-                                        @if (info.IsMine)
-                                        {
-                                            <div class="col">
-                                                <i class="bi bi-person-fill"></i>
+                                        <div class="col-4">
+                                            <div class="d-flex flex-row justify-content-between">
+                                                <div>
+                                                    <i class="bi bi-bookmark-star-fill @(isMainSource ? "" : "inactiveIcon")"></i>
+                                                </div>
+                                                <div>
+                                                    <i class="bi bi-person-fill @(isMine ? "" : "inactiveIcon")"></i>
+                                                </div>
                                             </div>
-                                        }
+                                        </div>
                                     </div>
                                 }
                             }
@@ -118,14 +174,10 @@
     });
 
     function showMainButtons() {
-        $("#addSimplePlaylistBtn").removeClass('d-none')
-        $("#select-mode-btn").removeClass('d-none')
-        $("#syncPlaylistThumbnailsBtn").removeClass('d-none')
+        $("#btn-header-row").show();
     }
     function hideMainButtons() {
-        $("#addSimplePlaylistBtn").addClass('d-none')
-        $("#select-mode-btn").addClass('d-none')
-        $("#syncPlaylistThumbnailsBtn").addClass('d-none')
+        $("#btn-header-row").hide();
     }
 
     function getSelectedPlaylistIds() {
@@ -143,6 +195,22 @@
             type: "POST",
             url: url,
             data: { source: source },
+            success: function (data) {
+                if (!data.success)
+                    return alert(data.message)
+                else if (data.message)
+                    return alert(data.message)
+                location.reload();
+            },
+            dataType: "json"
+        });
+    }
+
+    function syncPlaylists() {
+        let url = "/Playlist/SyncPlaylistsFrom/";
+        $.ajax({
+            type: "POST",
+            url: url,
             success: function (data) {
                 if (!data.success)
                     return alert(data.message)

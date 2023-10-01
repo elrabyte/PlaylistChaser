@@ -6,5 +6,6 @@ namespace PlaylistChaser.Web.Models.SearchModel
     {
         public bool AddSongStates { get; set; }
         public PlaylistViewModel Playlist { get; set; }
+        public List<PlaylistInfo> Infos { get; set; }
     }
 }

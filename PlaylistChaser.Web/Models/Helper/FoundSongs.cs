@@ -2,13 +2,11 @@ namespace PlaylistChaser.Web.Models
 {
     public class FoundSong
     {
-        public int Id { get; set; }
-        public string IdAtSource { get; set; }
+        public SongInfo NewSongInfo { get; set; }
         public bool ExactMatch { get; set; }
-        public FoundSong(int id, string idAtSource, bool exactMatch)
+        public FoundSong(SongInfo newSongInfo, bool exactMatch)
         {
-            Id = id;
-            IdAtSource = idAtSource;
+            NewSongInfo = newSongInfo;
             ExactMatch = exactMatch;
         }
     }

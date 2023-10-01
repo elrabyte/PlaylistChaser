@@ -1,0 +1,40 @@
+﻿@using PlaylistChaser.Web.Util;
+@using PlaylistChaser.Web.Models;
+@model SongInfo
+
+<div class="row">
+    <div class="col-12">
+        <form asp-action="_SongInfoEditPartial">
+            @Html.HiddenFor(m => m.SourceId)
+            @Html.HiddenFor(m => m.SongId)
+
+            <div class="row">
+                @Html.BsLabelFor(m => m.Name, colClass:"col-sm-3")
+                <div class="col-sm-9">
+                    @Html.BsTextBoxFor(m => m.Name)
+                </div>
+            </div>
+            <div class="row">
+                @Html.BsLabelFor(m => m.ArtistName, colClass:"col-sm-3")
+                <div class="col-sm-9">
+                    @Html.BsTextBoxFor(m => m.ArtistName)
+                </div>
+            </div>
+            <div class="row">
+                @Html.BsLabelFor(m => m.SongIdSource, colClass:"col-sm-3")
+                <div class="col-sm-9">
+                    @Html.BsTextBoxFor(m => m.SongIdSource)
+                </div>
+            </div>
+            <div style="float:right">
+                @Controls.SubmitButton()
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

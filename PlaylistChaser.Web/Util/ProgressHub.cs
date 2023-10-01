@@ -9,16 +9,16 @@ public class ProgressHub : Hub
         this.hubContext = hubContext;
     }
 
-    public async Task InitProgressToast(string title, int maxProgress)
+    public async Task InitProgressToast(string title, string toastId, bool cancellable)
     {
-        await hubContext.Clients.All.SendAsync("InitProgressToast", title, maxProgress);
+        await hubContext.Clients.All.SendAsync("InitProgressToast", title, toastId, cancellable);
     }
-    public async Task UpdateProgressToast(int progress, string message)
+    public async Task UpdateProgressToast(string title, int nCompleted, int nTotal, string message, string toastId, bool isCancellable)
     {
-        await hubContext.Clients.All.SendAsync("UpdateProgressToast", progress, message);
+        await hubContext.Clients.All.SendAsync("UpdateProgressToast", title, nCompleted, nTotal, message, toastId, isCancellable);
     }
-    public async Task EndProgressToast()
+    public async Task EndProgressToast(string toastId)
     {
-        await hubContext.Clients.All.SendAsync("EndProgressToast");
+        await hubContext.Clients.All.SendAsync("EndProgressToast", toastId);
     }
 }

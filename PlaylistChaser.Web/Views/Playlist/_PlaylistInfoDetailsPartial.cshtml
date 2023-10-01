@@ -1,0 +1,14 @@
+﻿@using PlaylistChaser.Web.Util;
+@using PlaylistChaser.Web.Models;
+@model PlaylistInfo
+
+<div class="row">
+    <div class="col-md-10">
+        <div class="form-group row">
+            @Html.BsLabelFor(m => m.Url)
+            <div class="col-sm-10">
+                <a href="@Model.Url" target="_blank">@Model.Url</a>
+            </div>
+        </div>
+    </div>
+</div>

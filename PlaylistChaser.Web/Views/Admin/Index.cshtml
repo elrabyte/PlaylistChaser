@@ -63,12 +63,12 @@
     }
 
     function loadSourcePartial() {
-        let urlGrid = "@Helper.Url(Url,"_SourceGridPartial","Admin")";
+        let urlGrid = "@Url.Url("_SourceGridPartial","Admin")";
         loadGridPartial(urlGrid, loadSourceEditPartial);
     }
 
     function loadSourceEditPartial(id) {
-        let urlEdit = "@Helper.Url(Url,"_SourceEditPartial","Admin")";
+        let urlEdit = "@Url.Url("_SourceEditPartial","Admin")";
         loadEditPartial(urlEdit, id);
     }
 
