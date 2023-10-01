@@ -2,6 +2,10 @@
 @using static PlaylistChaser.Web.Util.BuiltInIds;
 @model Sources
 
+@{
+    var sources = (List<Source>)ViewBag.Sources;
+    var source = sources.Single(s => s.Id == (int)Model);
+}
 
 <div class="modal-header p-5 pb-4 border-bottom-0">
     <h1 class="fw-bold mb-0 fs-2">Add a Playlist</h1>
@@ -10,20 +14,8 @@
 <div class="modal-body p-5 pt-0">
     <div class="form-floating mb-3">
         <div class="input-group">
-            @switch (Model)
-            {
-                case Sources.Youtube:
-                    <div class="input-group-text text-yt-red"><i class="bi bi-youtube"></i></div>
-                    <input type="url" name="playlistUrl" class="form-control form-control-lg" id="playlistUrl" placeholder="youtu.be/playlist?list=...." required>
-                    break;
-                case Sources.Spotify:
-                    <div class="input-group-text text-sptf-green"><i class="bi bi-spotify"></i></div>
-                    <input type="url" name="playlistUrl" class="form-control form-control-lg" id="playlistUrl" placeholder="https://open.spotify.com/playlist/..." required>
-                    break;
-
-                default:
-                    break;
-            }
+            <div class="input-group-text" style="color:#@(source.ColorHex);">@Html.Raw(source.IconHtml)</div>
+            <input type="url" name="playlistUrl" class="form-control form-control-lg" id="playlistUrl" placeholder="@(Model.GetPlaylistUrlStart())..." required>
         </div>
     </div>
     <button class="w-100 mb-2 btn btn-lg rounded-3 btn-primary" onclick="addSimplePlaylist()">
@@ -34,12 +26,12 @@
 
 <script type="text/javascript">
     function addSimplePlaylist() {
-    
-        let url = "@Helper.Url(Url,"AddSimplePlaylist", "Playlist", null)";
+
+        let url = "@Url.Url("AddSimplePlaylist", "Playlist", null)";
         $.ajax({
             type: "POST",
             url: url,
-            data: { playlistUrl: $("#playlistUrl").val(), source: '@Model.ToString()' },
+            data: { playlistUrl: $("#playlistUrl").val(), source: @source.Id },
             success: function (data) {
                 if (!data.success)
                     return alert(data.message)

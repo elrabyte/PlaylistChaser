@@ -14,6 +14,8 @@ builder.Services.AddSession();
 
 builder.Services.AddSignalR();
 
+builder.Services.AddMemoryCache();
+
 // Add configuration sources
 var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
 environment ??= "Production"; //TODO: do it in right

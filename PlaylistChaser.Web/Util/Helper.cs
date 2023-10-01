@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Mvc;
-using PlaylistChaser.Web.Models;
+using PlaylistChaser.Web.Util.API;
 using System.Text.Encodings.Web;
 using static PlaylistChaser.Web.Util.BuiltInIds;
 
@@ -18,23 +18,9 @@ namespace PlaylistChaser.Web.Util
                 return ms.ToArray();
             }
         }
-        public static string ReadSecret(string sectionName, string key)
-        {
-            var environment = Environment.GetEnvironmentVariable("NETCORE_ENVIRONMENT");
-            var builder = new ConfigurationBuilder()
-                .AddJsonFile("appsettings.json")
-                .AddJsonFile($"appsettings.{environment}.json", optional: true)
-                .AddUserSecrets<Program>()
-                .AddEnvironmentVariables();
-            var configurationRoot = builder.Build();
-
-            return configurationRoot.GetSection(sectionName).GetValue<string>(key);
-        }
 
         public static string? Url(this IUrlHelper helper, string? action, string? controller, object? values = null)
-        {
-            return helper.Action(action, controller, values);
-        }
+            => helper.Action(action, controller, values);
 
         public static string GetString(this IHtmlContent content)
         {
@@ -45,225 +31,74 @@ namespace PlaylistChaser.Web.Util
             }
         }
 
-        #region ModalPartal
-        public static IHtmlContent ModalBareBonePartial(string name, string partialUrl)
+        #region Toast
+        public static string GetToastId()
+            => Guid.NewGuid().ToString("N").Substring(0, 5);
+        public static string ToastMessageDisplay(bool success, int total, DateTime startTime, ref List<int> secondsElapsed, ref int nCompleted, ref int nSkipped, string progressDisplay = "{0} / {1} completed. ", string skippedDisplay = "{0} skipped.", string timeLeftDisplay = "\nTime elapsed: {0} / left: {1}")
         {
-            var modalName = $"{name}Modal";
-            var containerName = $"{name}Container";
+            if (success) { nCompleted++; } else { nSkipped++; }
 
-            var html = $@"
-                <div id=""{modalName}"" class=""modal fade"" id=""addCombinedPlaylistModal"" tabindex=""-1"" aria-labelledby=""{modalName}Labe"" aria-hidden=""true"">
-	                <div class=""modal-dialog"" role=""document"">
-		                <div id=""{containerName}"" class=""modal-content rounded-4 shadow"">
-                        </div>
-                    </div>
-                </div>";
+            var timeElapsed = (int)Math.Round((DateTime.Now - startTime).TotalSeconds);
+            secondsElapsed.Add(timeElapsed);
 
-            html += getModalPartialScript(name, modalName, containerName, partialUrl);
+            progressDisplay = string.Format(progressDisplay, nCompleted, total);
+            skippedDisplay = string.Format(skippedDisplay, nSkipped);
 
-            return new HtmlString(html);
+            var totalTimeElapsed = secondsElapsed.Sum();
+            var avgTimeElapsed = (int)Math.Round(secondsElapsed.Average());
+            var nLeft = (total - nCompleted);
+            timeLeftDisplay = string.Format(timeLeftDisplay, TimeDisplay(totalTimeElapsed), TimeDisplay(avgTimeElapsed * nLeft));
+
+            string messageDisplay = progressDisplay;
+            if (nSkipped > 0)
+                messageDisplay += skippedDisplay;
+            messageDisplay += timeLeftDisplay;
+
+            return messageDisplay;
         }
-        public static IHtmlContent ModalPartial(string name, string title, string partialUrl)
+        public static string TimeDisplay(int totalSeconds)
         {
-            var modalName = $"{name}Modal";
-            var containerName = $"{name}Container";
+            var hours = totalSeconds / 3600;
+            var minutes = (totalSeconds % 3600) / 60;
+            var seconds = totalSeconds % 60;
+            string displayTime;
+            if (hours > 0)
+                displayTime = $"{hours} h {minutes} min. {seconds} sec.";
+            else if (minutes > 0)
+                displayTime = $"{minutes} min. {seconds} sec.";
+            else
+                displayTime = $"{seconds} sec.";
 
-            var html = $@"
-                <div id=""{modalName}"" class=""modal fade"" tabindex=""-1"" aria-labelledby=""{modalName}Label"" aria-hidden=""true"">
-                    <div class=""modal-dialog"">
-                        <div class=""modal-content"">
-                            <div class=""modal-header"">
-                                <h1 class=""modal-title fs-5"" id=""{modalName}Label"">{title}</h1>
-                                <button type=""button"" class=""btn-close"" data-bs-dismiss=""modal"" aria-label=""Close""></button>
-                            </div>
-                            <div id=""{containerName}"" class=""modal-body"">
-                            </div>
-                            <div class=""modal-footer"">
-                                <button type=""button"" class=""btn btn-secondary"" data-bs-dismiss=""modal"">Close</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>";
-
-            html += getModalPartialScript(name, modalName, containerName, partialUrl);
-
-            return new HtmlString(html);
-        }
-        private static string getModalPartialScript(string name, string modalName, string containerName, string partialUrl)
-        {
-            return $@"
-                <script type=""text/javascript"">
-                    var {name} = {{
-                        __namespace: true,
-                        loaded: false,
-                        params: null,
-                        init: function() {{
-                            {name}.loadBody();
-                        }},                        
-                        loadBody: function () {{
-                            let url = ""{partialUrl}"";
-                            if(typeof {name}.params !== 'undefined')
-                                url = url + {name}.params
-                            $.get(url, null, function (data, status, jqXHR) {{
-                                if (data.success == false || status != ""success"") {{ 
-                                    return console.error(""error while loading modal {modalName}!""); 
-                                }}
-
-                                $(""#{containerName}"").html(data);
-                                {name}.loaded = true;
-                                //move submit button to footer
-                                let submitBtn = $(""#{containerName}"").find(""#submitBtn"");
-                                if(submitBtn.length === 1) {{
-                                    submitBtn.appendTo("".modal-footer"");
-                                    //if no onclick
-                                    if(typeof submitBtn[0].onclick != 'undefined') {{
-                                        {name}.setOnclickToSubmitBtn(submitBtn);
-                                    }}
-                                }}
-                            }});
-                        }},
-                        show: function(params) {{
-                            {name}.params = params;
-                            if({name}.loaded == false)
-                                {name}.init();
-                            $(""#{modalName}"").modal('show');
-                        }},
-                        hide: function() {{
-                            $(""#{modalName}"").modal('hide');
-                        }},
-                        on: function(event, handler) {{
-                            return $(""#{modalName}"").on(event, handler);
-                        }},
-                        off: function(event, handler) {{
-                            return $(""#{modalName}"").off(event, handler);
-                        }},
-                        setOnclickToSubmitBtn: function(submitBtn) {{
-                            submitBtn.click({name}.submit);
-                        }},
-                        submit: function(){{
-                            let form = $(""#{containerName} form"");
-                            let url = form[0].action;
-                            //get form vals
-                            //fire event
-                            $.ajax({{
-                                type: ""POST"",
-                                url: url,
-                                data: form.serialize(),
-                                success: function (data) {{
-                                    if (!data.success)
-                                        return alert(data.message);
-                                    {name}.hide();
-                                    $(""#{modalName}"").trigger('saved');
-                                }},
-                                dataType: ""json""
-                            }});
-                        }},
-                        undoFooter: function(){{
-                            let submitBtn = $("".modal-footer #submitBtn"");
-                            submitBtn.remove();                            
-                        }},
-                        onHide: function(){{
-                            {name}.undoFooter();
-                            $(""#{containerName}"").html("""");
-                            {name}.loaded = false;
-                        }}
-                    }}
-                    $(""#{modalName}"").on(""hide.bs.modal"", function(){{
-                        {name}.onHide();
-                    }})
-                </script>
-            ";
+            return displayTime;
         }
         #endregion
 
-        #region ReloadablePartial
-        public static IHtmlContent ReloadablePartial(string name, string partialUrl, bool loadInitial = false)
+        #region JsonResponse
+        public static JsonResult JsonResponse()
+         => new JsonResult(new { success = true });
+        public static JsonResult JsonResponse(bool success, string message)
+         => new JsonResult(new { success = success, message = message });
+        public static JsonResult JsonResponse(Exception ex)
+         => new JsonResult(new { success = false, message = ex.Message });
+        #endregion
+
+        public static string SourcesToJs(List<Models.Source> sources)
         {
-            var containerName = $"{name}Container";
-            var html = $@"<div id=""{containerName}""></div>
-                <script type=""text/javascript"">
-                    var {name} = {{
-                        __namespace: true,
-                        params: null,
-                        init: function() {{
-                            {name}.loadBody();
-                        }},
-                        load: function(params) {{
-                            {name}.params = params;
-                            {name}.init();
-                        }},
-                        unload: function() {{
-                            $(""#{containerName}"").html("""");
-                        }},
-                        loadBody: function () {{
-                            $(""#{containerName}"").html(""Loading..."");
-                            let url = ""{partialUrl}"";
-                            if(typeof {name}.params !== 'undefined')
-                                url = url + {name}.params
-                            $.get(url, null, function (data, status, jqXHR) {{
-                                if (data.success == false || status != ""success"") {{ 
-                                    return console.error(""error while loading partial!""); 
-                                }}
+            var sourcesJs = string.Join(',', sources.Select(src => Newtonsoft.Json.JsonConvert.SerializeObject(src)));
+            return $"[{sourcesJs}]";
+        }
 
-                                $(""#{containerName}"").html(data);
-                                
-                                let submitBtn = $(""#{containerName}"").find(""#submitBtn"");
-                                if(submitBtn.length === 1) {{
-                                    submitBtn.appendTo("".modal-footer"");
-                                    //if no onclick
-                                    if(typeof submitBtn[0].onclick != 'undefined') {{
-                                        {name}.setOnclickToSubmitBtn(submitBtn);
-                                    }}
-                                }}
-                            }});
-                        }},
-                        setOnclickToSubmitBtn: function(submitBtn) {{
-                            submitBtn.click({name}.submit);
-                        }},
-                        submit: function(){{
-                            let form = $(""#{containerName} form"");
-                            let url = form[0].action;
-                            //get form vals
-                            //fire event
-                            $.ajax({{
-                                type: ""POST"",
-                                url: url,
-                                data: form.serialize(),
-                                success: function(data) {{
-                                        if (!data.success)
-                                            return alert(data.message);
-
-                                    $(""#{containerName}"").trigger(""saved"");
-                                    }},
-                                dataType: ""json""
-                            }});
-                        }}                        
-                    }};";
-            if (loadInitial)
+        public static string GetPlaylistUrlStart(this Sources source)
+        {
+            switch (source)
             {
-                html += $@"
-                    $(function() {{
-                        {name}.load();
-                    }})";
+                case Sources.Youtube:
+                    return YoutubeApiHelper.PlaylistUrlStart;
+                case Sources.Spotify:
+                    return SpotifyApiHelper.PlaylistUrlStart;
+                default:
+                    throw new NotImplementedException(ErrorHelper.NotImplementedForThatSource);
             }
-
-            html += "</script>";
-
-            return new HtmlString(html);
         }
-        #endregion
-
-        #region Models
-        internal static Playlist InfoToPlaylist(PlaylistAdditionalInfo info, PLaylistTypes playlistType, int? thumbnailId = null)
-        => new Playlist { Name = info.Name, ChannelName = info.CreatorName, Description = info.Description, PlaylistTypeId = playlistType, ThumbnailId = thumbnailId };
-        internal static PlaylistAdditionalInfo PlaylistToInfo(Playlist playlist, Sources source, bool isMine = true)
-            => new PlaylistAdditionalInfo { Name = playlist.Name, CreatorName = playlist.ChannelName, Description = playlist.Description, IsMine = isMine, PlaylistId = playlist.Id, SourceId = source };
-
-        internal static SongAdditionalInfo SongToInfo(Song song, string songIdSource, Sources sourceId, string url = null)
-            => new SongAdditionalInfo { Name = song.SongName, ArtistName = song.ArtistName, SongId = song.Id, SongIdSource = songIdSource, SourceId = sourceId, Url = url };
-
-        internal static Song InfoToSong(SongAdditionalInfo info, int? thumbnailId = null)
-            => new Song { SongName = info.Name, ArtistName = info.ArtistName, ThumbnailId = thumbnailId };
-        #endregion
     }
 }

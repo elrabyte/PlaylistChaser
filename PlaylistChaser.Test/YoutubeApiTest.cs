@@ -28,7 +28,7 @@ namespace PlaylistChaser.Test
         {
             Id = 1,
         };
-        PlaylistAdditionalInfo TestPlaylistInfoYT = new PlaylistAdditionalInfo
+        PlaylistInfo TestPlaylistInfoYT = new PlaylistInfo
         {
             PlaylistId = 0,
             PlaylistIdSource = PLAYLIST_ID,
@@ -43,7 +43,7 @@ namespace PlaylistChaser.Test
             ChannelName = "RickAstleyVEVO",
             Description = "Videos from the dapper British pop-soul singer.\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nrick astley, never gonna give you up, together forever",
         };
-        PlaylistAdditionalInfo ExpectedPlaylistInfoYT = new PlaylistAdditionalInfo
+        PlaylistInfo ExpectedPlaylistInfoYT = new PlaylistInfo
         {
             CreatorName = "RickAstleyVEVO",
             Description = "Videos from the dapper British pop-soul singer.\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nrick astley, never gonna give you up, together forever",
@@ -72,7 +72,7 @@ namespace PlaylistChaser.Test
         public async void GetPlaylistThumbnailBase64()
         {
             var actualPlaylistThumbnail = await youtubeApiHelper.GetPlaylistThumbnail(TestPlaylistInfoYT.PlaylistIdSource);
-            Assert.True(actualPlaylistThumbnail.Any());
+            Assert.True(actualPlaylistThumbnail != null);
         }
         [Fact]
         public async void GetSongsThumbnailBase64ByPlaylist()

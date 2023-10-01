@@ -1,54 +1,38 @@
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using PlaylistChaser.Web.Models;
 using PlaylistChaser.Web.Models.ViewModel;
+using System.Data;
 
 namespace PlaylistChaser.Web.Database
 {
     public class PlaylistChaserDbContext : DbContext
     {
-        public PlaylistChaserDbContext(DbContextOptions<PlaylistChaserDbContext> options) : base(options) { }
+        protected readonly IMemoryCache memoryCache;
+        public PlaylistChaserDbContext(DbContextOptions<PlaylistChaserDbContext> options, IMemoryCache memoryCache) : base(options)
+        {
+            this.memoryCache = memoryCache;
+        }
 
-        #region 1:1 Views
+        #region DbSet
         public DbSet<Playlist> Playlist { get; set; }
-        public IQueryable<Playlist> PlaylistReadOnly
-            => Playlist.AsNoTracking();
-
-        public DbSet<PlaylistAdditionalInfo> PlaylistAdditionalInfo { get; set; }
-        public IQueryable<PlaylistAdditionalInfo> PlaylistAdditionalInfoReadOnly
-            => PlaylistAdditionalInfo.AsNoTracking();
+        public DbSet<PlaylistInfo> PlaylistInfo { get; set; }
 
         public DbSet<PlaylistSong> PlaylistSong { get; set; }
-        public IQueryable<PlaylistSong> PlaylistSongReadOnly
-            => PlaylistSong.AsNoTracking();
-
         public DbSet<PlaylistSongState> PlaylistSongState { get; set; }
-        public IQueryable<PlaylistSongState> PlaylistSongStateReadOnly
-            => PlaylistSongState.AsNoTracking();
 
         public DbSet<Song> Song { get; set; }
-        public IQueryable<Song> SongReadOnly
-            => Song.AsNoTracking();
-
-        public DbSet<SongAdditionalInfo> SongAdditionalInfo { get; set; }
-        public IQueryable<SongAdditionalInfo> SongAdditionalInfoReadOnly
-            => SongAdditionalInfo.AsNoTracking();
+        public DbSet<SongInfo> SongInfo { get; set; }
+        public DbSet<SongState> SongState { get; set; }
 
         public DbSet<Thumbnail> Thumbnail { get; set; }
-        public IQueryable<Thumbnail> ThumbnailReadOnly
-            => Thumbnail.AsNoTracking();
 
         public DbSet<CombinedPlaylistEntry> CombinedPlaylistEntry { get; set; }
-        public IQueryable<CombinedPlaylistEntry> CombinedPlaylistEntryReadOnly
-            => CombinedPlaylistEntry.AsNoTracking();
 
         public DbSet<OAuth2Credential> OAuth2Credential { get; set; }
-        public IQueryable<OAuth2Credential> OAuth2CredentialReadOnly
-            => OAuth2Credential.AsNoTracking();
 
         public DbSet<Source> Source { get; set; }
-        public IQueryable<Source> SourceReadOnly
-            => Source.AsNoTracking();
         #endregion
 
         #region SP ViewModels
@@ -57,7 +41,7 @@ namespace PlaylistChaser.Web.Database
         private DbSet<SongViewModel> SongViewModel { get; set; }
         #endregion
 
-        #region SPs
+        #region SP
         public async Task<List<PlaylistViewModel>> GetPlaylists(int? playlistId = null)
         {
             var sql = "exec dbo.GetPlaylists @playlistId";
@@ -81,20 +65,129 @@ namespace PlaylistChaser.Web.Database
             return songs;
         }
 
+
+        public async Task<bool> MergeSongs(List<int> songIds, int? mainSongId = null)
+        {
+            var sql = "exec dbo.MergeSongs @songIds, @mainSongId";
+            var success = await Database.ExecuteSqlRawAsync(sql, GetParameterFromList("songIds", "List_int", "Id", songIds),
+                                                                 GetParameter("mainSongId", mainSongId));
+
+            return true;
+        }
+
         #endregion
 
-        public List<Source> GetSources()
-            => SourceReadOnly.OrderBy(i => i.Name).ToList();
+        #region DataHelper
+        public List<Source> GetSources(List<Util.BuiltInIds.Sources> filteredSources = null)
+        {
+            var sources = GetCachedList(Source).OrderBy(i => i.Name).ToList();
+            if (filteredSources != null && filteredSources.Any())
+                sources = sources.Where(s => filteredSources.Contains((Util.BuiltInIds.Sources)s.Id)).ToList();
+            return sources;
+        }
+
+        public IQueryable<TEntity> GetReadOnlyQuery<TEntity>(DbSet<TEntity> dbSet) where TEntity : class
+            => dbSet.AsNoTracking();
+        public List<TEntity> GetCachedList<TEntity>(DbSet<TEntity> dbSet) where TEntity : class
+        {
+            var tableName = dbSet.EntityType.GetTableName();
+
+            // Attempt to retrieve the data from cache
+            var cachedData = memoryCache.Get(tableName) as List<TEntity>;
+
+            if (cachedData == null)
+            {
+                // If data is not found in cache, retrieve it from the database
+                cachedData = dbSet.AsNoTracking().ToList();
+
+                if (cachedData.Any())
+                {
+                    memoryCache.Set(tableName, cachedData);
+                }
+            }
+
+            return cachedData;
+        }
+        #endregion
+
+        #region Override
+        public override int SaveChanges()
+        {
+            // Get all the entries that have been modified
+            var modifiedEntries = ChangeTracker.Entries()
+                .Where(e => e.State == EntityState.Modified
+                            || e.State == EntityState.Added
+                            || e.State == EntityState.Deleted)
+                .ToList();
+            if (!modifiedEntries.Any())
+                return base.SaveChanges();
+
+            var modifiedMetadatas = modifiedEntries.GroupBy(e => e.Metadata).Select(e => e.Key).ToList();
+            foreach (var metaData in modifiedMetadatas)
+            {
+                //remove from cache
+                memoryCache.Remove(metaData.GetTableName());
+            }
+
+            // Call the base SaveChanges to save the changes to the database
+            return base.SaveChanges();
+        }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            modelBuilder.Entity<OAuth2Credential>()
-                .HasKey(m => new { m.UserId, m.Provider });
-            modelBuilder.Entity<SongAdditionalInfo>()
-                .HasKey(m => new { m.SongId, m.SourceId });
-            modelBuilder.Entity<PlaylistSongState>()
-                .HasKey(m => new { m.PlaylistSongId, m.SourceId });
-            modelBuilder.Entity<PlaylistAdditionalInfo>()
-                .HasKey(m => new { m.PlaylistId, m.SourceId });
+            ConfigureCompositeKey<OAuth2Credential>(modelBuilder);
+            ConfigureCompositeKey<SongInfo>(modelBuilder);
+            ConfigureCompositeKey<SongState>(modelBuilder);
+            ConfigureCompositeKey<PlaylistSongState>(modelBuilder);
+            ConfigureCompositeKey<PlaylistInfo>(modelBuilder);
         }
+
+        private void ConfigureCompositeKey<TEntity>(ModelBuilder modelBuilder)
+            where TEntity : class
+        {
+            var entityType = modelBuilder.Model.FindEntityType(typeof(TEntity));
+            if (entityType != null)
+            {
+                var primaryKeyPropertyNames = entityType.FindPrimaryKey().Properties.Select(p => p.Name).ToArray();
+                var keyProperties = typeof(TEntity)
+                    .GetProperties()
+                    .Where(p => primaryKeyPropertyNames.Contains(p.Name))
+                    .Select(p => p.Name)
+                    .ToArray();
+
+                modelBuilder.Entity<TEntity>().HasKey(keyProperties);
+            }
+        }
+        #endregion
+
+        #region SqlParameter
+        public static SqlParameter GetParameter<T>(string name, T value)
+        {
+            var type = typeof(T);
+            bool nullable = Nullable.GetUnderlyingType(type) != null;
+
+            var dbType = SqlDbType.NVarChar;
+
+            if (type.IsAssignableFrom(typeof(int)))
+            {
+                dbType = SqlDbType.Int;
+            }
+
+            return new SqlParameter(name, ((object)value) ?? DBNull.Value);
+        }
+        public static SqlParameter GetParameterFromList<T>(string name, string typeName, string listFieldName, List<T> valuesList)
+        {
+            var dt = new DataTable();
+            dt.Columns.Add(listFieldName);
+
+            if (valuesList != null)
+            {
+                foreach (var val in valuesList)
+                    dt.Rows.Add(val);
+            }
+
+            var valParam = new SqlParameter(name, SqlDbType.Structured) { Value = dt, TypeName = typeName };
+            return valParam;
+        }
+        #endregion
     }
 }

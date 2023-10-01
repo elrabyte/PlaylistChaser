@@ -9,5 +9,6 @@ namespace PlaylistChaser.Web.Models
         public int Id { get; set; }
         [Required]
         public byte[] FileContents { get; set; }
+        public string? Url { get; set; }
     }
 }

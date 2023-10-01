@@ -12,7 +12,7 @@ namespace PlaylistChaser.Web.Models.ViewModel
         public int? ThumbnailId { get; set; }
 
         [NotMapped]
-        public List<SongAdditionalInfo>? SongInfos { get; set; }
+        public List<SongState>? SongStates { get; set; }
 
     }
 }

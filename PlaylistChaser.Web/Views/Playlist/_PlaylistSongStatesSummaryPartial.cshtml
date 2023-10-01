@@ -3,20 +3,38 @@
 @using static PlaylistChaser.Web.Util.BuiltInIds;
 @model List<IGrouping<Sources,PlaylistSongState>>
 
+@{
+    var playlistId = (int)ViewBag.PlaylistId;
+    var songsTotalCount = Model.Max(m => m.Count());
+    var sources = (List<Source>)ViewBag.Sources;
+}
+
 <div class="row">
     <div class="col-md-10">
         <h5>Playlist songs states</h5>
-        @foreach (var sources in Model)
+
+        @foreach (var playlistSongStates in Model)
         {
-            var songsAddedCount = sources.Count(s => s.StateId == PlaylistSongStates.Added);
-            var songsNotAddedCount = sources.Count(s => s.StateId == PlaylistSongStates.NotAdded);
-            var songsTotalCount = sources.Count();
-            <div class="form-group row">
-                @Html.BsLabel(sources.Key.ToString())
+            var source = sources.Single(s => s.Id == (int)playlistSongStates.Key);
+            var songsAddedCount = playlistSongStates.Count(s => s.StateId == PlaylistSongStates.Added);
+            var songsNotAddedCount = playlistSongStates.Count(s => s.StateId == PlaylistSongStates.NotAdded);
+            <div class="form-group row align-items-center">
+                <div class="col-sm-2">
+                @Html.Raw(source.DisplayName)
+                </div>
                 <div class="col-sm-10">
-                    @Html.BsDisplay($"Songs added: {songsAddedCount} / {songsTotalCount}")
+                    @Html.BsDisplay($"Added: {songsAddedCount} / {songsTotalCount}")
                 </div>
             </div>
         }
     </div>
 </div>
+
+<script type="text/javascript">
+    function syncPlaylistSongStatesFrom(source) {
+        let url = '@Url.Url("SyncPlaylistSongStatesFrom", "Playlist", new {playlistId = playlistId})'
+        $.post(url, { source: source }, function (data, status, jqXHR) {
+            location.reload();
+        });
+    }
+</script>

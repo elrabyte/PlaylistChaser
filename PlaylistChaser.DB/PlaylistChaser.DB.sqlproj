@@ -61,6 +61,7 @@
     <Folder Include="NewDbScripts" />
     <Folder Include="NewDbScripts\InBuiltValues" />
     <Folder Include="SP" />
+    <Folder Include="Type" />
   </ItemGroup>
   <ItemGroup>
     <Build Include="Playlist.sql" />
@@ -78,10 +79,13 @@
     <Build Include="State.sql" />
     <Build Include="NewDbScripts\InBuiltValues\InsertStates.sql" />
     <Build Include="PlaylistSongState.sql" />
-    <Build Include="PlaylistAdditionalInfo.sql" />
-    <Build Include="SongAdditionalInfo.sql" />
+    <Build Include="PlaylistInfo.sql" />
+    <Build Include="SongInfo.sql" />
     <Build Include="OAuth2Credential.sql" />
     <Build Include="SP\GetSongs.sql" />
+    <Build Include="SongState.sql" />
+    <Build Include="Type\List_int.sql" />
+    <Build Include="SP\MergeSongs.sql" />
   </ItemGroup>
   <ItemGroup>
     <RefactorLog Include="PlaylistChaser.DB.refactorlog" />

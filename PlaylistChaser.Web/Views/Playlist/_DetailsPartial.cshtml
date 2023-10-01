@@ -1,0 +1,20 @@
+﻿@using PlaylistChaser.Web.Util;
+@using PlaylistChaser.Web.Models;
+@model Playlist
+
+<div class="row">
+    <div class="col-md-10">
+        <div class="form-group row">
+            @Html.BsLabelFor(m => m.Name)
+            <div class="col-sm-10">
+                @Html.BsDisplayFor(m => m.Name)
+            </div>
+        </div>
+        <div class="form-group row">
+            @Html.BsLabelFor(m => m.Description)
+            <div class="col-sm-10">
+                @Html.BsDisplayFor(m => m.Description)
+            </div>
+        </div>
+    </div>
+</div>

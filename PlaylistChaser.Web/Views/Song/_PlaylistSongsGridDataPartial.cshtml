@@ -2,6 +2,9 @@
 @using PlaylistChaser.Web.Util;
 @using static PlaylistChaser.Web.Util.BuiltInIds;
 @model List<PlaylistSongViewModel>
+@{
+    var sources = (List<Source>)ViewBag.FilteredSources;
+}
 
 <table id="playlistSongsGrid"
        class="table"
@@ -17,7 +20,7 @@
             <th rowspan="2" data-sortable="true">@Html.DisplayNameFor(m => m.First().ArtistName)</th>
             @if (ViewBag.AddSongStates)
             {
-                foreach (Source source in ViewBag.Sources)
+                foreach (var source in sources)
                 {
                     <th colspan="2">@Html.Raw(source.DisplayName)</th>
                 }
@@ -26,7 +29,7 @@
         <tr>
             @if (ViewBag.AddSongStates)
             {
-                foreach (Source source in ViewBag.Sources)
+                foreach (var source in sources)
                 {
                     <th data-filter-control="select" data-sortable="true">@("Playlist song state")</th>
                     <th data-filter-control="select" data-sortable="true">@("Song state")</th>
@@ -48,7 +51,7 @@
                 </td>
                 @if (ViewBag.AddSongStates)
                 {
-                    @foreach (Source source in ViewBag.Sources)
+                    @foreach (var source in sources)
                     {
                         <td>
                             @{
@@ -61,7 +64,7 @@
                         </td>
                         <td>
                             @{
-                                var state = song.SongInfos.SingleOrDefault(ss => ss.SourceId == (Sources)source.Id);
+                                var state = song.SongStates.SingleOrDefault(ss => ss.SourceId == (Sources)source.Id);
                                 if (state != null)
                                 {
                                     @(state.StateId.ToString())
@@ -95,5 +98,8 @@
 <script type="text/javascript">
     $(function () {
         $("table").bootstrapTable();
+    })
+    $('table').on('dbl-click-row.bs.table', function (row, element, field) {
+        playlistSongsGrid_dblCliked(row, element, field);
     })
 </script>

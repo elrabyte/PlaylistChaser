@@ -78,85 +78,102 @@
     }
 </script>
 
-<!--Buttons-->
-<div id="btn-header-row" class="btn-group" role="group" aria-label="Button group with nested dropdown">
-    <!--Sync Playlist-->
-    <div class="btn-group">
-        <button type="button" class="btn btn-primary" onclick="syncPlaylistFrom('@Model.Playlist.MainSourceId')">
-            <i class="bi bi-cloud-download"></i> Sync Playlist
-        </button>
-    </div>
-
-    <!--Sync Playlist To-->
-    <div class="btn-group" role="group">
-        <button id="btnGroupSync" type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-            <i class="bi bi-cloud-upload"></i> Sync Playlist To
-        </button>
-        <div class="dropdown-menu dropdown-menu-end" aria-labelledby="btnGroupSync">
-            @foreach (var source in sources)
-            {
-                <a class="dropdown-item" href="javascript:;" onclick="syncPlaylistTo('@source.Id')">@Html.Raw(source.IconHtml) @source.Name</a>
+<div class="container">
+    <div class="row">
+        <!--Buttons-->
+        <div id="btn-header-row" class="btn-group" role="group" style="white-space:nowrap">
+            <!--Sync Playlist-->
+            @{
+                var actionText = "Sync Playlist";
             }
-        </div>
-    </div>
-    <!--Sync Songs-Thumbnail From-->
-    <div class="btn-group" role="group">
-        <button id="btnGroupSync" type="button" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-            <i class="bi bi-file-arrow-down"></i> Sync Songs-Thumbnail From
-        </button>
-        <div class="dropdown-menu dropdown-menu-end" aria-labelledby="btnGroupSync">
-            @foreach (var source in sources)
-            {
-                <a class="dropdown-item" href="javascript:;" onclick="syncSongsThumbnail('@source.Id')">@Html.Raw(source.IconHtml) @source.Name</a>
-            }
-        </div>
-    </div>
-    <!--Delete Playlist-->
-    <div class="btn-group" role="group">
-        <button id="btnGroupDelete" type="button" class="btn btn-danger dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-            <i class="bi bi-trash"></i> Delete Playlist
-        </button>
-        <div class="dropdown-menu dropdown-menu-end" aria-labelledby="btnGroupDelete">
-            <a id="deletePlaylistLocalBtn" class="dropdown-item" href="javascript:;" onclick="deletePlaylistLocal()">Delete Playlist Local</a>
-            <hr class="dropdown-divider">
-            @foreach (var source in sources)
-            {
-                <a class="dropdown-item" href="javascript:;" onclick="deletePlaylistAtSource('@source.Id')">@Html.Raw(source.IconHtml) @source.Name</a>
-            }
-        </div>
-    </div>
-</div>
+            <button type="button" class="btn btn-primary d-none d-sm-block" onclick="syncPlaylistFrom('@Model.Playlist.MainSourceId')">
+                <i class="bi bi-cloud-download"></i> @(actionText)
+            </button>
+            <button type="button" class="btn btn-primary d-block d-sm-none" onclick="syncPlaylistFrom('@Model.Playlist.MainSourceId')" title="@(actionText)">
+                <i class="bi bi-cloud-download"></i>
+            </button>
 
-<h4>Playlist @Controls.Button("Edit","editPlaylist()",iconName:"pencil-square")</h4>
-
-<div class="row">
-    <div class="col-md-10">
-        <div class="form-group row">
-            @Html.BsLabelFor(m => m.Playlist.Name)
-            <div class="col-sm-10">
-                @Html.BsDisplayFor(m => m.Playlist.Name)
+            <!--Sync Playlist To-->
+            @{
+                actionText = "Sync Playlist To";
+            }
+            <button id="btnGroupSync" type="button" class="btn btn-primary dropdown-toggle d-none d-sm-block" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-cloud-upload"></i> @(actionText)
+            </button>
+            <button id="btnGroupSync" type="button" class="btn btn-primary dropdown-toggle d-block d-sm-none" data-bs-toggle="dropdown" aria-expanded="false" title="@(actionText)">
+                <i class="bi bi-cloud-upload"></i>
+            </button>
+            <div class="dropdown-menu dropdown-menu-end" aria-labelledby="btnGroupSync">
+                @foreach (var source in sources)
+                {
+                    <a class="dropdown-item" href="javascript:;" onclick="syncPlaylistTo('@source.Id')">@Html.Raw(source.IconHtml) @source.Name</a>
+                }
+            </div>
+            <!--Sync Songs-Thumbnail From-->
+            @{
+                actionText = "Sync Songs-Thumbnail From";
+            }
+            <button id="btnGroupSync" type="button" class="btn btn-secondary dropdown-toggle d-none d-md-block" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-file-arrow-down"></i> @(actionText)
+            </button>
+            <button id="btnGroupSync" type="button" class="btn btn-secondary dropdown-toggle d-block d-md-none" data-bs-toggle="dropdown" aria-expanded="false" title="@(actionText)">
+                <i class="bi bi-file-arrow-down"></i>
+            </button>
+            <div class="dropdown-menu dropdown-menu-end" aria-labelledby="btnGroupSync">
+                @foreach (var source in sources)
+                {
+                    <a class="dropdown-item" href="javascript:;" onclick="syncSongsThumbnail('@source.Id')">@Html.Raw(source.IconHtml) @source.Name</a>
+                }
+            </div>
+            <!--Delete Playlist-->
+            @{
+                actionText = "Delete Playlist";
+            }
+            <button id="btnGroupDelete" type="button" class="btn btn-danger dropdown-toggle d-none d-md-block" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-trash"></i> @(actionText)
+            </button>
+            <button id="btnGroupDelete" type="button" class="btn btn-danger dropdown-toggle d-block d-md-none" data-bs-toggle="dropdown" aria-expanded="false" title="@(actionText)">
+                <i class="bi bi-trash"></i>
+            </button>
+            <div class="dropdown-menu dropdown-menu-end" aria-labelledby="btnGroupDelete">
+                <a id="deletePlaylistLocalBtn" class="dropdown-item" href="javascript:;" onclick="deletePlaylistLocal()">Delete Playlist Local</a>
+                <hr class="dropdown-divider">
+                @foreach (var source in sources)
+                {
+                    <a class="dropdown-item" href="javascript:;" onclick="deletePlaylistAtSource('@source.Id')">@Html.Raw(source.IconHtml) @source.Name</a>
+                }
             </div>
         </div>
-        <div class="form-group row">
-            @Html.BsLabelFor(m => m.Playlist.Description)
-            <div class="col-sm-10">
-                @Html.BsDisplayFor(m => m.Playlist.Description)
-            </div>
-        </div>
     </div>
+
+    <div class="d-flex flex-row">
+        <h4>Playlist</h4>
+        @Controls.Button("Edit","editPlaylist()",iconName:"pencil-square", cssClass:"")
+    </div>
+
+    <div class="row">
+        @Partials.ReloadablePartial("detailsPartial",Url.Url("_DetailsPartial","Playlist", new { playlistId = Model.Playlist.Id }), true)
+    </div>
+
+    <div class="row">
+        @Partials.ReloadablePartial("playlistInfosDetailsPartial",Url.Url("_PlaylistInfosDetailsPartial","Playlist", new { playlistId = Model.Playlist.Id }), true)
+    </div>
+
+    <hr />
+    <div class="row">
+        @Partials.ReloadablePartial("playlistSongsStatesSummary",Url.Url("_PlaylistSongStatesSummaryPartial", "Playlist", new { id = Model.Playlist.Id }), true)
+    </div>
+    <div class="row">
+        @Partials.ReloadablePartial("songsStatesSummary",Url.Url("_SongStatesSummaryPartial", "Song", new { playlistId = Model.Playlist.Id }), true)
+    </div>
+    <div class="row">
+        @Partials.ReloadablePartial("playlistSongsGridPartial",Url.Url("_PlaylistSongsGridPartial","Song", new { playlistId = Model.Playlist.Id, addSongStates = Model.AddSongStates }),true)
+    </div>
+
 </div>
 
-<hr />
-<div class="row">
-    @Helper.ReloadablePartial("playlistSongsStatesDetails",Helper.Url(Url,"_PlaylistSongStatesSummaryPartial", "Playlist", new { id = Model.Playlist.Id }), true)
-</div>
+@Partials.ModalPartial("playlistEdit", "Edit Playlist", Url.Url("_EditPartial", "Playlist", new { id = Model.Playlist.Id }))
 
-<div class="row">
-    @Helper.ReloadablePartial("playlistSongsGridPartial",Url.Url("_PlaylistSongsGridPartial","Song", new { playlistId = Model.Playlist.Id, addSongStates = Model.AddSongStates }),true)
-</div>
-
-
-@Helper.ModalPartial("playlistEdit", "Edit Playlist", Helper.Url(Url,"_EditPartial", "Playlist", new { id = Model.Playlist.Id }))
 
 <script type="text/javascript">
     playlistEdit.on("saved", function () {

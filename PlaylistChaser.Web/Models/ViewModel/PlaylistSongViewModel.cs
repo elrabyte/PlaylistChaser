@@ -15,7 +15,7 @@ namespace PlaylistChaser.Web.Models.ViewModel
         [NotMapped]
         public List<PlaylistSongState>? PlaylistSongStates { get; set; }
         [NotMapped]
-        public List<SongAdditionalInfo>? SongInfos { get; set; }
+        public List<SongState>? SongStates { get; set; }
 
     }
 }

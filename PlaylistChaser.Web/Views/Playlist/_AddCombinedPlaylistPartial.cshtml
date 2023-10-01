@@ -3,7 +3,7 @@
 
 @{
     var selectedSource = (Sources)ViewBag.SelectedSource;
-    var sources = (List<(Sources source, string icon)>)ViewBag.Sources;
+    var sources = (List<Source>)ViewBag.Sources;
 }
 
 <div class="modal-header p-5 pb-4 border-bottom-0">
@@ -11,17 +11,18 @@
     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
 <div class="modal-body p-5 pt-0">
-    @(Controls.EnumSelect<Sources>("Sources", "sourceSelector"))
+    @*@(Controls.EnumSelect<Sources>("Sources", "sourceSelector"))*@
+    @Controls.SourceSelect(sources)
     <div class="form-floating mb-3">
-        <label class="visually-hidden" for="combinedYtPlName">Name</label>
+        <label class="visually-hidden" for="combinedPlName">Name</label>
         <div class="input-group">
             <div id="sourceIcon" class="input-group-text spot">
             </div>
-            <input type="text" name="combinedYtPlName" class="form-control form-control-lg" id="combinedYtPlName" placeholder="Playlist name" required>
+            <input type="text" name="combinedPlName" class="form-control form-control-lg" id="combinedPlName" placeholder="Playlist name" required>
         </div>
     </div>
 
-    <button id="create-combined-yt-btn"
+    <button id="create-combined-btn"
             class="w-100 mb-2 btn btn-lg rounded-3 btn-primary"
             type="button"
             data-bs-dismiss="modal">
@@ -30,28 +31,22 @@
 </div>
 
 <script type="text/javascript">
-    var sourcesJs = [@Html.Raw(string.Join(',', sources.Select(s => "{ id:'" + (int)s.source + "', icon:\"" + s.icon + "\"}").ToList()))];
     $("#sourceSelector").on("change", function (s, e) {
-        let source = sourcesJs.find(({ id }) => id == s.target.value);
-        $("#sourceIcon").html(source.icon);
-        $("#sourceIcon").addClass("text-yt-red");
+        let source = sourcesJs.find(({ Id }) => Id == s.target.value);
+        $("#sourceIcon").html(source.IconHtml);
+        $("#sourceIcon").css("color", "#" + source.ColorHex);
     })
-    $(function () {
-        $("#sourceSelector").val(@((int)selectedSource)).change()
-    })
-    function getSelectedSource() {
-        return $("#sourceSelector").val();
-    }
+    
 
-    $("#create-combined-yt-btn").click(function () {
-        let name = $("#combinedYtPlName").val()
+    $("#create-combined-btn").click(function () {
+        let name = $("#combinedPlName").val()
         let selectedIds = getSelectedPlaylistIds();
         createCombinedPlaylist(name, selectedIds, '@Sources.Youtube')
     });
-    
+
     function createCombinedPlaylist(playlistName, playlistIds, source) {
 
-        let url = "@Helper.Url(Url,"CreateCombinedPlaylist","Playlist")";
+        let url = "@Url.Url("CreateCombinedPlaylist","Playlist")";
         $.ajax({
             type: "POST",
             url: url,

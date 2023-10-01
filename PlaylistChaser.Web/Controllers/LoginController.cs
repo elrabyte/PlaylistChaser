@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Caching.Memory;
 using PlaylistChaser.Web.Database;
 using PlaylistChaser.Web.Util.API;
 using static PlaylistChaser.Web.Util.BuiltInIds;
@@ -8,8 +9,8 @@ namespace PlaylistChaser.Web.Controllers
 {
     public class LoginController : BaseController
     {
-        public LoginController(IConfiguration configuration, PlaylistChaserDbContext db, IHubContext<ProgressHub> hubContext) 
-            : base(configuration, db, hubContext) { }
+        public LoginController(IConfiguration configuration, PlaylistChaserDbContext db, IHubContext<ProgressHub> hubContext, IMemoryCache memoryCache)
+            : base(configuration, db, hubContext, memoryCache) { }
 
         #region Spotify
         public async Task<ActionResult> LoginToSpotify()
@@ -93,7 +94,6 @@ namespace PlaylistChaser.Web.Controllers
                 return new JsonResult(new { success = false, message = ex.Message });
             }
         }
-
         public async Task<ActionResult> AcceptYoutubeCode(string code)
         {
             var clientId = configuration["Youtube:ClientId"];

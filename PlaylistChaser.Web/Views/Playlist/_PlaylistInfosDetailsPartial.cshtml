@@ -1,0 +1,14 @@
+﻿@using PlaylistChaser.Web.Util;
+@using PlaylistChaser.Web.Models;
+@model List<PlaylistInfo>
+
+@{
+    var sources = (List<Source>)ViewBag.Sources;
+}
+
+@foreach (var info in Model)
+{
+    var source = sources.Single(s => s.Id == (int)info.SourceId);
+    @Html.Raw(source.DisplayName)
+    @Html.Partial("_PlaylistInfoDetailsPartial", info)
+}

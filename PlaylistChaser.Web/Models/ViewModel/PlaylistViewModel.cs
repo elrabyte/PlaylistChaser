@@ -16,6 +16,6 @@ namespace PlaylistChaser.Web.Models.ViewModel
         public int SongsTotal { get; set; }
         public Sources? MainSourceId { get; set; }
         [NotMapped]
-        public List<PlaylistAdditionalInfo> Infos { get; set; }
+        public List<PlaylistInfo> Infos { get; set; }
     }
 }

@@ -8,6 +8,6 @@
 <div class="row">
     <div class="col">
         <h5>Songs</h5>
-        @Helper.ReloadablePartial("songsGridPartial",Url.Url("_SongsGridPartial","Song", new { addSongStates = Model.AddSongStates }),true)
+        @Partials.ReloadablePartial("songsGridPartial",Url.Url("_SongsGridPartial","Song", new { addSongStates = Model.AddSongStates }),true)
     </div>
 </div>
