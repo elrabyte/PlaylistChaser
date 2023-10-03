@@ -74,7 +74,7 @@
     function findSelectedSongs(source) {
         let selectedIds = getSelectedIds();
         if (selectedIds.length <= 0) {
-            return alert("no rows selected")
+            return popupHelper.showError("no rows selected")
         }
         let url = '@Url.Url("FindSongs", "Song")';
         $.post(url, { source: source, songIds: selectedIds.toString() }, function (data, status, jqXHR) {

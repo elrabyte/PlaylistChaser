@@ -36,7 +36,7 @@
 
     function ajaxCall(url, btn, source, onSuccessFunc) {
         if (url == null || btn == null)
-            return alert("url or button not set");
+            return popupHelper.showError("url or button not set");
 
         disableButtonRow();
         disableButton(btn);
@@ -49,7 +49,8 @@
                 if (!data.success) {
                     enableButtonRow();
                     enableButton(btn);
-                    return alert(data.message)
+                    debugger;
+                    return popupHelper.showError(data.message);
                 }
                 if (typeof onSuccessFunc === 'undefined')
                     location.reload();
@@ -159,6 +160,14 @@
         @Partials.ReloadablePartial("playlistInfosDetailsPartial",Url.Url("_PlaylistInfosDetailsPartial","Playlist", new { playlistId = Model.Playlist.Id }), true)
     </div>
 
+    @if (Model.Playlist.PlaylistTypeId == PLaylistTypes.Combined)
+    {
+        <hr />
+        <div class="row">
+            @Partials.ReloadablePartial("combinedPlaylistEntriesDetailsPartial",Url.Url("_CombinedPlaylistEntriesDetailsPartial","Playlist", new { playlistId = Model.Playlist.Id }), true)
+        </div>
+    }
+
     <hr />
     <div class="row">
         @Partials.ReloadablePartial("playlistSongsStatesSummary",Url.Url("_PlaylistSongStatesSummaryPartial", "Playlist", new { id = Model.Playlist.Id }), true)
@@ -182,5 +191,13 @@
 
     function editPlaylist() {
         playlistEdit.show();
+    }
+
+
+    function removeDuplicatesFromPlaylist(source) {
+        let url = '@Url.Url("RemoveDuplicatesFromPlaylist", "Playlist", new {playlistId = Model.Playlist.Id})'
+        $.post(url, { source: source }, function (data, status, jqXHR) {
+            location.reload();
+        });
     }
 </script>

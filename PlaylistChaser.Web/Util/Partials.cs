@@ -110,7 +110,7 @@ namespace PlaylistChaser.Web.Util
                                 data: form.serialize(),
                                 success: function (data) {{
                                     if (!data.success)
-                                        return alert(data.message);
+                                        return popupHelper.showError(data.message);
                                     {name}.hide();
                                     $(""#{modalName}"").trigger('saved');
                                 }},
@@ -190,7 +190,7 @@ namespace PlaylistChaser.Web.Util
                                 data: form.serialize(),
                                 success: function(data) {{
                                         if (!data.success)
-                                            return alert(data.message);
+                                            return popupHelper.showError(data.message);
 
                                     $(""#{containerName}"").trigger(""saved"");
                                     }},

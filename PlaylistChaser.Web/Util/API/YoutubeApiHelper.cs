@@ -86,21 +86,22 @@ namespace PlaylistChaser.Web.Util.API
             return toPlaylistModel(newPlaylist);
         }
 
-        public async Task<bool> DeletePlaylist(string youtubePlaylistId)
+        public async Task<ReturnModel> DeletePlaylist(string youtubePlaylistId)
         {
             try
             {
                 await ytService.Playlists.Delete(youtubePlaylistId).ExecuteAsync();
-                return true;
+
+                return new ReturnModel();
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return false;
+                return new ReturnModel(ex.Message);
             }
 
         }
 
-        public async Task<bool> UpdatePlaylist(string playlistId, string? playlistName = null, string? description = null, bool isPublic = true)
+        public async Task<ReturnModel> UpdatePlaylist(string playlistId, string? playlistName = null, string? description = null, bool isPublic = true)
         {
             try
             {
@@ -109,11 +110,11 @@ namespace PlaylistChaser.Web.Util.API
                 playlist.Snippet.Description = description;
                 playlist.Status.PrivacyStatus = isPublic ? "public" : "private";
                 await ytService.Playlists.Update(playlist, "snippet,status").ExecuteAsync();
-                return true;
+                return new ReturnModel();
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return false;
+                return new ReturnModel(ex.Message);
             }
 
         }
@@ -207,14 +208,15 @@ namespace PlaylistChaser.Web.Util.API
         public List<SongInfo> GetPlaylistSongsReadOnly(string playlistId)
             => toSongModels(getPlaylistSongsReadOnly(playlistId).Result);
 
-
-
         /// <summary>
         /// Returns a list of songs from a playlist
         /// </summary>
         /// <param name="playlistId">youtube playlist id</param>
         /// <returns></returns>
         private List<PlaylistItemSnippet> getPlaylistSongs(string playlistId)
+        => getPlaylistItems(playlistId).Select(i => i.Snippet).ToList();
+
+        private List<PlaylistItem> getPlaylistItems(string playlistId)
         {
             var listRequest = ytService.PlaylistItems.List("snippet");
             listRequest.MaxResults = 50;
@@ -223,25 +225,50 @@ namespace PlaylistChaser.Web.Util.API
             var resultsShown = resp.PageInfo.ResultsPerPage;
             var totalResults = resp.PageInfo.TotalResults;
 
-            var songs = resp.Items.Select(i => i.Snippet).ToList();
+            var playlistItems = resp.Items.ToList();
             if (totalResults == 0)
-                return songs;
+                return playlistItems;
 
             while (resultsShown <= totalResults)
             {
                 listRequest.PageToken = resp.NextPageToken;
                 resp = listRequest.Execute();
                 resultsShown += resp.PageInfo.ResultsPerPage;
-                songs.AddRange(resp.Items.Select(i => i.Snippet).ToList());
+                playlistItems.AddRange(resp.Items.ToList());
             }
-            return songs;
+            return playlistItems;
+
         }
         private async Task<IReadOnlyList<PlaylistVideo>> getPlaylistSongsReadOnly(string playlistId)
         {
             var searchResults = await ytServiceReadOnly.Playlists.GetVideosAsync(playlistId);
-            
+
             return searchResults;
         }
+
+
+
+        public bool RemoveDuplicatesFromPlaylist(string playlistId)
+        {
+            var playlistItems = getPlaylistItems(playlistId);
+
+            var duplicateSongIds = playlistItems.GroupBy(i => i.Snippet.ResourceId.VideoId).Where(x => x.Count() > 1).Select(x => x.Key).ToList();
+            var duplicatePlaylistItems = playlistItems.Where(i => duplicateSongIds.Contains(i.Snippet.ResourceId.VideoId));
+            var playlistItemIds = duplicatePlaylistItems.DistinctBy(i => i.Snippet.ResourceId.VideoId).Select(i => i.Id).ToList();
+
+            foreach (var playlistItemId in playlistItemIds)
+            {
+                removeSongFromPlaylist(playlistItemId);
+            }
+            return true;
+        }
+
+        private bool removeSongFromPlaylist(string playlistItemId)
+        {
+            ytService.PlaylistItems.Delete(playlistItemId).Execute();
+            return true;
+        }
+
         #endregion
 
         #region Song
@@ -322,7 +349,7 @@ namespace PlaylistChaser.Web.Util.API
         /// <returns></returns>
         internal async Task<Dictionary<string, SourceThumbnail>> GetSongsThumbnailByPlaylist(string playlistId)
         {
-            var ytSongs =  await getPlaylistSongsReadOnly(playlistId);
+            var ytSongs = await getPlaylistSongsReadOnly(playlistId);
             var songThumbnails = new Dictionary<string, SourceThumbnail>();
 
             foreach (var ytSong in ytSongs)
@@ -400,7 +427,7 @@ namespace PlaylistChaser.Web.Util.API
         #endregion
 
         #region Add songs to playlist
-        public bool AddSongToPlaylist(string playlistId, string songId)
+        public ReturnModel AddSongToPlaylist(string playlistId, string songId)
         {
             try
             {
@@ -413,11 +440,11 @@ namespace PlaylistChaser.Web.Util.API
 
                 var request = ytService.PlaylistItems.Insert(playlistItem, "snippet");
                 var response = request.Execute();
-                return true;
+                return new ReturnModel();
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return false;
+                return new ReturnModel(ex.Message);
             }
         }
         #endregion

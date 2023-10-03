@@ -37,7 +37,7 @@ namespace PlaylistChaser.Web.Util.API
             var userId = (await spotify.UserProfile.Current()).Id;
             return await spotify.Playlists.Create(userId, request);
         }
-        public async Task<bool> UpdatePlaylist(string spotifyPlaylistId, string? playlistName = null, string? playlistDescription = null, bool isPublic = true)
+        public async Task<ReturnModel> UpdatePlaylist(string spotifyPlaylistId, string? playlistName = null, string? playlistDescription = null, bool isPublic = true)
         {
             //update playlistdescription
             var request = new PlaylistChangeDetailsRequest();
@@ -45,16 +45,24 @@ namespace PlaylistChaser.Web.Util.API
             request.Description = playlistDescription;
             request.Public = isPublic;
 
-            return await spotify.Playlists.ChangeDetails(spotifyPlaylistId, request);
+            var success = await spotify.Playlists.ChangeDetails(spotifyPlaylistId, request);
+            if (success)
+                return new ReturnModel();
+            else
+                return new ReturnModel("Update failed");
         }
 
-        public async Task<bool> DeletePlaylist(string plalyistId)
+        public async Task<ReturnModel> DeletePlaylist(string plalyistId)
         {
             //only sets private for the moment. couldnt find api            
             var request = new PlaylistChangeDetailsRequest();
             request.Public = false;
 
-            return await spotify.Playlists.ChangeDetails(plalyistId, request);
+            var success = await spotify.Playlists.ChangeDetails(plalyistId, request);
+            if (success)
+                return new ReturnModel();
+            else
+                return new ReturnModel("Delete failed");
         }
         #endregion
 
@@ -136,11 +144,11 @@ namespace PlaylistChaser.Web.Util.API
             return songs;
         }
 
-        public async Task<bool> RemovePlaylistSong(string spotifyPlaylistId, string spotifySongId)
+        public async Task<ReturnModel> RemovePlaylistSong(string spotifyPlaylistId, string spotifySongId)
         {
             return await removePlaylistSongs(spotifyPlaylistId, new List<string> { spotifySongId });
         }
-        private async Task<bool> removePlaylistSongs(string spotifyPlaylistId, List<string> spotifySongIds)
+        private async Task<ReturnModel> removePlaylistSongs(string spotifyPlaylistId, List<string> spotifySongIds)
         {
             //can add max. 100 songs per request
             var rounds = Math.Ceiling(spotifySongIds.Count / 100d);
@@ -153,7 +161,7 @@ namespace PlaylistChaser.Web.Util.API
                                            .ToList()
                 });
 
-            return true;
+            return new ReturnModel();
         }
         #endregion        
 
@@ -269,32 +277,32 @@ namespace PlaylistChaser.Web.Util.API
         /// <summary>
         ///can add max. 100 songs per request
         /// </summary>
-        public bool AddSongsToPlaylistBatch(string playlistId, List<string> songIds)
+        public ReturnModel AddSongsToPlaylistBatch(string playlistId, List<string> songIds)
         {
             try
             {
                 var trackUris = songIds.Select(i => $"spotify:track:{i}").ToList();
                 var response = spotify.Playlists.AddItems(playlistId, new PlaylistAddItemsRequest(trackUris)).Result;
-                return true;
+                return new ReturnModel();
             }
             catch (Exception ex)
             {
-                return false;
+                return new ReturnModel(ex.Message);
             }
         }
 
-        public bool AddSongToPlaylist(string playlistId, string songId)
+        public ReturnModel AddSongToPlaylist(string playlistId, string songId)
         {
             try
             {
                 var trackUri = new List<string> { $"spotify:track:{songId}" };
                 var response = spotify.Playlists.AddItems(playlistId, new PlaylistAddItemsRequest(trackUri)).Result;
 
-                return true;
+                return new ReturnModel();
             }
             catch (Exception ex)
             {
-                return false;
+                return new ReturnModel(ex.Message);
             }
         }
         #endregion

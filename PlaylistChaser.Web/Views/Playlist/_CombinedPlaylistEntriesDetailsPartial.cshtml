@@ -1,0 +1,19 @@
+﻿@using PlaylistChaser.Web.Util;
+@using PlaylistChaser.Web.Models;
+@model List<Playlist>
+
+
+<h5>Playlist entries</h5>
+@foreach (var playlist in Model)
+{
+    <div class="row">
+        <div class="col-md-10">
+            <div class="form-group row">
+                @Html.BsLabel(playlist.ChannelName)
+                <div class="col-sm-10">
+                    @Html.BsLabel(playlist.Name)
+                </div>
+            </div>
+        </div>
+    </div>
+}
