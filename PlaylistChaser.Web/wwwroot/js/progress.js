@@ -52,7 +52,7 @@ var staticProgressToast = {
             "       <span id=\"message\"></span>";
         if (cancellable == true) {
             html += "" +
-                "   <button type=\"button\" style=\"margin-left:5px;\" class=\"btn btn-secondary btn-sm float-end\" onclick=\"staticProgressToast.cancel('" + toastId + "');\">Cancel</button>";
+                "   <button id=\"cancelBtn\" type=\"button\" style=\"margin-left:5px;\" class=\"btn btn-secondary btn-sm float-end\" onclick=\"staticProgressToast.cancel('" + toastId + "');\">Cancel</button>";
         }
         html += "" +
             "       <div id=\"progressBarContainer\" class=\"progress\" role=\"progressbar\" aria-label=\"Example with label\" aria-valuenow=\"0\" aria-valuemin=\"0\" aria-valuemax=\"100\">" +
@@ -62,10 +62,17 @@ var staticProgressToast = {
             "</div>";
         return html;
     },
+    enableCancelButton: function () {
+        $("#cancelBtn").removeClass("disabled");
+    },
+    disableCancelButton: function () {
+        $("#cancelBtn").addClass("disabled");
+    },
     cancel: function (toastId) {
+        this.disableCancelButton();
         let url = '/Base/CancelAction'
         $.post(url, { toastId: toastId }, function (data, status, jqXHR) {
-            debugger;
+            staticProgressToast.enableCancelButton();
         });
     }
 };

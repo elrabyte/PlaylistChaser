@@ -446,7 +446,8 @@ namespace PlaylistChaser.Web.Controllers
                             throw new NotImplementedException(ErrorHelper.NotImplementedForThatSource);
                     }
 
-                    info = addPlaylistInfoToDb(id, source, newInfo.PlaylistIdSource, newInfo.Name, newInfo.CreatorName, true, newInfo.Url, newInfo.Description);
+                    string descriptionText = "Copied from $OriginalSource$: \n$OriginalPlaylistName$ by $OriginalCreatorName$. \n$SongsUploaded$ / $SongsTotal$ - $LastChangeDate$";
+                    info = addPlaylistInfoToDb(id, source, newInfo.PlaylistIdSource, newInfo.Name, newInfo.CreatorName, true, newInfo.Url, descriptionText);
                 }
 
                 //get missing songs
@@ -484,9 +485,9 @@ namespace PlaylistChaser.Web.Controllers
                 return JsonResponse(ex);
             }
         }
-        private string getPlaylistDescriptionText(PlaylistInfo info, string descriptionText = "Copied from $OriginalSource$: \n$OriginalPlaylistName$ by $OriginalCreatorName$. \n$SongsUploaded$ / $SongsTotal$ - $LastChangeDate$")
+        private string getPlaylistDescriptionText(PlaylistInfo info)
         {
-            var playlistDescription = descriptionText;
+            var playlistDescription = info.Description;
             var playlist = db.GetCachedList(db.Playlist).Single(p => p.Id == info.PlaylistId);
             var playlistSongIds = db.GetCachedList(db.PlaylistSong).Where(ps => ps.PlaylistId == playlist.Id).Select(ps => ps.Id).ToList();
             var playlistSongStates = db.GetCachedList(db.PlaylistSongState).Where(pss => pss.SourceId == info.SourceId && pss.StateId == PlaylistSongStates.Added && playlistSongIds.Contains(pss.PlaylistSongId)).ToList();
