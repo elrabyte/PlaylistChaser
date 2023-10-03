@@ -89,6 +89,23 @@
     }
 /*#endregion*/
 
+/*#region card_heading*/
+.card_heading {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+/*#endregion*/
+
+/*#region card_subHeading*/
+.card_subHeading {
+    color: var(--text-light);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+/*#endregion*/
+
 /*#region card__background*/
 .card__background {
     background-size: cover;
@@ -101,7 +118,7 @@
     top: 0;
     transform-origin: center;
     trsnsform: scale(1) translateZ(0);
-    transition: filter 200ms linear, transform 200ms linear;    
+    transition: filter 200ms linear, transform 200ms linear;
 }
 
 /*#endregion*/
@@ -114,11 +131,7 @@
     width: 100%;
 }
 /*#endregion*/
-/*#region card_subTitle*/
-.card_subTitle {
-    color: var(--text-light);    
-}
-/*#endregion*/
+
 /*#region card__footer*/
 
 .card__footer .source.mainsource {

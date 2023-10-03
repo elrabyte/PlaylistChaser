@@ -100,7 +100,7 @@
                 <a class="pl_card @(pl_card_classes)" asp-action="Details" asp-route-id="@playlist.Id" data-pl-id="@playlist.Id">
                     <div class="card__background" style="background-image: url('/Playlist/GetThumbnail?thumbnailId=@playlist.ThumbnailId')"></div>
                     <div class="card__content">
-                        <h5 class="card_subTitle">@(playlist.ChannelName) @Html.Raw(playlist.PlaylistTypeId == PLaylistTypes.Combined ? "<i class=\"bi bi-grid-fill\" style=\"float: right;\"></i>" : "")</h5>
+                        <h5 class="card_subHeading">@(playlist.ChannelName) @Html.Raw(playlist.PlaylistTypeId == PLaylistTypes.Combined ? "<i class=\"bi bi-grid-fill\" style=\"float: right;\"></i>" : "")</h5>
                         <h4 class="card_heading">@(playlist.Name)</h4>
                         <footer class="card__footer">
                             @foreach (var source in sources)
