@@ -11,6 +11,7 @@ using PlaylistChaser.Web.Util.API;
 using System.Collections.Generic;
 using System.Data.Entity;
 using System.Diagnostics;
+using System.Net.Http.Headers;
 using static PlaylistChaser.Web.Util.BuiltInIds;
 using static PlaylistChaser.Web.Util.Helper;
 using Playlist = PlaylistChaser.Web.Models.Playlist;
@@ -454,13 +455,17 @@ namespace PlaylistChaser.Web.Controllers
                 var songsToUpload = missingSongs.Select(s => new UploadSong(s.Id, db.GetCachedList(db.SongInfo).SingleOrDefault(i => i.SourceId == source && i.SongId == s.Id)?.SongIdSource)).ToList();
                 songsToUpload = songsToUpload.Where(s => !string.IsNullOrEmpty(s.SongIdSource)).ToList();
                 songsToUpload = songsToUpload.DistinctBy(s => s.SongIdSource).ToList();
+
                 //  upload
-                var returnObj = await uploadSongsToPlaylist(source, info.PlaylistIdSource, songsToUpload);
+                var returnObj = new ReturnModel();
+                if (songsToUpload.Any())
+                    returnObj = await uploadSongsToPlaylist(source, info.PlaylistIdSource, songsToUpload);
                 if (!returnObj.Success)
                     return JsonResponse(returnObj);
 
                 //update Playlist
-                returnObj = await updatePlaylist(source, info.PlaylistIdSource, info.Name, info.Description);
+                var playlistDescription = getPlaylistDescriptionText(info);
+                returnObj = await updatePlaylist(source, info.PlaylistIdSource, info.Name, playlistDescription);
                 if (!returnObj.Success)
                     return JsonResponse(returnObj);
 
@@ -472,7 +477,55 @@ namespace PlaylistChaser.Web.Controllers
                 return JsonResponse(ex);
             }
         }
+        private string getPlaylistDescriptionText(PlaylistInfo info, string descriptionText = "Copied from $OriginalSource$: \n$OriginalPlaylistName$ by $OriginalCreatorName$. \n$SongsUploaded$ / $SongsTotal$ - $LastChangeDate$")
+        {
+            var playlistDescription = descriptionText;
+            var playlist = db.GetCachedList(db.Playlist).Single(p => p.Id == info.PlaylistId);
+            var playlistSongIds = db.GetCachedList(db.PlaylistSong).Where(ps => ps.PlaylistId == playlist.Id).Select(ps => ps.Id).ToList();
+            var playlistSongStates = db.GetCachedList(db.PlaylistSongState).Where(pss => pss.SourceId == info.SourceId && pss.StateId == PlaylistSongStates.Added && playlistSongIds.Contains(pss.PlaylistSongId)).ToList();
 
+            var songsUploaded = playlistSongStates.Count();
+            var songsTotal = playlistSongIds.Count();
+            var lastChangeDate = playlistSongStates.Max(pss => pss.LastChecked);
+
+            switch (playlist.PlaylistTypeId)
+            {
+                case PLaylistTypes.Simple:
+
+                    var originalInfo = db.GetCachedList(db.PlaylistInfo).Single(i => i.SourceId == playlist.MainSourceId && i.PlaylistId == playlist.Id);
+                    
+
+                    var originalSource = originalInfo.SourceId.ToString();
+                    var originalPlaylistName = originalInfo.Name;
+                    var originalCreatorName = originalInfo.CreatorName;                    
+
+                    playlistDescription = playlistDescription.Replace("$OriginalSource$", originalSource);
+                    playlistDescription = playlistDescription.Replace("$OriginalPlaylistName$", originalPlaylistName);
+                    playlistDescription = playlistDescription.Replace("$OriginalCreatorName$", originalCreatorName);
+                    playlistDescription = playlistDescription.Replace("$SongsUploaded$", songsUploaded.ToString());
+                    playlistDescription = playlistDescription.Replace("$SongsTotal$", songsTotal.ToString());
+                    playlistDescription = playlistDescription.Replace("$LastChangeDate$", lastChangeDate.ToShortDateString());
+
+                    return playlistDescription;
+                case PLaylistTypes.Combined:
+                    playlistDescription = "A combined playlist consisting of:\n";
+
+                    var playlistIds = db.GetCachedList(db.CombinedPlaylistEntry).Where(e => e.CombinedPlaylistId == playlist.Id).Select(e => e.PlaylistId).ToList();
+                    var playlists = db.GetCachedList(db.Playlist).Where(p => playlistIds.Contains(p.Id)).ToList();
+                    foreach (var entryPlaylist in playlists)
+                        playlistDescription += $"{entryPlaylist.ChannelName} - {entryPlaylist.Name}\n";
+
+                    playlistDescription += "$SongsUploaded$ / $SongsTotal$ - $LastChangeDate$";
+                    playlistDescription = playlistDescription.Replace("$SongsUploaded$", songsUploaded.ToString());
+                    playlistDescription = playlistDescription.Replace("$SongsTotal$", songsTotal.ToString());
+                    playlistDescription = playlistDescription.Replace("$LastChangeDate$", lastChangeDate.ToShortDateString());
+
+                    return playlistDescription;
+                default:
+                    throw new NotImplementedException(ErrorHelper.NotImplementedForThatType);
+            }
+
+        }
         private PlaylistInfo addPlaylistInfoToDb(int playlistId, Sources source, string playlistIdSource, string playlistName, string creatorName, bool isMine, string url, string? description = null)
         {
             var playlistInfo = new PlaylistInfo
@@ -523,6 +576,9 @@ namespace PlaylistChaser.Web.Controllers
             => await songController.FindSongs(missingSongs, source);
         private async Task<ReturnModel> uploadSongsToPlaylist(Sources source, string playlistIdSource, List<UploadSong> songsToUpload)
         {
+            if (!songsToUpload.Any())
+                throw new Exception("List can't be empty");
+
             if (songsToUpload.Any(s => string.IsNullOrEmpty(s.SongIdSource)))
                 throw new Exception("SongIdSource can't be null");
 
@@ -603,8 +659,6 @@ namespace PlaylistChaser.Web.Controllers
             }
             return returnObj;
         }
-        private string getPlaylistDescriptionText(string playlistDescription, int uploadedSongsCount, int totalSongsCount)
-            => playlistDescription + string.Format("\nFound {0}/{1} Songs, {2}", uploadedSongsCount.ToString(), totalSongsCount.ToString(), DateTime.Now.ToString());
 
         #region update PlaylistSongState
         private void updatePlaylistSongsState(Sources source, string playlistIdSource, List<string> songIdsSource, bool success)
