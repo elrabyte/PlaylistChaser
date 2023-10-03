@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Mvc;
+using PlaylistChaser.Web.Models;
 using PlaylistChaser.Web.Util.API;
 using System.Text.Encodings.Web;
 using static PlaylistChaser.Web.Util.BuiltInIds;
@@ -80,6 +81,13 @@ namespace PlaylistChaser.Web.Util
          => new JsonResult(new { success = success, message = message });
         public static JsonResult JsonResponse(Exception ex)
          => new JsonResult(new { success = false, message = ex.Message });
+        public static JsonResult JsonResponse(ReturnModel returnObj)
+        {
+            if (returnObj.Success)
+                return new JsonResult(new { success = true });
+            else
+                return new JsonResult(new { success = false, message = returnObj.ErrorMessage });
+        }
         #endregion
 
         public static string SourcesToJs(List<Models.Source> sources)

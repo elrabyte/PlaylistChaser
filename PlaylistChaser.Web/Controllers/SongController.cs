@@ -95,7 +95,7 @@ namespace PlaylistChaser.Web.Controllers
             var songInfo = db.SongInfo.Single(s => s.SourceId == sourceId && s.SongId == songId);
             songInfo.Name = uiSongInfo.Name;
             songInfo.ArtistName = uiSongInfo.ArtistName;
-            songInfo.SongIdSource = uiSongInfo.SongIdSource;            
+            songInfo.SongIdSource = uiSongInfo.SongIdSource;
             songInfo.Url = uiSongInfo.Url;
 
             db.SaveChanges();
@@ -357,8 +357,11 @@ namespace PlaylistChaser.Web.Controllers
                 }
 
                 var newSongInfo = foundSong.NewSongInfo;
-                var success = addFoundSongToDb(newSongInfo.SongId, newSongInfo.Name, newSongInfo.ArtistName, newSongInfo.SourceId, newSongInfo.SongIdSource, newSongInfo.Url);
-                var msgDisplay = ToastMessageDisplay(success, findSongs.Count, startTime, ref timeElapsedList, ref nFound, ref nSkipped);
+                var stateId = SongStates.Available;
+                if (newSongInfo.ArtistName == "NotAvailable")
+                    stateId = SongStates.NotAvailable;
+                var returnObj = addFoundSongToDb(newSongInfo.SongId, newSongInfo.Name, newSongInfo.ArtistName, newSongInfo.SourceId, newSongInfo.SongIdSource, newSongInfo.Url, stateId);
+                var msgDisplay = ToastMessageDisplay(returnObj.Success, findSongs.Count, startTime, ref timeElapsedList, ref nFound, ref nSkipped);
 
                 await progressHub.UpdateProgressToast("Finding songs...", nFound, findSongs.Count, msgDisplay, toastId, true);
 
@@ -371,31 +374,30 @@ namespace PlaylistChaser.Web.Controllers
         #endregion
 
         #region Add song to db
-        private bool addFoundSongToDb(int songId, string songName, string artistName, Sources source, string songIdSource, string url)
+        private ReturnModel addFoundSongToDb(int songId, string songName, string artistName, Sources source, string songIdSource, string url, SongStates stateId = SongStates.Available)
         {
             try
             {
                 if (db.GetCachedList(db.SongInfo).Any(i => i.SongId == songId && i.SourceId == source))
-                    return false; // already in db
+                    return new ReturnModel("A songInfo already exists for that source");
 
                 if (db.GetCachedList(db.SongInfo).Any(i => i.SongIdSource == songIdSource && i.SourceId == source))
-                    return false; // already in db
+                    return new ReturnModel("There's already a songinfo with that SongIdSource");
 
                 //add song info
                 var newSongInfo = new SongInfo { SongId = songId, SourceId = source, SongIdSource = songIdSource, Name = songName, ArtistName = artistName, Url = url };
                 db.SongInfo.Add(newSongInfo);
 
                 //add song state
-                var newSongState = new SongState { SongId = songId, SourceId = source, StateId = SongStates.Available, LastChecked = DateTime.Now };
+                var newSongState = new SongState { SongId = songId, SourceId = source, StateId = stateId, LastChecked = DateTime.Now };
                 db.SongState.AddRange(newSongState);
 
                 db.SaveChanges();
-                return true;
+                return new ReturnModel();
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return false;
-
+                return new ReturnModel(ex.Message);
             }
         }
 
@@ -426,7 +428,7 @@ namespace PlaylistChaser.Web.Controllers
                 return addedSongs;
             }
         }
-        private bool addSongs(string songName, string artistName, Sources source, string songIdSource, string url)
+        private ReturnModel addSongs(string songName, string artistName, Sources source, string songIdSource, string url)
         {
             try
             {
@@ -445,11 +447,11 @@ namespace PlaylistChaser.Web.Controllers
 
                 db.SaveChanges();
 
-                return true;
+                return new ReturnModel();
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return false;
+                return new ReturnModel(ex.Message);
             }
         }
         #endregion       

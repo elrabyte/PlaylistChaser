@@ -7,7 +7,9 @@ using PlaylistChaser.Web.Models;
 using PlaylistChaser.Web.Models.SearchModel;
 using PlaylistChaser.Web.Util;
 using PlaylistChaser.Web.Util.API;
+using System.Collections.Generic;
 using System.Data.Entity;
+using System.Diagnostics;
 using static PlaylistChaser.Web.Util.BuiltInIds;
 using static PlaylistChaser.Web.Util.Helper;
 using Playlist = PlaylistChaser.Web.Models.Playlist;
@@ -92,7 +94,7 @@ namespace PlaylistChaser.Web.Controllers
         {
             var playlistInfos = db.GetCachedList(db.PlaylistInfo).Where(s => s.PlaylistId == playlistId).ToList();
             return PartialView(playlistInfos);
-        }        
+        }
 
         public ActionResult _PlaylistInfoDetailsPartial(Sources source, int playlistId)
         {
@@ -110,7 +112,7 @@ namespace PlaylistChaser.Web.Controllers
 
         #region Edit
 
-        
+
         [HttpGet]
         public ActionResult _EditPartial(int id)
         {
@@ -207,6 +209,8 @@ namespace PlaylistChaser.Web.Controllers
                 return new JsonResult(new { success = false, message = ex.Message });
             }
         }
+
+        /// <returns>Playlistid</returns>
         private int addPlaylistToDb(string playlistName, string channelName, PLaylistTypes playlistType, Sources source, string playlistIdSource, bool isMine, string url, string description = null, int? thumbnailId = null)
         {
             //add playlist to db
@@ -225,7 +229,7 @@ namespace PlaylistChaser.Web.Controllers
                 IsMine = isMine,
                 Description = description,
                 Url = url,
-                LastSynced = new DateTime(2000,1,1)
+                LastSynced = new DateTime(2000, 1, 1)
             };
             db.PlaylistInfo.Add(playlistInfo);
             db.SaveChanges();
@@ -253,8 +257,8 @@ namespace PlaylistChaser.Web.Controllers
                     if (!playlist.MainSourceId.HasValue)
                         continue;
 
-                    var success = syncPlaylistFrom(playlist.Id, playlist.MainSourceId.Value);
-                    var msgDisplay = ToastMessageDisplay(success, playlists.Count, startTime, ref timeElapsedList, ref nSynced, ref nSkipped);
+                    var returnObj = syncPlaylistFrom(playlist.Id, playlist.MainSourceId.Value);
+                    var msgDisplay = ToastMessageDisplay(returnObj.Success, playlists.Count, startTime, ref timeElapsedList, ref nSynced, ref nSkipped);
 
                     progressHub.UpdateProgressToast("Syncing Playlists...", nSynced, playlists.Count, msgDisplay, toastId, true);
                 }
@@ -270,22 +274,13 @@ namespace PlaylistChaser.Web.Controllers
 
         #region Sync Playlist From
 
-        /// <summary>
-        /// brings the local db up to date with the youtube playlist
-        /// </summary>
-        /// <param name="id">local playlist id</param>
-        /// <returns></returns>
-
         public ActionResult SyncPlaylistFrom(int id, Sources source)
         {
-            var success = syncPlaylistFrom(id, source);
+            var returnObj = syncPlaylistFrom(id, source);
 
-            if (success)
-                return new JsonResult(new { success = true });
-            else
-                return new JsonResult(new { success = false, message = "Sync Failed" });
+            return JsonResponse(returnObj);
         }
-        private bool syncPlaylistFrom(int id, Sources? source = null)
+        private ReturnModel syncPlaylistFrom(int id, Sources? source = null)
         {
             try
             {
@@ -294,21 +289,21 @@ namespace PlaylistChaser.Web.Controllers
                 {
                     case PLaylistTypes.Simple:
                         if (!source.HasValue)
-                            return false;
+                            return new ReturnModel("No Source defined!");
 
-                        var success = syncPlaylistFromSimple(id, source.Value);
-                        return success;
+                        var returnModel = syncPlaylistFromSimple(id, source.Value);
+                        return returnModel;
                     case PLaylistTypes.Combined:
                         syncPlaylistFromCombined(id);
                         break;
                     default:
                         throw new NotImplementedException(ErrorHelper.NotImplementedForThatType);
                 }
-                return true;
+                return new ReturnModel();
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return false;
+                return new ReturnModel(ex.Message);
             }
         }
 
@@ -327,8 +322,8 @@ namespace PlaylistChaser.Web.Controllers
             {
                 if (IsCancelled(toastId, out var startTime)) break;
 
-                var success = syncPlaylistFromSimple(playlist.Id, playlist.MainSourceId.Value);
-                var msgDisplay = ToastMessageDisplay(success, playlists.Count, startTime, ref timeElapsedList, ref nCompleted, ref nSkipped);
+                var returnObj = syncPlaylistFromSimple(playlist.Id, playlist.MainSourceId.Value);
+                var msgDisplay = ToastMessageDisplay(returnObj.Success, playlists.Count, startTime, ref timeElapsedList, ref nCompleted, ref nSkipped);
 
                 progressHub.UpdateProgressToast("Syncing Combined Playlists...", nCompleted, playlists.Count, msgDisplay, toastId, true);
             }
@@ -338,13 +333,13 @@ namespace PlaylistChaser.Web.Controllers
             syncCombinedPlaylistLocal(id);
         }
 
-        private bool syncPlaylistFromSimple(int id, Sources source)
+        private ReturnModel syncPlaylistFromSimple(int id, Sources source)
         {
             var info = db.PlaylistInfo.Single(i => i.PlaylistId == id && i.SourceId == source);
 
             //skip if last sync was less than 5min ago
             if (info.LastSynced > DateTime.Now.AddMinutes(-5))
-                return false;
+                return new ReturnModel("Already recently Synced");
 
             List<SongInfo> songInfos;
 
@@ -374,7 +369,7 @@ namespace PlaylistChaser.Web.Controllers
             info.LastSynced = DateTime.Now;
             db.SaveChanges();
 
-            return true;
+            return new ReturnModel();
         }
 
         private List<Song> addSongsToDb(List<SongInfo> songsFromPlaylist)
@@ -453,11 +448,16 @@ namespace PlaylistChaser.Web.Controllers
                 //  prepare
                 var songsToUpload = missingSongs.Select(s => new UploadSong(s.Id, db.GetCachedList(db.SongInfo).SingleOrDefault(i => i.SourceId == source && i.SongId == s.Id)?.SongIdSource)).ToList();
                 songsToUpload = songsToUpload.Where(s => !string.IsNullOrEmpty(s.SongIdSource)).ToList();
+                songsToUpload = songsToUpload.DistinctBy(s => s.SongIdSource).ToList();
                 //  upload
-                await uploadSongsToPlaylist(source, info.PlaylistIdSource, songsToUpload);
+                var returnObj = await uploadSongsToPlaylist(source, info.PlaylistIdSource, songsToUpload);
+                if (!returnObj.Success)
+                    return JsonResponse(returnObj);
 
                 //update Playlist
-                await updatePlaylist(source, info.PlaylistIdSource, info.Name, info.Description);
+                returnObj = await updatePlaylist(source, info.PlaylistIdSource, info.Name, info.Description);
+                if (!returnObj.Success)
+                    return JsonResponse(returnObj);
 
 
                 return new JsonResult(new { success = true });
@@ -516,16 +516,24 @@ namespace PlaylistChaser.Web.Controllers
         }
         private async Task<List<FoundSong>> findSongs(List<Song> missingSongs, Sources source)
             => await songController.FindSongs(missingSongs, source);
-        private async Task uploadSongsToPlaylist(Sources source, string playlistIdSource, List<UploadSong> songsToUpload)
+        private async Task<ReturnModel> uploadSongsToPlaylist(Sources source, string playlistIdSource, List<UploadSong> songsToUpload)
         {
             if (songsToUpload.Any(s => string.IsNullOrEmpty(s.SongIdSource)))
                 throw new Exception("SongIdSource can't be null");
+
+            if (songsToUpload.GroupBy(x => x.SongIdSource).Where(x => x.Count() > 1).Any())
+                throw new Exception("There are duplicates");
+
+            var songStates = db.GetCachedList(db.SongState).Where(i => i.SourceId == source && songsToUpload.Select(s => s.SongId).Contains(i.SongId)).ToList();
+            if (songStates.Any(i => !(i.StateId == SongStates.Available)))
+                throw new Exception("All songs must be available");
 
             var toastId = GetToastId();
             await progressHub.InitProgressToast("Add songs to playlist", toastId, true);
             var timeElapsedList = new List<int>();
             int nAdded = 0;
             int nSkipped = 0;
+            ReturnModel returnObj = null;
             switch (source)
             {
                 case Sources.Youtube:
@@ -533,13 +541,13 @@ namespace PlaylistChaser.Web.Controllers
                     {
                         if (IsCancelled(toastId, out var startTime)) break;
 
-                        var success = ytHelper.AddSongToPlaylist(playlistIdSource, song.SongIdSource);
-                        updatePlaylistSongState(source, playlistIdSource, song.SongIdSource, success);
+                        returnObj = ytHelper.AddSongToPlaylist(playlistIdSource, song.SongIdSource);
+                        updatePlaylistSongState(source, playlistIdSource, song.SongIdSource, returnObj.Success);
 
-                        var msgDisplay = ToastMessageDisplay(success, songsToUpload.Count, startTime, ref timeElapsedList, ref nAdded, ref nSkipped, "{0} / {1} uploaded");
+                        var msgDisplay = ToastMessageDisplay(returnObj.Success, songsToUpload.Count, startTime, ref timeElapsedList, ref nAdded, ref nSkipped, "{0} / {1} uploaded");
 
                         await progressHub.UpdateProgressToast("Uploading songs to playlist...", nAdded, songsToUpload.Count, msgDisplay, toastId, true);
-                        if (!success)
+                        if (!returnObj.Success)
                             break;
                     }
                     break;
@@ -552,15 +560,15 @@ namespace PlaylistChaser.Web.Controllers
                         if (IsCancelled(toastId, out var startTime)) break;
 
                         var batch = songsToUpload.Skip(i * maxItemsRequest).Take(maxItemsRequest).ToList();
-                        var success = spottyHelper.AddSongsToPlaylistBatch(playlistIdSource, batch.Select(b => b.SongIdSource).ToList());
+                        returnObj = spottyHelper.AddSongsToPlaylistBatch(playlistIdSource, batch.Select(b => b.SongIdSource).ToList());
 
-                        updatePlaylistSongsState(source, playlistIdSource, batch.Select(s => s.SongIdSource).ToList(), success);
-                        if (success)
+                        updatePlaylistSongsState(source, playlistIdSource, batch.Select(s => s.SongIdSource).ToList(), returnObj.Success);
+                        if (returnObj.Success)
                         {
                             batch.ForEach(s => s.Uploaded = true);
                             nAdded = (i + 1) * maxItemsRequest;
 
-                            var msgDisplay = ToastMessageDisplay(success, songsToUpload.Count, startTime, ref timeElapsedList, ref nAdded, ref nSkipped);
+                            var msgDisplay = ToastMessageDisplay(returnObj.Success, songsToUpload.Count, startTime, ref timeElapsedList, ref nAdded, ref nSkipped);
 
                             await progressHub.UpdateProgressToast("Adding songs to playlist...", nAdded, songsToUpload.Count, msgDisplay, toastId, true);
                         }
@@ -572,22 +580,23 @@ namespace PlaylistChaser.Web.Controllers
                     throw new NotImplementedException(ErrorHelper.NotImplementedForThatSource);
             }
             await progressHub.EndProgressToast(toastId);
+            return returnObj;
         }
-        private async Task<bool> updatePlaylist(Sources source, string playlistIdSource, string playlistName, string description)
+        private async Task<ReturnModel> updatePlaylist(Sources source, string playlistIdSource, string playlistName, string description)
         {
-            bool updated = false;
+            ReturnModel returnObj;
             switch (source)
             {
                 case Sources.Youtube:
-                    updated = await ytHelper.UpdatePlaylist(playlistIdSource, playlistName, description);
+                    returnObj = await ytHelper.UpdatePlaylist(playlistIdSource, playlistName, description);
                     break;
                 case Sources.Spotify:
-                    updated = await spottyHelper.UpdatePlaylist(playlistIdSource, playlistName, description);
+                    returnObj = await spottyHelper.UpdatePlaylist(playlistIdSource, playlistName, description);
                     break;
                 default:
                     throw new NotImplementedException(ErrorHelper.NotImplementedForThatSource);
             }
-            return updated;
+            return returnObj;
         }
         private string getPlaylistDescriptionText(string playlistDescription, int uploadedSongsCount, int totalSongsCount)
             => playlistDescription + string.Format("\nFound {0}/{1} Songs, {2}", uploadedSongsCount.ToString(), totalSongsCount.ToString(), DateTime.Now.ToString());
@@ -712,20 +721,20 @@ namespace PlaylistChaser.Web.Controllers
                 if (!info.IsMine)
                     return new JsonResult(new { success = false, message = "you don't own the playlist" });
 
-                bool deleteSucceeded;
+                ReturnModel returnObj;
                 switch (source)
                 {
                     case Sources.Youtube:
-                        deleteSucceeded = await ytHelper.DeletePlaylist(info.PlaylistIdSource);
+                        returnObj = await ytHelper.DeletePlaylist(info.PlaylistIdSource);
                         break;
                     case Sources.Spotify:
-                        deleteSucceeded = await spottyHelper.DeletePlaylist(info.PlaylistIdSource);
+                        returnObj = await spottyHelper.DeletePlaylist(info.PlaylistIdSource);
                         break;
                     default:
                         throw new NotImplementedException(ErrorHelper.NotImplementedForThatSource);
                 }
 
-                if (!deleteSucceeded)
+                if (!returnObj.Success)
                     return new JsonResult(new { success = false, message = $"couldn't delete playlist on {source.ToString()}" });
 
                 //remove info
@@ -811,6 +820,32 @@ namespace PlaylistChaser.Web.Controllers
             //    return;
             //db.Song.RemoveRange(deletableSongs);
             //db.SaveChanges();
+        }
+
+
+        public ActionResult RemoveDuplicatesFromPlaylist(Sources source, int playlistId)
+        {
+            try
+            {
+                var info = db.GetCachedList(db.PlaylistInfo).Single(i => i.SourceId == source && i.PlaylistId == playlistId);
+                List<SongInfo> songInfos;
+                switch (source)
+                {
+                    case Sources.Youtube:
+                        var success = ytHelper.RemoveDuplicatesFromPlaylist(info.PlaylistIdSource);
+                        break;
+                    case Sources.Spotify:
+                        throw new NotImplementedException(ErrorHelper.NotImplementedForThatSource);
+                    default:
+                        throw new NotImplementedException(ErrorHelper.NotImplementedForThatSource);
+                }
+
+                return JsonResponse();
+            }
+            catch (Exception ex)
+            {
+                return JsonResponse(ex);
+            }
         }
         #endregion
 
@@ -949,6 +984,36 @@ namespace PlaylistChaser.Web.Controllers
         #endregion
 
         #region SyncPlaylistSongStatesFrom
+        public ActionResult SyncPlaylistSongStatesFrom(Sources source, int playlistId)
+        {
+            try
+            {
+                var info = db.GetCachedList(db.PlaylistInfo).Single(i => i.SourceId == source && i.PlaylistId == playlistId);
+
+                List<SongInfo> songInfos;
+                switch (source)
+                {
+                    case Sources.Youtube:
+                        songInfos = ytHelper.GetPlaylistSongs(info.PlaylistIdSource);
+                        break;
+                    case Sources.Spotify:
+                        songInfos = spottyHelper.GetPlaylistSongs(info.PlaylistIdSource);
+                        break;
+                    default:
+                        throw new NotImplementedException(ErrorHelper.NotImplementedForThatSource);
+                }
+
+                removeAllPlaylistSongStates(source, playlistId);
+                addPlaylistSongStates(source, playlistId, songInfos.Select(i => i.SongIdSource).ToList());
+
+                return JsonResponse();
+            }
+            catch (Exception ex)
+            {
+                return JsonResponse(ex);
+            }
+        }
+
         private void removeAllPlaylistSongStates(Sources source, int playlistId)
         {
             var playlistSongIds = db.GetCachedList(db.PlaylistSong).Where(ps => ps.PlaylistId == playlistId).Select(ps => ps.Id).ToList();
@@ -959,7 +1024,6 @@ namespace PlaylistChaser.Web.Controllers
 
         private void addPlaylistSongStates(Sources source, int playlistId, List<string> songIdsAtSource, PlaylistSongStates playlistSongState = PlaylistSongStates.Added)
         {
-            //get songIds 
             var songids = db.GetCachedList(db.SongInfo).Where(i => i.SourceId == source && songIdsAtSource.Contains(i.SongIdSource)).Select(i => i.SongId).ToList();
             var playlistSongIds = db.GetCachedList(db.PlaylistSong).Where(ps => ps.PlaylistId == playlistId && songids.Contains(ps.SongId)).Select(ps => ps.Id).ToList();
 

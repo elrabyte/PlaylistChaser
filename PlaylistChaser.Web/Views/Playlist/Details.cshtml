@@ -183,4 +183,12 @@
     function editPlaylist() {
         playlistEdit.show();
     }
+
+
+    function removeDuplicatesFromPlaylist(source) {
+        let url = '@Url.Url("RemoveDuplicatesFromPlaylist", "Playlist", new {playlistId = Model.Playlist.Id})'
+        $.post(url, { source: source }, function (data, status, jqXHR) {
+            location.reload();
+        });
+    }
 </script>
