@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.DotNet.MSIdentity.Shared;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using PlaylistChaser.Web.Database;
@@ -249,7 +250,7 @@ namespace PlaylistChaser.Web.Controllers
                 int nSkipped = 0;
                 var playlists = db.GetCachedList(db.Playlist).ToList();
                 var timeElapsedList = new List<int>();
-                //skip playlist with last sync newer than 5min                
+                ReturnModel returnObj = null;
                 foreach (var playlist in playlists)
                 {
                     if (IsCancelled(toastId, out var startTime)) break;
@@ -257,17 +258,21 @@ namespace PlaylistChaser.Web.Controllers
                     if (!playlist.MainSourceId.HasValue)
                         continue;
 
-                    var returnObj = syncPlaylistFrom(playlist.Id, playlist.MainSourceId.Value);
+                    returnObj = syncPlaylistFrom(playlist.Id, playlist.MainSourceId.Value);
+                    if (!returnObj.Success)
+                        break;
+
                     var msgDisplay = ToastMessageDisplay(returnObj.Success, playlists.Count, startTime, ref timeElapsedList, ref nSynced, ref nSkipped);
 
                     progressHub.UpdateProgressToast("Syncing Playlists...", nSynced, playlists.Count, msgDisplay, toastId, true);
                 }
                 progressHub.EndProgressToast(toastId);
-                return new JsonResult(new { success = true });
+
+                return JsonResponse(returnObj);
             }
             catch (Exception ex)
             {
-                return new JsonResult(new { success = false, message = ex.Message });
+                return JsonResponse(ex);
             }
         }
         #endregion
@@ -460,11 +465,11 @@ namespace PlaylistChaser.Web.Controllers
                     return JsonResponse(returnObj);
 
 
-                return new JsonResult(new { success = true });
+                return JsonResponse();
             }
             catch (Exception ex)
             {
-                return new JsonResult(new { success = false, message = ex.Message });
+                return JsonResponse(ex);
             }
         }
 

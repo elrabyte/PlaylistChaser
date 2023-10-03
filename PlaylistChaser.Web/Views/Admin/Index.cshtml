@@ -91,7 +91,7 @@
             data: form.serialize(),
             success: function (data) {
                 if (!data.success)
-                    return alert(data.message);
+                    return popupHelper.showError(data.message);
 
                 $("#divEdit").trigger("saved");
             },

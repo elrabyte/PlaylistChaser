@@ -36,7 +36,7 @@
 
     function ajaxCall(url, btn, source, onSuccessFunc) {
         if (url == null || btn == null)
-            return alert("url or button not set");
+            return popupHelper.showError("url or button not set");
 
         disableButtonRow();
         disableButton(btn);
@@ -49,7 +49,8 @@
                 if (!data.success) {
                     enableButtonRow();
                     enableButton(btn);
-                    return alert(data.message)
+                    debugger;
+                    return popupHelper.showError(data.message);
                 }
                 if (typeof onSuccessFunc === 'undefined')
                     location.reload();

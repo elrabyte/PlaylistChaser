@@ -197,9 +197,9 @@
             data: { source: source },
             success: function (data) {
                 if (!data.success)
-                    return alert(data.message)
+                    return popupHelper.showError(data.message)
                 else if (data.message)
-                    return alert(data.message)
+                    return popupHelper.showError(data.message)
                 location.reload();
             },
             dataType: "json"
@@ -213,9 +213,9 @@
             url: url,
             success: function (data) {
                 if (!data.success)
-                    return alert(data.message)
+                    return popupHelper.showError(data.message)
                 else if (data.message)
-                    return alert(data.message)
+                    return popupHelper.showError(data.message)
                 location.reload();
             },
             dataType: "json"
@@ -235,7 +235,7 @@
             url: url,
             success: function (data) {
                 if (!data.success)
-                    return alert(data.message)
+                    return popupHelper.showError(data.message)
                 else if (data.url)
                     return window.location.replace(data.url);
             },
@@ -250,7 +250,7 @@
             url: url,
             success: function (data) {
                 if (!data.success)
-                    return alert(data.message)
+                    return popupHelper.showError(data.message)
                 else if (data.url)
                     return window.location.replace(data.url);
             },
