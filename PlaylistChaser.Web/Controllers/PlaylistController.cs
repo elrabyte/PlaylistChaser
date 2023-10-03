@@ -110,6 +110,13 @@ namespace PlaylistChaser.Web.Controllers
             return PartialView(playlist);
         }
 
+        public ActionResult _CombinedPlaylistEntriesDetailsPartial(int playlistId)
+        {
+            var playlistIds = db.GetCachedList(db.CombinedPlaylistEntry).Where(c => c.CombinedPlaylistId == playlistId).Select(c => c.PlaylistId).ToList();
+            var playlists = db.GetCachedList(db.Playlist).Where(p => playlistIds.Contains(p.Id)).ToList();
+            return PartialView(playlists);
+        }
+
         #endregion
 
         #region Edit
@@ -493,11 +500,11 @@ namespace PlaylistChaser.Web.Controllers
                 case PLaylistTypes.Simple:
 
                     var originalInfo = db.GetCachedList(db.PlaylistInfo).Single(i => i.SourceId == playlist.MainSourceId && i.PlaylistId == playlist.Id);
-                    
+
 
                     var originalSource = originalInfo.SourceId.ToString();
                     var originalPlaylistName = originalInfo.Name;
-                    var originalCreatorName = originalInfo.CreatorName;                    
+                    var originalCreatorName = originalInfo.CreatorName;
 
                     playlistDescription = playlistDescription.Replace("$OriginalSource$", originalSource);
                     playlistDescription = playlistDescription.Replace("$OriginalPlaylistName$", originalPlaylistName);

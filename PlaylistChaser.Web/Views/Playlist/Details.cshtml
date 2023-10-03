@@ -160,6 +160,14 @@
         @Partials.ReloadablePartial("playlistInfosDetailsPartial",Url.Url("_PlaylistInfosDetailsPartial","Playlist", new { playlistId = Model.Playlist.Id }), true)
     </div>
 
+    @if (Model.Playlist.PlaylistTypeId == PLaylistTypes.Combined)
+    {
+        <hr />
+        <div class="row">
+            @Partials.ReloadablePartial("combinedPlaylistEntriesDetailsPartial",Url.Url("_CombinedPlaylistEntriesDetailsPartial","Playlist", new { playlistId = Model.Playlist.Id }), true)
+        </div>
+    }
+
     <hr />
     <div class="row">
         @Partials.ReloadablePartial("playlistSongsStatesSummary",Url.Url("_PlaylistSongStatesSummaryPartial", "Playlist", new { id = Model.Playlist.Id }), true)
