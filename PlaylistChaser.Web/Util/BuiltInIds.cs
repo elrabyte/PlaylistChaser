@@ -24,6 +24,7 @@
         {
             Added = 210,
             NotAdded = 200,
+            Deleted = 205,
         }
         public enum Entity
         {

@@ -214,7 +214,7 @@ namespace PlaylistChaser.Web.Util.API
         /// <param name="playlistId">youtube playlist id</param>
         /// <returns></returns>
         private List<PlaylistItemSnippet> getPlaylistSongs(string playlistId)
-        => getPlaylistItems(playlistId).Select(i => i.Snippet).ToList();
+            => getPlaylistItems(playlistId).Select(i => i.Snippet).ToList();
 
         private List<PlaylistItem> getPlaylistItems(string playlistId)
         {

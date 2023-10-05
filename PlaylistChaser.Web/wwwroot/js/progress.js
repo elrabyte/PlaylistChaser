@@ -28,10 +28,14 @@ var staticProgressToast = {
 
         let toastHtml = this.getHtml(title, toastId, cancellable)
         toastContainer.append(toastHtml);
+
+        let toast = $("#progressToast_" + toastId);
+        toast.find(".toast-body #progressBarContainer").hide();
     },
     updateProgress: function (title, progress, maxProgress, message, toastId, cancellable) {
         this.show(title, toastId, cancellable);
         let toast = $("#progressToast_" + toastId);
+        toast.find(".toast-body #progressBarContainer").show();
         toast.find(".toast-body #progressBarContainer").attr('aria-valuenow', progress);
         let percentage = ((progress / maxProgress) * 100).toFixed(2);
         toast.find(".toast-body #progressBar").css('width', percentage + '%');

@@ -1,0 +1,15 @@
+﻿@using PlaylistChaser.Web.Util;
+@using PlaylistChaser.Web.Models;
+@using Microsoft.AspNetCore.Mvc.Rendering;
+@model PlaylistSong
+
+@{
+    var sources = (List<Source>)ViewBag.Sources;
+}
+
+@foreach (var source in sources)
+{
+    @Html.Raw(source.DisplayName)
+    @HtmlHelperViewExtensions.RenderAction(Html, "_SongInfoEditPartial", "Song", new { source = source.Id, songId = Model.SongId })
+    @HtmlHelperViewExtensions.RenderAction(Html, "_PlaylistSongStateEditPartial", "Song", new { source = source.Id, playlistSongId = Model.Id })
+}

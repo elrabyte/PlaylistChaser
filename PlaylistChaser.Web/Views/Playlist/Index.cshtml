@@ -14,7 +14,7 @@
 @Partials.ModalBareBonePartial("addSimplePlaylistPartial", Url.Url( "_AddSimplePlaylistPartial", "Playlist"))
 @Partials.ModalBareBonePartial("addCombinedPlaylistPartial", Url.Url( "_AddCombinedPlaylistPartial", "Playlist"))
 
-<div class="container  mt-4">
+<div class="container mt-4">
     <div class="row">
         <div id="btn-header-row" class="btn-group" role="group" style="white-space:nowrap">
             <!--Add Simple Playlist-->
@@ -42,15 +42,25 @@
                 <i class="bi bi-grid-fill"></i>
             </a>
 
-            <!--Sync Playlists-->
+            <!--Sync Playlists from-->
             @{
-                actionText = "Sync Playlists";
+                actionText = "Sync Playlists from";
             }
-            <a id="syncPlaylistsBtn" class="btn btn-secondary d-none d-md-block" href="javascript:;" onclick="syncPlaylists()">
-                <i class="bi bi-cloud-download"></i> @actionText
+            <a id="syncPlaylistsFromBtn" class="btn btn-secondary d-none d-md-block" href="javascript:;" onclick="syncPlaylistsFrom()" title="Sync playlists from">
+                <i class="bi bi-cloud-download"></i> Sync Playlists
             </a>
-            <a id="syncPlaylistsBtn" class="btn btn-secondary d-block d-md-none" href="javascript:;" onclick="syncPlaylists()" title="@actionText">
+            <a id="syncPlaylistsFromBtn" class="btn btn-secondary d-block d-md-none" href="javascript:;" onclick="syncPlaylistsFrom()" title="Sync playlists from">
                 <i class="bi bi-cloud-download"></i>
+            </a>
+            <!--Sync Playlists to-->
+            @{
+                actionText = "Sync Playlists to";
+            }
+            <a id="syncPlaylistsToBtn" class="btn btn-secondary d-none d-md-block" href="javascript:;" onclick="syncPlaylistsTo()" title="Sync playlists to">
+                <i class="bi bi-cloud-upload"></i> Sync Playlists
+            </a>
+            <a id="syncPlaylistsToBtn" class="btn btn-secondary d-block d-md-none" href="javascript:;" onclick="syncPlaylistsTo()" title="Sync playlists to">
+                <i class="bi bi-cloud-upload"></i>
             </a>
 
             <!--Sync all Playlist Thumbnails-->
@@ -63,9 +73,6 @@
             <a id="syncPlaylistThumbnailsBtn" class="btn btn-tertiary d-block d-lg-none" href="javascript:;" onclick="syncPlaylistThumbnailsFrom()" title="@actionText">
                 <i class="bi bi-file-image"></i>
             </a>
-
-
-
         </div>
         <!--combine mode-->
         <div id="combine-mode-section" class="btn-group" role="group" style="white-space:nowrap">
@@ -207,7 +214,38 @@
     }
 
     function syncPlaylists() {
+        let url = "/Playlist/SyncPlaylists/";
+        $.ajax({
+            type: "POST",
+            url: url,
+            success: function (data) {
+                if (!data.success)
+                    return popupHelper.showError(data.message)
+                else if (data.message)
+                    return popupHelper.showError(data.message)
+                location.reload();
+            },
+            dataType: "json"
+        });
+    }
+
+    function syncPlaylistsFrom() {
         let url = "/Playlist/SyncPlaylistsFrom/";
+        $.ajax({
+            type: "POST",
+            url: url,
+            success: function (data) {
+                if (!data.success)
+                    return popupHelper.showError(data.message)
+                else if (data.message)
+                    return popupHelper.showError(data.message)
+                location.reload();
+            },
+            dataType: "json"
+        });
+    }
+    function syncPlaylistsTo() {
+        let url = "/Playlist/SyncPlaylistsTo/";
         $.ajax({
             type: "POST",
             url: url,
