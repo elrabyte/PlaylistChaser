@@ -1,6 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Hangfire;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.DotNet.MSIdentity.Shared;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using PlaylistChaser.Web.Database;
@@ -8,10 +8,7 @@ using PlaylistChaser.Web.Models;
 using PlaylistChaser.Web.Models.SearchModel;
 using PlaylistChaser.Web.Util;
 using PlaylistChaser.Web.Util.API;
-using System.Collections.Generic;
 using System.Data.Entity;
-using System.Diagnostics;
-using System.Net.Http.Headers;
 using static PlaylistChaser.Web.Util.BuiltInIds;
 using static PlaylistChaser.Web.Util.Helper;
 using Playlist = PlaylistChaser.Web.Models.Playlist;
@@ -22,7 +19,11 @@ namespace PlaylistChaser.Web.Controllers
     public class PlaylistController : BaseController
     {
         public PlaylistController(IConfiguration configuration, PlaylistChaserDbContext db, SongController songController, IHubContext<ProgressHub> hubContext, IMemoryCache memoryCache)
-            : base(configuration, db, hubContext, memoryCache) { this.songController = songController; }
+            : base(configuration, db, hubContext, memoryCache)
+        {
+            this.songController = songController;
+            RecurringJob.AddOrUpdate("SyncPlaylists", () => SyncPlaylists(), Cron.Daily);
+        }
 
         #region Properties
         private YoutubeApiHelper _ytHelper;
@@ -247,6 +248,59 @@ namespace PlaylistChaser.Web.Controllers
         }
         #endregion
 
+        #region Sync Playlists
+        public ActionResult SyncPlaylists()
+        {
+            try
+            {
+                var toastId = GetToastId();
+                progressHub.InitProgressToast("Sync Playlists", toastId, true);
+                int nSynced = 0;
+                int nSkipped = 0;
+                var playlists = db.GetCachedList(db.Playlist).ToList();
+                var timeElapsedList = new List<int>();
+                ReturnModel returnObj = null;
+                foreach (var playlist in playlists)
+                {
+                    if (IsCancelled(toastId, out var startTime)) break;
+
+                    if (!playlist.MainSourceId.HasValue)
+                        continue;
+
+                    #region Sync playlist from
+                    var tmpToastId = GetToastId();
+                    progressHub.InitProgressToast($"Syncing playlist {playlist.Name} from {playlist.MainSourceId.Value}", tmpToastId, true);
+                    returnObj = syncPlaylistFrom(playlist.Id, playlist.MainSourceId.Value);
+                    progressHub.EndProgressToast(tmpToastId);
+                    if (!returnObj.Success)
+                        break;
+                    #endregion
+
+                    #region Sync playlist to
+                    var infos = db.GetCachedList(db.PlaylistInfo).Where(i => i.IsMine && i.SourceId != (playlist.MainSourceId ?? 0) && i.PlaylistId == playlist.Id).ToList();
+                    foreach (var info in infos)
+                    {
+                        tmpToastId = GetToastId();
+                        progressHub.InitProgressToast($"Syncing playlist {playlist.Name} to {info.SourceId}", tmpToastId, true);
+                        returnObj = syncPlaylistTo(info.SourceId, info.PlaylistId).Result;
+                        progressHub.EndProgressToast(tmpToastId);
+                    }
+                    #endregion
+
+                    var msgDisplay = ToastMessageDisplay(returnObj.Success, playlists.Count, startTime, ref timeElapsedList, ref nSynced, ref nSkipped);
+                    progressHub.UpdateProgressToast($"Syncing Playlist...", nSynced, playlists.Count, msgDisplay, toastId, true);
+                }
+                progressHub.EndProgressToast(toastId);
+
+                return JsonResponse(returnObj);
+            }
+            catch (Exception ex)
+            {
+                return JsonResponse(ex);
+            }
+        }
+        #endregion
+
         #region Sync Playlists From
         public ActionResult SyncPlaylistsFrom()
         {
@@ -272,7 +326,7 @@ namespace PlaylistChaser.Web.Controllers
 
                     var msgDisplay = ToastMessageDisplay(returnObj.Success, playlists.Count, startTime, ref timeElapsedList, ref nSynced, ref nSkipped);
 
-                    progressHub.UpdateProgressToast("Syncing Playlists...", nSynced, playlists.Count, msgDisplay, toastId, true);
+                    progressHub.UpdateProgressToast($"Syncing Playlist {playlist.Name} from {playlist.MainSourceId.Value.ToString()}", nSynced, playlists.Count, msgDisplay, toastId, true);
                 }
                 progressHub.EndProgressToast(toastId);
 
@@ -284,7 +338,6 @@ namespace PlaylistChaser.Web.Controllers
             }
         }
         #endregion
-
         #region Sync Playlist From
 
         public ActionResult SyncPlaylistFrom(int id, Sources source)
@@ -417,76 +470,118 @@ namespace PlaylistChaser.Web.Controllers
 
         #endregion
 
-        #region Sync Playlist To
-        public async Task<ActionResult> SyncPlaylistTo(int id, Sources source)
+        #region Sync Playlists To
+        public async Task<ActionResult> SyncPlaylistsTo()
         {
             try
             {
-                var playlist = db.GetCachedList(db.Playlist).Single(p => p.Id == id);
+                var toastId = GetToastId();
+                progressHub.InitProgressToast("Sync Playlists To", toastId, true);
+                int nSynced = 0;
+                int nSkipped = 0;
+                var playlists = db.GetCachedList(db.Playlist).ToList();
+                var timeElapsedList = new List<int>();
+                ReturnModel returnObj = null;
 
-                //create info - first time for that source
-                var info = db.PlaylistInfo.SingleOrDefault(i => i.SourceId == source && i.PlaylistId == id);
-                if (info != null && !info.IsMine)
-                    return new JsonResult(new { success = false, message = "No permission to edit playlist at source" });
+                var playlistIds = playlists.Select(p => p.Id).ToList();
 
+                var infos = new List<PlaylistInfo>();
+                foreach (var playlist in playlists)
+                    infos = db.GetCachedList(db.PlaylistInfo).Where(i => i.IsMine && i.SourceId != (playlist.MainSourceId ?? 0) && i.PlaylistId == playlist.Id).ToList();
 
-                //create playlist if doesn't exists
-                if (string.IsNullOrEmpty(info?.PlaylistIdSource))
+                foreach (var info in infos)
                 {
-                    PlaylistInfo newInfo;
-                    switch (source)
-                    {
-                        case Sources.Youtube:
-                            newInfo = await ytHelper.CreatePlaylist(playlist.Name, playlist.Description);
-                            break;
-                        case Sources.Spotify:
-                            newInfo = await spottyHelper.CreatePlaylist(playlist.Name, playlist.Description);
-                            break;
-                        default:
-                            throw new NotImplementedException(ErrorHelper.NotImplementedForThatSource);
-                    }
+                    if (IsCancelled(toastId, out var startTime)) break;
 
-                    info = addPlaylistInfoToDb(id, source, newInfo.PlaylistIdSource, newInfo.Name, newInfo.CreatorName, true, newInfo.Url, newInfo.Description);
+                    returnObj = await syncPlaylistTo(info.SourceId, info.PlaylistId);
+
+                    if (!returnObj.Success)
+                        break;
+
+                    var msgDisplay = ToastMessageDisplay(returnObj.Success, playlists.Count, startTime, ref timeElapsedList, ref nSynced, ref nSkipped);
+
+                    progressHub.UpdateProgressToast($"Syncing Playlist {info.Name} to {info.SourceId.ToString()}", nSynced, playlists.Count, msgDisplay, toastId, true);
                 }
+                progressHub.EndProgressToast(toastId);
 
-                //get missing songs
-                var missingSongs = getMissingSongs(id, source);
-                if (!missingSongs.Any())
-                    return new JsonResult(new { success = true, message = "Already up to date!" });
-
-                //check if songs exists at source
-                var foundSongs = await findSongs(missingSongs, source);
-
-                //add songs to playlist
-                //  prepare
-                var songsToUpload = missingSongs.Select(s => new UploadSong(s.Id, db.GetCachedList(db.SongInfo).SingleOrDefault(i => i.SourceId == source && i.SongId == s.Id)?.SongIdSource)).ToList();
-                songsToUpload = songsToUpload.Where(s => !string.IsNullOrEmpty(s.SongIdSource)).ToList();
-                songsToUpload = songsToUpload.DistinctBy(s => s.SongIdSource).ToList();
-
-                //  upload
-                var returnObj = new ReturnModel();
-                if (songsToUpload.Any())
-                    returnObj = await uploadSongsToPlaylist(source, info.PlaylistIdSource, songsToUpload);
-                if (!returnObj.Success)
-                    return JsonResponse(returnObj);
-
-                //update Playlist
-                var playlistDescription = getPlaylistDescriptionText(info);
-                returnObj = await updatePlaylist(source, info.PlaylistIdSource, info.Name, playlistDescription);
-                if (!returnObj.Success)
-                    return JsonResponse(returnObj);
-
-
-                return JsonResponse();
+                return JsonResponse(returnObj);
             }
             catch (Exception ex)
             {
                 return JsonResponse(ex);
             }
         }
-        private string getPlaylistDescriptionText(PlaylistInfo info, string descriptionText = "Copied from $OriginalSource$: \n$OriginalPlaylistName$ by $OriginalCreatorName$. \n$SongsUploaded$ / $SongsTotal$ - $LastChangeDate$")
+        #endregion
+        #region Sync Playlist To
+
+        public async Task<ActionResult> SyncPlaylistTo(int id, Sources source)
         {
-            var playlistDescription = descriptionText;
+            var returnObj = await syncPlaylistTo(source, id);
+            return JsonResponse(returnObj);
+        }
+        private async Task<ReturnModel> syncPlaylistTo(Sources source, int id)
+        {
+            var playlist = db.GetCachedList(db.Playlist).Single(p => p.Id == id);
+
+            //create info - first time for that source
+            var info = db.PlaylistInfo.SingleOrDefault(i => i.SourceId == source && i.PlaylistId == id);
+            if (info != null && !info.IsMine)
+                throw new Exception("No permission to edit playlist at source");
+
+
+            //create playlist if doesn't exists
+            if (string.IsNullOrEmpty(info?.PlaylistIdSource))
+            {
+                PlaylistInfo newInfo;
+                switch (source)
+                {
+                    case Sources.Youtube:
+                        newInfo = await ytHelper.CreatePlaylist(playlist.Name, playlist.Description);
+                        break;
+                    case Sources.Spotify:
+                        newInfo = await spottyHelper.CreatePlaylist(playlist.Name, playlist.Description);
+                        break;
+                    default:
+                        throw new NotImplementedException(ErrorHelper.NotImplementedForThatSource);
+                }
+
+                string descriptionText = "Copied from $OriginalSource$: \n$OriginalPlaylistName$ by $OriginalCreatorName$. \n$SongsUploaded$ / $SongsTotal$ - $LastChangeDate$";
+                info = addPlaylistInfoToDb(id, source, newInfo.PlaylistIdSource, newInfo.Name, newInfo.CreatorName, true, newInfo.Url, descriptionText);
+            }
+
+            //get missing songs
+            var missingSongs = getMissingSongs(id, source);
+            if (!missingSongs.Any())
+                return new ReturnModel(true, "Already up to date!");
+
+
+            //check if songs exists at source
+            var foundSongs = await findSongs(missingSongs, source);
+
+            //add songs to playlist
+            //  prepare
+            var songsToUpload = missingSongs.Select(s => new UploadSong(s.Id, db.GetCachedList(db.SongInfo).SingleOrDefault(i => i.SourceId == source && i.SongId == s.Id)?.SongIdSource)).ToList();
+            songsToUpload = songsToUpload.Where(s => !string.IsNullOrEmpty(s.SongIdSource)).ToList();
+            songsToUpload = songsToUpload.DistinctBy(s => s.SongIdSource).ToList();
+
+            //  upload
+            var returnObj = new ReturnModel();
+            if (songsToUpload.Any())
+                returnObj = await uploadSongsToPlaylist(source, info.PlaylistIdSource, songsToUpload);
+            if (!returnObj.Success)
+                return returnObj;
+
+            //update Playlist
+            var playlistDescription = getPlaylistDescriptionText(info);
+            returnObj = await updatePlaylist(source, info.PlaylistIdSource, info.Name, playlistDescription);
+            if (!returnObj.Success)
+                return returnObj;
+
+            return returnObj;
+        }
+        private string getPlaylistDescriptionText(PlaylistInfo info)
+        {
+            var playlistDescription = info.Description;
             var playlist = db.GetCachedList(db.Playlist).Single(p => p.Id == info.PlaylistId);
             var playlistSongIds = db.GetCachedList(db.PlaylistSong).Where(ps => ps.PlaylistId == playlist.Id).Select(ps => ps.Id).ToList();
             var playlistSongStates = db.GetCachedList(db.PlaylistSongState).Where(pss => pss.SourceId == info.SourceId && pss.StateId == PlaylistSongStates.Added && playlistSongIds.Contains(pss.PlaylistSongId)).ToList();

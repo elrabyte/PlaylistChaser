@@ -1,0 +1,41 @@
+﻿@using PlaylistChaser.Web.Util;
+@using PlaylistChaser.Web.Models;
+@using static PlaylistChaser.Web.Util.BuiltInIds;
+@model PlaylistSongState
+
+<div class="row">
+    <div class="col-12">
+        @if (Model == null)
+        {
+            @("No State yet")
+        }
+        else
+        {
+
+            <form asp-action="_PlaylistSongStateEditPartial">
+                @Html.HiddenFor(m => m.SourceId)
+                @Html.HiddenFor(m => m.PlaylistSongId)
+
+                <div class="row">
+                    @Html.BsLabelFor(m => m.StateId, colClass:"col-sm-3")
+                    <div class="col-sm-9">
+                        <select asp-for="StateId"
+                                class="form-control"
+                                asp-items="Html.GetEnumSelectList<PlaylistSongStates>()">
+                            <option>Select type ...</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="float:right">
+                    @Controls.SubmitButton()
+                </div>
+            </form>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

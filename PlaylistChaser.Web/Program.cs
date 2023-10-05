@@ -1,3 +1,4 @@
+using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using PlaylistChaser.Web.Controllers;
 using PlaylistChaser.Web.Database;
@@ -15,6 +16,16 @@ builder.Services.AddSession();
 builder.Services.AddSignalR();
 
 builder.Services.AddMemoryCache();
+
+// Add Hangfire services.
+builder.Services.AddHangfire(configuration => configuration
+    .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+    .UseSimpleAssemblyNameTypeSerializer()
+    .UseRecommendedSerializerSettings()
+    .UseSqlServerStorage(builder.Configuration.GetConnectionString("HangfireConnection")));
+
+// Add the processing server as IHostedService
+builder.Services.AddHangfireServer();
 
 // Add configuration sources
 var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
@@ -60,5 +71,13 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Playlist}/{action=Index}/{id?}");
 
+
+app.UseHangfireDashboard();
+
+app.UseEndpoints(endpoints =>
+{
+    endpoints.MapControllers();
+    endpoints.MapHangfireDashboard();
+});
 
 app.Run();

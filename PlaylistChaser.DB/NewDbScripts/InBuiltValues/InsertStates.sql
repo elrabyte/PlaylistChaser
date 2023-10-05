@@ -9,6 +9,7 @@ insert into [dbo].[State] (id, name, Entity)
 			(111, 'MaybeAvailable', 'Song'),
 
 			(200, 'NotAdded', 'PlaylistSong'),
+			(205, 'Deleted', 'PlaylistSong'),
 			(210, 'Added', 'PlaylistSong')
 
 set identity_insert [dbo].[State] off;

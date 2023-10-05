@@ -27,7 +27,7 @@
 </div>
 
 @Partials.ReloadablePartial("playlistSongsGrid", Url.Url("_PlaylistSongsGridDataPartial", "Song", new { PlaylistId = Model.PlaylistId }))
-@Partials.ModalPartial("songInfosEdit","Edit Songinfos", Url.Url("_SongInfosEditPartial", "Song"))
+@Partials.ModalPartial("playlistSongEdit","Edit Playlist song", Url.Url("_PlaylistSongEditPartial", "Song"))
 
 <script type="text/javascript">
 
@@ -83,11 +83,14 @@
     }
 </script>
 <!--#endregion-->
-<!--#region dropdown actions-->
+<!--#region grid actions-->
 <script type="text/javascript">
     function playlistSongsGrid_dblCliked(row, element, field) {
-        let songId = element._data.id;
-        songInfosEdit.show("?songId=" + songId);
+        let clickedField = field.prevObject;
+
+        let playlistSongId = element._data.id;
+        debugger;
+        playlistSongEdit.show("?playlistSongId=" + playlistSongId);
     }
 </script>
 <!--#endregion-->

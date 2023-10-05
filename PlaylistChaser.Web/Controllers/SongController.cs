@@ -101,6 +101,22 @@ namespace PlaylistChaser.Web.Controllers
             db.SaveChanges();
             return JsonResponse();
         }
+
+        [HttpGet]
+        public ActionResult _PlaylistSongStateEditPartial(Sources source, int playlistSongId)
+        {
+            var playlistSongState = db.GetCachedList(db.PlaylistSongState).SingleOrDefault(pss => pss.SourceId == source && pss.PlaylistSongId == playlistSongId);
+            return PartialView(playlistSongState);
+        }
+        [HttpPost]
+        public ActionResult _PlaylistSongStateEditPartial(Sources sourceId, int playlistSongId, PlaylistSongState uiPlaylistSongState)
+        {
+            var playlistSongState = db.PlaylistSongState.Single(s => s.SourceId == sourceId && s.PlaylistSongId == playlistSongId);
+            playlistSongState.StateId = uiPlaylistSongState.StateId;
+
+            db.SaveChanges();
+            return JsonResponse();
+        }
         #endregion
 
         #region Grid
@@ -278,6 +294,12 @@ namespace PlaylistChaser.Web.Controllers
             return PartialView(songInfos);
         }
 
+        public ActionResult _PlaylistSongEditpartial(int playlistSongId)
+        {
+            var playlistSong = db.GetCachedList(db.PlaylistSong).Single(ps => ps.Id == playlistSongId);
+            return PartialView(playlistSong);
+        }
+
         #endregion
 
         #endregion
@@ -361,6 +383,7 @@ namespace PlaylistChaser.Web.Controllers
                 if (newSongInfo.ArtistName == "NotAvailable")
                     stateId = SongStates.NotAvailable;
                 var returnObj = addFoundSongToDb(newSongInfo.SongId, newSongInfo.Name, newSongInfo.ArtistName, newSongInfo.SourceId, newSongInfo.SongIdSource, newSongInfo.Url, stateId);
+
                 var msgDisplay = ToastMessageDisplay(returnObj.Success, findSongs.Count, startTime, ref timeElapsedList, ref nFound, ref nSkipped);
 
                 await progressHub.UpdateProgressToast("Finding songs...", nFound, findSongs.Count, msgDisplay, toastId, true);
