@@ -1,16 +1,23 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Memory;
 using PlaylistChaser.Web.Database;
+using PlaylistChaser.Web.Models;
+using PlaylistChaser.Web.Util;
 
 namespace PlaylistChaser.Web.Controllers
 {
+    [Authorize]
     public class BaseController : Controller
     {
         protected readonly IConfiguration configuration;
         protected readonly PlaylistChaserDbContext db;
         protected readonly ProgressHub progressHub;
         protected readonly IMemoryCache memoryCache;
+
+        public User CurrentUser { get; private set; }
 
         public BaseController(IConfiguration configuration, PlaylistChaserDbContext db, IHubContext<ProgressHub> hubContext, IMemoryCache memoryCache)
         {
@@ -94,6 +101,6 @@ namespace PlaylistChaser.Web.Controllers
             }
             return false;
         }
-        #endregion
+        #endregion        
     }
 }

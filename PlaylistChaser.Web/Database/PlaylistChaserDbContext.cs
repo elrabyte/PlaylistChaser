@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -7,7 +9,7 @@ using System.Data;
 
 namespace PlaylistChaser.Web.Database
 {
-    public class PlaylistChaserDbContext : DbContext
+    public class PlaylistChaserDbContext : IdentityDbContext<User, IdentityRole<int>, int>
     {
         protected readonly IMemoryCache memoryCache;
         public PlaylistChaserDbContext(DbContextOptions<PlaylistChaserDbContext> options, IMemoryCache memoryCache) : base(options)
@@ -139,6 +141,16 @@ namespace PlaylistChaser.Web.Database
             ConfigureCompositeKey<SongState>(modelBuilder);
             ConfigureCompositeKey<PlaylistSongState>(modelBuilder);
             ConfigureCompositeKey<PlaylistInfo>(modelBuilder);
+
+            // Configure Identity tables
+            modelBuilder.Entity<User>().ToTable("AspNetUsers").HasKey(u => u.Id);
+            modelBuilder.Entity<IdentityRole<int>>().ToTable("AspNetRoles").HasKey(r => r.Id);
+            modelBuilder.Entity<IdentityUserClaim<int>>().ToTable("AspNetUserClaims").HasKey(uc => uc.Id);
+            modelBuilder.Entity<IdentityUserRole<int>>().ToTable("AspNetUserRoles").HasKey(ur => new { ur.UserId, ur.RoleId });
+            modelBuilder.Entity<IdentityUserLogin<int>>().ToTable("AspNetUserLogins").HasKey(ul => new { ul.LoginProvider, ul.ProviderKey });
+            modelBuilder.Entity<IdentityRoleClaim<int>>().ToTable("AspNetRoleClaims").HasKey(rc => rc.Id);
+            modelBuilder.Entity<IdentityUserToken<int>>().ToTable("AspNetUserTokens").HasKey(ut => new { ut.UserId, ut.LoginProvider, ut.Name });
+
         }
 
         private void ConfigureCompositeKey<TEntity>(ModelBuilder modelBuilder)

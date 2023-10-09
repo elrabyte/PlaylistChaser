@@ -9,6 +9,7 @@ using PlaylistChaser.Web.Models.SearchModel;
 using PlaylistChaser.Web.Util;
 using PlaylistChaser.Web.Util.API;
 using System.Data.Entity;
+using System.Security.Claims;
 using static PlaylistChaser.Web.Util.BuiltInIds;
 using static PlaylistChaser.Web.Util.Helper;
 using Playlist = PlaylistChaser.Web.Models.Playlist;
@@ -33,7 +34,10 @@ namespace PlaylistChaser.Web.Controllers
             {
                 if (_ytHelper == null)
                 {
-                    var oAuth = db.GetCachedList(db.OAuth2Credential).Single(c => c.UserId == 1 && c.Provider == Sources.Youtube.ToString());
+                    if (!int.TryParse(HttpContext.User.FindFirst(ClaimTypes.NameIdentifier).Value, out var userId))
+                        return null;
+
+                    var oAuth = db.GetCachedList(db.OAuth2Credential).Single(c => c.UserId == userId && c.Provider == Sources.Youtube.ToString());
                     _ytHelper = new YoutubeApiHelper(oAuth.AccessToken);
                 }
                 return _ytHelper;
@@ -47,7 +51,10 @@ namespace PlaylistChaser.Web.Controllers
             {
                 if (_spottyHelper == null)
                 {
-                    var oAuth = db.GetCachedList(db.OAuth2Credential).Single(c => c.UserId == 1 && c.Provider == Sources.Spotify.ToString());
+                    if (!int.TryParse(HttpContext.User.FindFirst(ClaimTypes.NameIdentifier).Value, out var userId))
+                        return null;
+                    
+                    var oAuth = db.GetCachedList(db.OAuth2Credential).Single(c => c.UserId == userId && c.Provider == Sources.Spotify.ToString());
                     _spottyHelper = new SpotifyApiHelper(oAuth.AccessToken);
                 }
                 return _spottyHelper;
