@@ -60,46 +60,72 @@
     <Folder Include="_publish" />
     <Folder Include="NewDbScripts" />
     <Folder Include="NewDbScripts\InBuiltValues" />
-    <Folder Include="SP" />
     <Folder Include="Type" />
+    <Folder Include="Schema" />
+    <Folder Include="Roles" />
+    <Folder Include="VIEWPROG" />
+    <Folder Include="VIEWPROG\SP" />
+    <Folder Include="VIEWPROG\Views" />
+    <Folder Include="dbo" />
+    <Folder Include="VIEWPROG\Functions" />
   </ItemGroup>
   <ItemGroup>
-    <Build Include="Playlist.sql" />
-    <Build Include="Song.sql" />
-    <Build Include="PlaylistType.sql" />
-    <Build Include="CombinedPlaylistEntry.sql" />
     <None Include="NewDbScripts\InBuiltValues\Insert_All.sql" />
     <Build Include="NewDbScripts\InBuiltValues\InsertPlaylistTypes.sql" />
-    <Build Include="Thumbnail.sql" />
-    <Build Include="SP\GetPlaylists.sql" />
-    <Build Include="SP\GetPlaylistSongs.sql" />
-    <Build Include="PlaylistSong.sql" />
-    <Build Include="Source.sql" />
     <Build Include="NewDbScripts\InBuiltValues\InsertSources.sql" />
-    <Build Include="State.sql" />
     <Build Include="NewDbScripts\InBuiltValues\InsertStates.sql" />
-    <Build Include="PlaylistSongState.sql" />
-    <Build Include="PlaylistInfo.sql" />
-    <Build Include="SongInfo.sql" />
-    <Build Include="OAuth2Credential.sql" />
-    <Build Include="SP\GetSongs.sql" />
-    <Build Include="SongState.sql" />
     <Build Include="Type\List_int.sql" />
-    <Build Include="SP\MergeSongs.sql" />
-    <Build Include="AspNetUserClaims.sql" />
-    <Build Include="AspNetUserTokens.sql" />
-    <Build Include="AspNetUsers.sql" />
-    <Build Include="AspNetUserLogins.sql" />
-    <Build Include="AspNetRoleClaims.sql" />
-    <Build Include="AspNetUserRoles.sql" />
-    <Build Include="AspNetRoles.sql" />
+    <Build Include="VIEWPROG\SP\GetPlaylists.sql" />
+    <Build Include="VIEWPROG\SP\GetPlaylistSongs.sql" />
+    <Build Include="VIEWPROG\SP\GetSongs.sql" />
+    <Build Include="VIEWPROG\SP\MergeSongs.sql" />
+    <Build Include="Roles\_grants.sql" />
+    <Build Include="VIEWPROG\Views\Playlist.sql" />
+    <Build Include="VIEWPROG\Views\Thumbnail.sql" />
+    <Build Include="VIEWPROG\Views\CombinedPlaylistEntry.sql" />
+    <Build Include="VIEWPROG\Views\PlaylistSong.sql" />
+    <Build Include="VIEWPROG\Views\PlaylistSongState.sql" />
+    <Build Include="VIEWPROG\Views\PlaylistType.sql" />
+    <Build Include="VIEWPROG\Views\Song.sql" />
+    <Build Include="VIEWPROG\Views\SongInfo.sql" />
+    <Build Include="VIEWPROG\Views\SongState.sql" />
+    <Build Include="VIEWPROG\Views\Source.sql" />
+    <Build Include="VIEWPROG\Views\State.sql" />
+    <Build Include="VIEWPROG\Views\OAuth2Credential.sql" />
+    <Build Include="VIEWPROG\Views\PlaylistInfo.sql" />
+    <Build Include="dbo\Thumbnail.sql" />
+    <Build Include="dbo\PlaylistInfo.sql" />
+    <Build Include="dbo\PlaylistSong.sql" />
+    <Build Include="dbo\PlaylistSongState.sql" />
+    <Build Include="dbo\PlaylistType.sql" />
+    <Build Include="dbo\Song.sql" />
+    <Build Include="dbo\SongInfo.sql" />
+    <Build Include="dbo\SongState.sql" />
+    <Build Include="dbo\Source.sql" />
+    <Build Include="dbo\State.sql" />
+    <Build Include="dbo\Playlist.sql" />
   </ItemGroup>
   <ItemGroup>
     <RefactorLog Include="PlaylistChaser.DB.refactorlog" />
   </ItemGroup>
   <ItemGroup>
     <None Include="_publish\local_playlistchaserdb.publish.xml" />
-    <None Include="PreDeployment.sql" />
+    <None Include="_PreDeployment.sql" />
     <None Include="_publish\prod_playlistchaserdb.publish.xml" />
+    <Build Include="Schema\VIEWPROG.sql" />
+    <Build Include="Roles\registered_user.sql" />
+  </ItemGroup>
+  <ItemGroup>
+    <Build Include="dbo\AspNetRoleClaims.sql" />
+    <Build Include="dbo\AspNetRoles.sql" />
+    <Build Include="dbo\AspNetUserClaims.sql" />
+    <Build Include="dbo\AspNetUserLogins.sql" />
+    <Build Include="dbo\AspNetUserRoles.sql" />
+    <Build Include="dbo\AspNetUsers.sql" />
+    <Build Include="dbo\AspNetUserTokens.sql" />
+    <Build Include="dbo\CombinedPlaylistEntry.sql" />
+    <Build Include="dbo\OAuth2Credential.sql" />
+    <Build Include="VIEWPROG\Functions\getCurrentUserId.sql" />
+    <Build Include="VIEWPROG\Views\AspNetUsers.sql" />
   </ItemGroup>
 </Project>

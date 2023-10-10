@@ -15,12 +15,12 @@ namespace PlaylistChaser.Web.Controllers
     public class AccountController : BaseController
     {
         public AccountController(IConfiguration configuration,
-                                 PlaylistChaserDbContext db,
                                  IHubContext<ProgressHub> hubContext,
                                  IMemoryCache memoryCache,
                                  SignInManager<User> signInManager,
-                                 UserManager<User> userManager)
-            : base(configuration, db, hubContext, memoryCache)
+                                 UserManager<User> userManager,
+                                 AdminDBContext dbAdmin)
+            : base(configuration, hubContext, memoryCache, dbAdmin)
         {
             this.signInManager = signInManager;
             this.userManager = userManager;
@@ -38,12 +38,11 @@ namespace PlaylistChaser.Web.Controllers
                 var clientSecret = configuration["Spotify:ClientSecret"];
                 var redirectUri = configuration["Spotify:RedirectUri"];
 
-
-
-                if (!int.TryParse(HttpContext.User.FindFirst(ClaimTypes.NameIdentifier).Value, out var userId))
+                var userId = getCurrentUserId();
+                if (userId == null)
                     return new JsonResult(new { success = false, message = "Can't get userId" });
 
-                var oAuth = db.OAuth2Credential.SingleOrDefault(a => a.UserId == userId && a.Provider == Sources.Spotify.ToString());
+                var oAuth = UserDbContext.OAuth2Credential.SingleOrDefault(a => a.UserId == userId && a.Provider == Sources.Spotify.ToString());
                 if (oAuth == null)
                 {
                     var url = SpotifyApiHelper.getLoginUri(clientId, redirectUri).ToString();
@@ -51,12 +50,12 @@ namespace PlaylistChaser.Web.Controllers
                 }
                 else if (oAuth.TokenExpiration < DateTime.Now) //refresh token
                 {
-                    var newOAuth = await SpotifyApiHelper.GetOAuthCredential(clientId, clientSecret, oAuth.RefreshToken, userId);
+                    var newOAuth = await SpotifyApiHelper.GetOAuthCredential(clientId, clientSecret, oAuth.RefreshToken, userId.Value);
                     oAuth.AccessToken = newOAuth.AccessToken;
                     oAuth.RefreshToken = newOAuth.RefreshToken;
                     oAuth.TokenExpiration = newOAuth.TokenExpiration;
 
-                    db.SaveChanges();
+                    UserDbContext.SaveChanges();
                 }
 
                 return new JsonResult(new { success = true });
@@ -73,12 +72,13 @@ namespace PlaylistChaser.Web.Controllers
             var clientSecret = configuration["Spotify:ClientSecret"];
             var redirectUri = configuration["Spotify:RedirectUri"];
 
-            if (!int.TryParse(HttpContext.User.FindFirst(ClaimTypes.NameIdentifier).Value, out var userId))
+            var userId = getCurrentUserId();
+            if (userId == null)
                 return new JsonResult(new { success = false, message = "Can't get userId" });
 
-            var oAuth = await SpotifyApiHelper.GetOauthCredential(code, clientId, clientSecret, redirectUri, userId);
-            db.OAuth2Credential.Add(oAuth);
-            db.SaveChanges();
+            var oAuth = await SpotifyApiHelper.GetOauthCredential(code, clientId, clientSecret, redirectUri, userId.Value);
+            UserDbContext.OAuth2Credential.Add(oAuth);
+            UserDbContext.SaveChanges();
 
             return RedirectToAction("Index", "Playlist");
         }
@@ -93,18 +93,19 @@ namespace PlaylistChaser.Web.Controllers
                 var clientSecret = configuration["Youtube:ClientSecret"];
                 var redirectUri = configuration["Youtube:RedirectUri"];
 
-                if (!int.TryParse(HttpContext.User.FindFirst(ClaimTypes.NameIdentifier).Value, out var userId))
+                var userId = getCurrentUserId();
+                if (userId == null)
                     return new JsonResult(new { success = false, message = "Can't get userId" });
 
-                var oAuth = db.OAuth2Credential.SingleOrDefault(a => a.UserId == userId && a.Provider == Sources.Youtube.ToString());
+                var oAuth = UserDbContext.OAuth2Credential.SingleOrDefault(a => a.UserId == userId && a.Provider == Sources.Youtube.ToString());
                 if (oAuth != null && oAuth.TokenExpiration > DateTime.Now) //refresh token
                 {
-                    var newOAuth = await YoutubeApiHelper.GetOauthCredential(clientId, clientSecret, oAuth.RefreshToken, userId);
+                    var newOAuth = await YoutubeApiHelper.GetOauthCredential(clientId, clientSecret, oAuth.RefreshToken, userId.Value);
                     oAuth.AccessToken = newOAuth.AccessToken;
                     oAuth.RefreshToken = newOAuth.RefreshToken;
                     oAuth.TokenExpiration = newOAuth.TokenExpiration;
 
-                    db.SaveChanges();
+                    UserDbContext.SaveChanges();
                 }
                 else
                 {
@@ -125,24 +126,25 @@ namespace PlaylistChaser.Web.Controllers
             var clientSecret = configuration["Youtube:ClientSecret"];
             var redirectUri = configuration["Youtube:RedirectUri"];
 
-            if (!int.TryParse(HttpContext.User.FindFirst(ClaimTypes.NameIdentifier).Value, out var userId))
+            var userId = getCurrentUserId();
+            if (userId == null)
                 return new JsonResult(new { success = false, message = "Can't get userId" });
 
-            var oAuth = db.OAuth2Credential.SingleOrDefault(a => a.UserId == userId && a.Provider == Sources.Youtube.ToString());
+            var oAuth = UserDbContext.OAuth2Credential.SingleOrDefault(a => a.UserId == userId && a.Provider == Sources.Youtube.ToString());
             if (oAuth == null)
             {
                 oAuth = new Models.OAuth2Credential();
-                oAuth.UserId = userId;
+                oAuth.UserId = userId.Value;
                 oAuth.Provider = Sources.Youtube.ToString();
-                db.OAuth2Credential.Add(oAuth);
+                UserDbContext.OAuth2Credential.Add(oAuth);
             }
-            var newOAuth = await YoutubeApiHelper.GetOauthCredential(code, clientId, clientSecret, redirectUri, userId);
+            var newOAuth = await YoutubeApiHelper.GetOauthCredential(code, clientId, clientSecret, redirectUri, userId.Value);
 
             oAuth.AccessToken = newOAuth.AccessToken;
             oAuth.RefreshToken = newOAuth.RefreshToken;
             oAuth.TokenExpiration = newOAuth.TokenExpiration;
 
-            db.SaveChanges();
+            UserDbContext.SaveChanges();
 
             return RedirectToAction("Index", "Playlist");
         }
@@ -174,11 +176,19 @@ namespace PlaylistChaser.Web.Controllers
 
                 if (result.Succeeded)
                 {
+                    BaseDbContext.GenerateDbCredentials(user.UserName, user.PasswordHash, out string dbUserName, out string dbPassword);
+                    await dbAdmin.CreateDBUser(dbUserName, dbPassword);
+
+                    user.DbUserName = dbUserName;
+                    user.DbPassword = dbPassword;
+
+                    await userManager.UpdateAsync(user);
+
                     // If user creation is successful, sign in the user (optional)
                     await signInManager.SignInAsync(user, isPersistent: false);
 
                     // Redirect to a success page or another appropriate action
-                    return RedirectToAction("RegisterConfirmation", "Account");
+                    return RedirectToAction("Index", "Playlist");
                 }
 
                 // If user creation fails, add errors to ModelState and redisplay the form

@@ -1,11 +1,10 @@
 ﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using PlaylistChaser.Web.Database;
-using PlaylistChaser.Web.Models;
-using PlaylistChaser.Web.Util;
+using System.Security.Claims;
 
 namespace PlaylistChaser.Web.Controllers
 {
@@ -13,24 +12,40 @@ namespace PlaylistChaser.Web.Controllers
     public class BaseController : Controller
     {
         protected readonly IConfiguration configuration;
-        protected readonly PlaylistChaserDbContext db;
+        protected readonly AdminDBContext dbAdmin;
         protected readonly ProgressHub progressHub;
         protected readonly IMemoryCache memoryCache;
+        private UserDbContext _userDbContext;
+        public UserDbContext UserDbContext
+        {
+            get
+            {
+                if (_userDbContext == null)
+                {
+                    var userId = getCurrentUserId();
+                    if (userId == null)
+                        return null;
 
-        public User CurrentUser { get; private set; }
+                    var user = dbAdmin.AspNetUsers.Single(u => u.Id == userId);
+                    _userDbContext = new UserDbContext(new DbContextOptions<UserDbContext>(), memoryCache, configuration, user.DbUserName, user.DbPassword);
+                }
 
-        public BaseController(IConfiguration configuration, PlaylistChaserDbContext db, IHubContext<ProgressHub> hubContext, IMemoryCache memoryCache)
+                return _userDbContext;
+            }
+        }
+        public BaseController(IConfiguration configuration, IHubContext<ProgressHub> hubContext, IMemoryCache memoryCache, AdminDBContext dbAdmin)
         {
             this.configuration = configuration;
-            this.db = db;
             progressHub = new ProgressHub(hubContext);
             this.memoryCache = memoryCache;
+            this.dbAdmin = dbAdmin;
         }
 
         #region Overrides
         private void setViewBags()
         {
-            ViewBag.Sources = db.GetSources();
+            if (UserDbContext != null)
+                ViewBag.Sources = UserDbContext.GetSources();
         }
 
         #region PartialView
@@ -102,5 +117,13 @@ namespace PlaylistChaser.Web.Controllers
             return false;
         }
         #endregion        
+
+        public int? getCurrentUserId()
+        {
+            if (int.TryParse(User?.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var userId))
+                return userId;
+            else
+                return null;
+        }
     }
 }

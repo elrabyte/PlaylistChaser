@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using PlaylistChaser.Web.Models;
 using PlaylistChaser.Web.Util.API;
+using System.Data.Entity;
 using System.Text.Encodings.Web;
 using static PlaylistChaser.Web.Util.BuiltInIds;
 

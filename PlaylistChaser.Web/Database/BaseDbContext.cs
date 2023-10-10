@@ -1,92 +1,24 @@
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using PlaylistChaser.Web.Models;
-using PlaylistChaser.Web.Models.ViewModel;
 using System.Data;
 
 namespace PlaylistChaser.Web.Database
 {
-    public class PlaylistChaserDbContext : IdentityDbContext<User, IdentityRole<int>, int>
+    //public class BaseDbContext : IdentityDbContext<User, IdentityRole<int>, int>
+    public class BaseDbContext : DbContext
     {
         protected readonly IMemoryCache memoryCache;
-        public PlaylistChaserDbContext(DbContextOptions<PlaylistChaserDbContext> options, IMemoryCache memoryCache) : base(options)
+        protected readonly IConfiguration configuration;
+        public BaseDbContext(DbContextOptions options, IMemoryCache memoryCache, IConfiguration configuration) : base(options)
         {
             this.memoryCache = memoryCache;
+            this.configuration = configuration;
         }
-
-        #region DbSet
-        public DbSet<Playlist> Playlist { get; set; }
-        public DbSet<PlaylistInfo> PlaylistInfo { get; set; }
-
-        public DbSet<PlaylistSong> PlaylistSong { get; set; }
-        public DbSet<PlaylistSongState> PlaylistSongState { get; set; }
-
-        public DbSet<Song> Song { get; set; }
-        public DbSet<SongInfo> SongInfo { get; set; }
-        public DbSet<SongState> SongState { get; set; }
-
-        public DbSet<Thumbnail> Thumbnail { get; set; }
-
-        public DbSet<CombinedPlaylistEntry> CombinedPlaylistEntry { get; set; }
-
-        public DbSet<OAuth2Credential> OAuth2Credential { get; set; }
-
-        public DbSet<Source> Source { get; set; }
-        #endregion
-
-        #region SP ViewModels
-        private DbSet<PlaylistViewModel> PlaylistViewModel { get; set; }
-        private DbSet<PlaylistSongViewModel> PlaylistSongViewModel { get; set; }
-        private DbSet<SongViewModel> SongViewModel { get; set; }
-        #endregion
-
-        #region SP
-        public async Task<List<PlaylistViewModel>> GetPlaylists(int? playlistId = null)
-        {
-            var sql = "exec dbo.GetPlaylists @playlistId";
-            return await PlaylistViewModel.FromSqlRaw(sql, new SqlParameter("playlistId", playlistId.HasValue ? playlistId.Value : DBNull.Value)).ToListAsync();
-        }
-
-        public async Task<List<PlaylistSongViewModel>> GetPlaylistSongs(int playlistId, int? limit = null)
-        {
-            var sql = "exec dbo.GetPlaylistSongs @playlistId, @limit";
-            var playlistSongs = await PlaylistSongViewModel.FromSqlRaw(sql, new SqlParameter("playlistId", playlistId),
-                                                                            new SqlParameter("limit", limit.HasValue ? limit.Value : DBNull.Value)).ToListAsync();
-
-            return playlistSongs;
-        }
-
-        public async Task<List<SongViewModel>> GetSongs()
-        {
-            var sql = "exec dbo.GetSongs";
-            var songs = await SongViewModel.FromSqlRaw(sql).ToListAsync();
-
-            return songs;
-        }
-
-
-        public async Task<bool> MergeSongs(List<int> songIds, int? mainSongId = null)
-        {
-            var sql = "exec dbo.MergeSongs @songIds, @mainSongId";
-            var success = await Database.ExecuteSqlRawAsync(sql, GetParameterFromList("songIds", "List_int", "Id", songIds),
-                                                                 GetParameter("mainSongId", mainSongId));
-
-            return true;
-        }
-
-        #endregion
-
-        #region DataHelper
-        public List<Source> GetSources(List<Util.BuiltInIds.Sources> filteredSources = null)
-        {
-            var sources = GetCachedList(Source).OrderBy(i => i.Name).ToList();
-            if (filteredSources != null && filteredSources.Any())
-                sources = sources.Where(s => filteredSources.Contains((Util.BuiltInIds.Sources)s.Id)).ToList();
-            return sources;
-        }
+        
+        #region DataHelper        
 
         public IQueryable<TEntity> GetReadOnlyQuery<TEntity>(DbSet<TEntity> dbSet) where TEntity : class
             => dbSet.AsNoTracking();
@@ -152,7 +84,6 @@ namespace PlaylistChaser.Web.Database
             modelBuilder.Entity<IdentityUserToken<int>>().ToTable("AspNetUserTokens").HasKey(ut => new { ut.UserId, ut.LoginProvider, ut.Name });
 
         }
-
         private void ConfigureCompositeKey<TEntity>(ModelBuilder modelBuilder)
             where TEntity : class
         {
@@ -201,5 +132,28 @@ namespace PlaylistChaser.Web.Database
             return valParam;
         }
         #endregion
+
+        public static void GenerateDbCredentials(string userName, string password, out string dbUserName, out string dbPassword)
+        {
+            dbUserName = userName;
+            dbUserName = dbUserName.Replace("@", "").Replace(".", "").Replace("-", "").Replace("+", "");
+            dbPassword = password;
+        }
+        public async Task<bool> CreateDBUser(string dbUsername, string dbPasswordClear)
+        {
+            var sql = "exec sp_addlogin @loginname, @passwd";
+            var result = await Database.ExecuteSqlRawAsync(sql, GetParameter("loginname", dbUsername),
+                                                                GetParameter("passwd", dbPasswordClear));
+
+            sql = "exec sp_adduser @loginname, @name_in_db";
+            result = await Database.ExecuteSqlRawAsync(sql, GetParameter("loginname", dbUsername),
+                                                            GetParameter("name_in_db", dbUsername));
+
+            sql = "exec sp_addrolemember @rolename, @loginname";
+            result = await Database.ExecuteSqlRawAsync(sql, GetParameter("rolename", "registered_user"),
+                                                            GetParameter("loginname", dbUsername));
+
+            return result != 0;
+        }
     }
 }

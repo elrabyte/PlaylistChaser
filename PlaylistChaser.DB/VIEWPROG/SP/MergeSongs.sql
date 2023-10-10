@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[MergeSongs]
+﻿CREATE PROCEDURE [VIEWPROG].[MergeSongs]
 	@songIds dbo.list_int readonly,
 	@mainSongId int = null
 AS

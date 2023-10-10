@@ -13,11 +13,13 @@
     [TwoFactorEnabled] BIT NOT NULL,
     [LockoutEnd] DateTimeOffset,
     [LockoutEnabled] BIT NOT NULL,
-    [AccessFailedCount] INT NOT NULL
+    [AccessFailedCount] INT NOT NULL, 
+    [DbUserName] NVARCHAR(255) NULL, 
+    [DbPassword] NVARCHAR(255) NULL
 );
 go
 
-CREATE UNIQUE INDEX [EmailIndex] ON [dbo].[AspNetUsers] ([NormalizedEmail]);
+CREATE UNIQUE INDEX [EmailIndex] ON [dbo].[AspNetUsers] ([NormalizedEmail]) WHERE [NormalizedEmail] IS NOT NULL;
 go
 CREATE UNIQUE INDEX [UserNameIndex] ON [dbo].[AspNetUsers] ([NormalizedUserName]) WHERE [NormalizedUserName] IS NOT NULL;
 go

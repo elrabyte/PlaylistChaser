@@ -7,11 +7,6 @@ namespace PlaylistChaser.Test
     public class YoutubeApiTest
     {
         private YoutubeApiHelper youtubeApiHelper;
-        private PlaylistChaserDbContext db;
-        public YoutubeApiTest(PlaylistChaserDbContext db)
-        {
-            this.db = db;
-        }
 
         #region Test Inputs
         const string VIDEO_URL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";

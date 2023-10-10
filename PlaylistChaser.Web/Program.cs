@@ -40,13 +40,13 @@ builder.Configuration
        .SetBasePath(builder.Environment.ContentRootPath)
        .AddJsonFile($"appsettings.{environment}.json", optional: false, reloadOnChange: true);
 
-builder.Services.AddDbContext<PlaylistChaserDbContext>(options =>
+builder.Services.AddDbContext<AdminDBContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("ServerConnectionString")));
 
 builder.Services.AddScoped<SongController>();
 
 builder.Services.AddIdentity<User, IdentityRole<int>>()
-        .AddEntityFrameworkStores<PlaylistChaserDbContext>()
+        .AddEntityFrameworkStores<AdminDBContext>()
         .AddDefaultTokenProviders();
 
 builder.Services.Configure<IdentityOptions>(options =>

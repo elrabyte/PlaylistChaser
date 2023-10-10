@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[GetSongs]
+﻿CREATE PROCEDURE [VIEWPROG].[GetSongs]
 AS
 BEGIN
 	set nocount on;

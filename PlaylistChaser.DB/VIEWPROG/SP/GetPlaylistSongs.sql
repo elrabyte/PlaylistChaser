@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[GetPlaylistSongs]
+﻿CREATE PROCEDURE [VIEWPROG].[GetPlaylistSongs]
 	@playlistId int,
 	@limit int = null
 AS
@@ -11,7 +11,7 @@ BEGIN
 		 select ps.Id, s.Id, s.SongName, s.ArtistName, 0, s.ThumbnailId
 		   from PlaylistSong ps
 		  inner join Song s
-			 on s.Id = ps.SongId
+			 on s.Id = ps.SongId		  
 		  where ps.PlaylistId = @playlistId
 
 	if (@limit is not null)
