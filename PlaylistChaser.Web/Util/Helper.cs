@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using PlaylistChaser.Web.Models;
 using PlaylistChaser.Web.Util.API;
+using System.Data.Entity;
 using System.Text.Encodings.Web;
 using static PlaylistChaser.Web.Util.BuiltInIds;
 
@@ -90,7 +91,7 @@ namespace PlaylistChaser.Web.Util
         }
         #endregion
 
-        public static string SourcesToJs(List<Models.Source> sources)
+        public static string SourcesToJs(List<Source> sources)
         {
             var sourcesJs = string.Join(',', sources.Select(src => Newtonsoft.Json.JsonConvert.SerializeObject(src)));
             return $"[{sourcesJs}]";

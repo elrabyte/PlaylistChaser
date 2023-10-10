@@ -4,32 +4,39 @@
 
 <div class="row">
     <div class="col-12">
-        <form asp-action="_SongInfoEditPartial">
-            @Html.HiddenFor(m => m.SourceId)
-            @Html.HiddenFor(m => m.SongId)
+        @if (Model == null)
+        {
+            <span>No Info Available</span>
+        }
+        else
+        {
+            <form asp-action="_SongInfoEditPartial">
+                @Html.HiddenFor(m => m.SourceId)
+                @Html.HiddenFor(m => m.SongId)
 
-            <div class="row">
-                @Html.BsLabelFor(m => m.Name, colClass:"col-sm-3")
-                <div class="col-sm-9">
-                    @Html.BsTextBoxFor(m => m.Name)
+                <div class="row">
+                    @Html.BsLabelFor(m => m.Name, colClass:"col-sm-3")
+                    <div class="col-sm-9">
+                        @Html.BsTextBoxFor(m => m.Name)
+                    </div>
                 </div>
-            </div>
-            <div class="row">
-                @Html.BsLabelFor(m => m.ArtistName, colClass:"col-sm-3")
-                <div class="col-sm-9">
-                    @Html.BsTextBoxFor(m => m.ArtistName)
+                <div class="row">
+                    @Html.BsLabelFor(m => m.ArtistName, colClass:"col-sm-3")
+                    <div class="col-sm-9">
+                        @Html.BsTextBoxFor(m => m.ArtistName)
+                    </div>
                 </div>
-            </div>
-            <div class="row">
-                @Html.BsLabelFor(m => m.SongIdSource, colClass:"col-sm-3")
-                <div class="col-sm-9">
-                    @Html.BsTextBoxFor(m => m.SongIdSource)
+                <div class="row">
+                    @Html.BsLabelFor(m => m.SongIdSource, colClass:"col-sm-3")
+                    <div class="col-sm-9">
+                        @Html.BsTextBoxFor(m => m.SongIdSource)
+                    </div>
                 </div>
-            </div>
-            <div style="float:right">
-                @Controls.SubmitButton()
-            </div>
-        </form>
+                <div style="float:right">
+                    @Controls.SubmitButton()
+                </div>
+            </form>
+        }
     </div>
 </div>
 

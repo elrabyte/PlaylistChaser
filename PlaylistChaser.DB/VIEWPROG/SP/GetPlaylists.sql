@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[GetPlaylists]
+﻿CREATE PROCEDURE [VIEWPROG].[GetPlaylists]
 	@playlistId int = null
 AS
 BEGIN

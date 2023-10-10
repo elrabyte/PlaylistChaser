@@ -9,6 +9,7 @@ using PlaylistChaser.Web.Models.SearchModel;
 using PlaylistChaser.Web.Util;
 using PlaylistChaser.Web.Util.API;
 using System.Data.Entity;
+using System.Security.Claims;
 using static PlaylistChaser.Web.Util.BuiltInIds;
 using static PlaylistChaser.Web.Util.Helper;
 using Playlist = PlaylistChaser.Web.Models.Playlist;
@@ -18,8 +19,8 @@ namespace PlaylistChaser.Web.Controllers
 {
     public class PlaylistController : BaseController
     {
-        public PlaylistController(IConfiguration configuration, PlaylistChaserDbContext db, SongController songController, IHubContext<ProgressHub> hubContext, IMemoryCache memoryCache)
-            : base(configuration, db, hubContext, memoryCache)
+        public PlaylistController(IConfiguration configuration, SongController songController, IHubContext<ProgressHub> hubContext, IMemoryCache memoryCache, AdminDBContext dbAdmin)
+            : base(configuration, hubContext, memoryCache, dbAdmin)
         {
             this.songController = songController;
             RecurringJob.AddOrUpdate("SyncPlaylists", () => SyncPlaylists(), Cron.Daily);
@@ -33,7 +34,11 @@ namespace PlaylistChaser.Web.Controllers
             {
                 if (_ytHelper == null)
                 {
-                    var oAuth = db.GetCachedList(db.OAuth2Credential).Single(c => c.UserId == 1 && c.Provider == Sources.Youtube.ToString());
+                    var userId = getCurrentUserId();
+                    if (userId == null)
+                        return null;
+
+                    var oAuth = UserDbContext.GetCachedList(UserDbContext.OAuth2Credential).Single(c => c.UserId == userId && c.Provider == Sources.Youtube.ToString());
                     _ytHelper = new YoutubeApiHelper(oAuth.AccessToken);
                 }
                 return _ytHelper;
@@ -47,7 +52,11 @@ namespace PlaylistChaser.Web.Controllers
             {
                 if (_spottyHelper == null)
                 {
-                    var oAuth = db.GetCachedList(db.OAuth2Credential).Single(c => c.UserId == 1 && c.Provider == Sources.Spotify.ToString());
+                    var userId = getCurrentUserId();
+                    if (userId == null)
+                        return null;
+
+                    var oAuth = UserDbContext.GetCachedList(UserDbContext.OAuth2Credential).Single(c => c.UserId == userId && c.Provider == Sources.Spotify.ToString());
                     _spottyHelper = new SpotifyApiHelper(oAuth.AccessToken);
                 }
                 return _spottyHelper;
@@ -61,12 +70,10 @@ namespace PlaylistChaser.Web.Controllers
         #region View
         public async Task<ActionResult> Index()
         {
-            db.GetCachedList(db.Playlist);
-
-            var playlists = await db.GetPlaylists();
+            var playlists = await UserDbContext.GetPlaylists();
 
             //get infos
-            playlists.ForEach(p => p.Infos = db.GetCachedList(db.PlaylistInfo).Where(i => i.PlaylistId == p.Id).ToList());
+            playlists.ForEach(p => p.Infos = UserDbContext.GetCachedList(UserDbContext.PlaylistInfo).Where(i => i.PlaylistId == p.Id).ToList());
 
             var model = new PlaylistIndexModel
             {
@@ -78,12 +85,16 @@ namespace PlaylistChaser.Web.Controllers
 
         public async Task<ActionResult> Details(int id)
         {
-            var playlist = (await db.GetPlaylists(id)).Single();
+            var userId = getCurrentUserId();
+            if (userId == null)
+                return null;
+
+            var playlist = (await UserDbContext.GetPlaylists(id)).Single();
             var model = new PlaylistDetailsModel
             {
                 Playlist = playlist,
                 AddSongStates = true,
-                Infos = db.GetCachedList(db.PlaylistInfo).Where(i => i.PlaylistId == id).ToList()
+                Infos = UserDbContext.GetCachedList(UserDbContext.PlaylistInfo).Where(i => i.PlaylistId == id).ToList()
             };
 
             return View(model);
@@ -95,26 +106,27 @@ namespace PlaylistChaser.Web.Controllers
         #region Details
         public ActionResult _PlaylistInfosDetailsPartial(int playlistId)
         {
-            var playlistInfos = db.GetCachedList(db.PlaylistInfo).Where(s => s.PlaylistId == playlistId).ToList();
+
+            var playlistInfos = UserDbContext.GetCachedList(UserDbContext.PlaylistInfo).Where(s => s.PlaylistId == playlistId).ToList();
             return PartialView(playlistInfos);
         }
 
         public ActionResult _PlaylistInfoDetailsPartial(Sources source, int playlistId)
         {
-            var playlistInfo = db.GetCachedList(db.PlaylistInfo).Single(s => s.SourceId == source && s.PlaylistId == playlistId);
+            var playlistInfo = UserDbContext.GetCachedList(UserDbContext.PlaylistInfo).Single(s => s.SourceId == source && s.PlaylistId == playlistId);
             return PartialView(playlistInfo);
         }
 
         public ActionResult _DetailsPartial(int playlistId)
         {
-            var playlist = db.GetCachedList(db.Playlist).Single(p => p.Id == playlistId);
+            var playlist = UserDbContext.GetCachedList(UserDbContext.Playlist).Single(p => p.Id == playlistId);
             return PartialView(playlist);
         }
 
         public ActionResult _CombinedPlaylistEntriesDetailsPartial(int playlistId)
         {
-            var playlistIds = db.GetCachedList(db.CombinedPlaylistEntry).Where(c => c.CombinedPlaylistId == playlistId).Select(c => c.PlaylistId).ToList();
-            var playlists = db.GetCachedList(db.Playlist).Where(p => playlistIds.Contains(p.Id)).ToList();
+            var playlistIds = UserDbContext.GetCachedList(UserDbContext.CombinedPlaylistEntry).Where(c => c.CombinedPlaylistId == playlistId).Select(c => c.PlaylistId).ToList();
+            var playlists = UserDbContext.GetCachedList(UserDbContext.Playlist).Where(p => playlistIds.Contains(p.Id)).ToList();
             return PartialView(playlists);
         }
 
@@ -126,7 +138,7 @@ namespace PlaylistChaser.Web.Controllers
         [HttpGet]
         public ActionResult _EditPartial(int id)
         {
-            var playlist = db.GetCachedList(db.Playlist).Single(p => p.Id == id);
+            var playlist = UserDbContext.GetCachedList(UserDbContext.Playlist).Single(p => p.Id == id);
             return PartialView(playlist);
         }
 
@@ -139,16 +151,19 @@ namespace PlaylistChaser.Web.Controllers
                 Playlist playlist;
                 if (isNew)
                 {
-                    playlist = new Playlist();
-                    db.Playlist.Add(playlist);
+                    var userId = getCurrentUserId();
+                    if (userId == null)
+                        throw new Exception("can't get userId");
+                    playlist = new Playlist { UserId = userId.Value };
+                    UserDbContext.Playlist.Add(playlist);
                 }
                 else
-                    playlist = db.Playlist.Single(p => p.Id == id);
+                    playlist = UserDbContext.Playlist.Single(p => p.Id == id);
 
                 playlist.Name = model.Name;
                 playlist.Description = model.Description;
 
-                db.SaveChanges();
+                UserDbContext.SaveChanges();
 
                 return new JsonResult(new { success = true });
             }
@@ -169,7 +184,7 @@ namespace PlaylistChaser.Web.Controllers
 
         public ActionResult _PlaylistSongStatesSummaryPartial(int id)
         {
-            var playlistSongStates = db.GetCachedList(db.PlaylistSongState).Where(pss => db.GetCachedList(db.PlaylistSong).Where(ps => ps.PlaylistId == id).Select(ps => ps.Id).Contains(pss.PlaylistSongId)).ToList();
+            var playlistSongStates = UserDbContext.GetCachedList(UserDbContext.PlaylistSongState).Where(pss => UserDbContext.GetCachedList(UserDbContext.PlaylistSong).Where(ps => ps.PlaylistId == id).Select(ps => ps.Id).Contains(pss.PlaylistSongId)).ToList();
             var model = playlistSongStates.GroupBy(pss => pss.SourceId).OrderBy(pss => pss.Key.ToString()).ToList();
 
             ViewBag.PlaylistId = id;
@@ -223,10 +238,14 @@ namespace PlaylistChaser.Web.Controllers
         /// <returns>Playlistid</returns>
         private int addPlaylistToDb(string playlistName, string channelName, PLaylistTypes playlistType, Sources source, string playlistIdSource, bool isMine, string url, string description = null, int? thumbnailId = null)
         {
+            var userId = getCurrentUserId();
+            if (userId == null)
+                throw new Exception("can't get userId");
+
             //add playlist to db
-            var playlist = new Playlist { Name = playlistName, ChannelName = channelName, PlaylistTypeId = playlistType, Description = description, ThumbnailId = thumbnailId, MainSourceId = source };
-            db.Playlist.Add(playlist);
-            db.SaveChanges();
+            var playlist = new Playlist { Name = playlistName, ChannelName = channelName, PlaylistTypeId = playlistType, Description = description, ThumbnailId = thumbnailId, MainSourceId = source, UserId = userId.Value };
+            UserDbContext.Playlist.Add(playlist);
+            UserDbContext.SaveChanges();
 
             //additional Info
             var playlistInfo = new PlaylistInfo
@@ -241,8 +260,8 @@ namespace PlaylistChaser.Web.Controllers
                 Url = url,
                 LastSynced = new DateTime(2000, 1, 1)
             };
-            db.PlaylistInfo.Add(playlistInfo);
-            db.SaveChanges();
+            UserDbContext.PlaylistInfo.Add(playlistInfo);
+            UserDbContext.SaveChanges();
 
             return playlist.Id;
         }
@@ -257,9 +276,9 @@ namespace PlaylistChaser.Web.Controllers
                 progressHub.InitProgressToast("Sync Playlists", toastId, true);
                 int nSynced = 0;
                 int nSkipped = 0;
-                var playlists = db.GetCachedList(db.Playlist).ToList();
+                var playlists = UserDbContext.GetCachedList(UserDbContext.Playlist).ToList();
                 var timeElapsedList = new List<int>();
-                ReturnModel returnObj = null;
+                var returnObj = new ReturnModel();
                 foreach (var playlist in playlists)
                 {
                     if (IsCancelled(toastId, out var startTime)) break;
@@ -277,7 +296,7 @@ namespace PlaylistChaser.Web.Controllers
                     #endregion
 
                     #region Sync playlist to
-                    var infos = db.GetCachedList(db.PlaylistInfo).Where(i => i.IsMine && i.SourceId != (playlist.MainSourceId ?? 0) && i.PlaylistId == playlist.Id).ToList();
+                    var infos = UserDbContext.GetCachedList(UserDbContext.PlaylistInfo).Where(i => i.IsMine && i.SourceId != (playlist.MainSourceId ?? 0) && i.PlaylistId == playlist.Id).ToList();
                     foreach (var info in infos)
                     {
                         tmpToastId = GetToastId();
@@ -310,9 +329,9 @@ namespace PlaylistChaser.Web.Controllers
                 progressHub.InitProgressToast("Sync Playlists", toastId, true);
                 int nSynced = 0;
                 int nSkipped = 0;
-                var playlists = db.GetCachedList(db.Playlist).ToList();
+                var playlists = UserDbContext.GetCachedList(UserDbContext.Playlist).ToList();
                 var timeElapsedList = new List<int>();
-                ReturnModel returnObj = null;
+                var returnObj = new ReturnModel();
                 foreach (var playlist in playlists)
                 {
                     if (IsCancelled(toastId, out var startTime)) break;
@@ -350,7 +369,7 @@ namespace PlaylistChaser.Web.Controllers
         {
             try
             {
-                var playlist = db.GetCachedList(db.Playlist).Single(p => p.Id == id);
+                var playlist = UserDbContext.GetCachedList(UserDbContext.Playlist).Single(p => p.Id == id);
                 switch (playlist.PlaylistTypeId)
                 {
                     case PLaylistTypes.Simple:
@@ -376,8 +395,8 @@ namespace PlaylistChaser.Web.Controllers
         private void syncPlaylistFromCombined(int id)
         {
             //sync all attached playlists by their main source
-            var playlistIds = db.GetCachedList(db.CombinedPlaylistEntry).Where(cp => cp.CombinedPlaylistId == id).Select(cp => cp.PlaylistId).ToList();
-            var playlists = db.GetCachedList(db.Playlist).Where(p => playlistIds.Contains(p.Id)).ToList();
+            var playlistIds = UserDbContext.GetCachedList(UserDbContext.CombinedPlaylistEntry).Where(cp => cp.CombinedPlaylistId == id).Select(cp => cp.PlaylistId).ToList();
+            var playlists = UserDbContext.GetCachedList(UserDbContext.Playlist).Where(p => playlistIds.Contains(p.Id)).ToList();
 
             var toastId = GetToastId();
             progressHub.InitProgressToast("Sync Combined Playlists", toastId, true);
@@ -401,7 +420,7 @@ namespace PlaylistChaser.Web.Controllers
 
         private ReturnModel syncPlaylistFromSimple(int id, Sources source)
         {
-            var info = db.PlaylistInfo.Single(i => i.PlaylistId == id && i.SourceId == source);
+            var info = UserDbContext.PlaylistInfo.Single(i => i.PlaylistId == id && i.SourceId == source);
 
             //skip if last sync was less than 5min ago
             if (info.LastSynced > DateTime.Now.AddMinutes(-5))
@@ -426,14 +445,14 @@ namespace PlaylistChaser.Web.Controllers
 
             //get local variants from songs at source
             var songSourceIds = songInfos.Select(i => i.SongIdSource).ToList();
-            var songIds = songSourceIds.Select(id => db.GetCachedList(db.SongInfo).Single(i => i.SourceId == source && i.SongIdSource == id)).Select(i => i.SongId).ToList();
-            var songs = db.GetCachedList(db.Song).Where(s => songIds.Contains(s.Id)).ToList();
+            var songIds = songSourceIds.Select(id => UserDbContext.GetCachedList(UserDbContext.SongInfo).Single(i => i.SourceId == source && i.SongIdSource == id)).Select(i => i.SongId).ToList();
+            var songs = UserDbContext.GetCachedList(UserDbContext.Song).Where(s => songIds.Contains(s.Id)).ToList();
 
             addSongsToLocalPlaylist(source, id, songs);
 
             //update playlistInfo
             info.LastSynced = DateTime.Now;
-            db.SaveChanges();
+            UserDbContext.SaveChanges();
 
             return new ReturnModel();
         }
@@ -449,7 +468,7 @@ namespace PlaylistChaser.Web.Controllers
         private void addSongsToLocalPlaylist(Sources source, int playlistId, List<Song> songsToAdd)
         {
             //only add new songs
-            var curSongIds = db.GetCachedList(db.PlaylistSong).Where(ps => ps.PlaylistId == playlistId).Select(ps => ps.SongId).ToList();
+            var curSongIds = UserDbContext.GetCachedList(UserDbContext.PlaylistSong).Where(ps => ps.PlaylistId == playlistId).Select(ps => ps.SongId).ToList();
             var newSongIds = songsToAdd.Select(s => s.Id).Where(i => !curSongIds.Contains(i)).ToList();
 
             var newPlaylistSongs = newSongIds.Select(i => new PlaylistSong { PlaylistId = playlistId, SongId = i }).ToList();
@@ -458,14 +477,14 @@ namespace PlaylistChaser.Web.Controllers
         }
         private void addPlaylistSongs(Sources source, List<PlaylistSong> playlistSongs)
         {
-            db.PlaylistSong.AddRange(playlistSongs);
-            db.SaveChanges();
+            UserDbContext.PlaylistSong.AddRange(playlistSongs);
+            UserDbContext.SaveChanges();
 
             playlistSongs.ForEach(ps =>
             {
-                db.PlaylistSongState.Add(new PlaylistSongState { PlaylistSongId = ps.Id, SourceId = source, StateId = PlaylistSongStates.Added, LastChecked = DateTime.Now });
+                UserDbContext.PlaylistSongState.Add(new PlaylistSongState { PlaylistSongId = ps.Id, SourceId = source, StateId = PlaylistSongStates.Added, LastChecked = DateTime.Now });
             });
-            db.SaveChanges();
+            UserDbContext.SaveChanges();
         }
 
         #endregion
@@ -479,15 +498,15 @@ namespace PlaylistChaser.Web.Controllers
                 progressHub.InitProgressToast("Sync Playlists To", toastId, true);
                 int nSynced = 0;
                 int nSkipped = 0;
-                var playlists = db.GetCachedList(db.Playlist).ToList();
+                var playlists = UserDbContext.GetCachedList(UserDbContext.Playlist).ToList();
                 var timeElapsedList = new List<int>();
-                ReturnModel returnObj = null;
+                var returnObj = new ReturnModel();
 
                 var playlistIds = playlists.Select(p => p.Id).ToList();
 
                 var infos = new List<PlaylistInfo>();
                 foreach (var playlist in playlists)
-                    infos = db.GetCachedList(db.PlaylistInfo).Where(i => i.IsMine && i.SourceId != (playlist.MainSourceId ?? 0) && i.PlaylistId == playlist.Id).ToList();
+                    infos = UserDbContext.GetCachedList(UserDbContext.PlaylistInfo).Where(i => i.IsMine && i.SourceId != (playlist.MainSourceId ?? 0) && i.PlaylistId == playlist.Id).ToList();
 
                 foreach (var info in infos)
                 {
@@ -521,10 +540,10 @@ namespace PlaylistChaser.Web.Controllers
         }
         private async Task<ReturnModel> syncPlaylistTo(Sources source, int id)
         {
-            var playlist = db.GetCachedList(db.Playlist).Single(p => p.Id == id);
+            var playlist = UserDbContext.GetCachedList(UserDbContext.Playlist).Single(p => p.Id == id);
 
             //create info - first time for that source
-            var info = db.PlaylistInfo.SingleOrDefault(i => i.SourceId == source && i.PlaylistId == id);
+            var info = UserDbContext.PlaylistInfo.SingleOrDefault(i => i.SourceId == source && i.PlaylistId == id);
             if (info != null && !info.IsMine)
                 throw new Exception("No permission to edit playlist at source");
 
@@ -560,7 +579,7 @@ namespace PlaylistChaser.Web.Controllers
 
             //add songs to playlist
             //  prepare
-            var songsToUpload = missingSongs.Select(s => new UploadSong(s.Id, db.GetCachedList(db.SongInfo).SingleOrDefault(i => i.SourceId == source && i.SongId == s.Id)?.SongIdSource)).ToList();
+            var songsToUpload = missingSongs.Select(s => new UploadSong(s.Id, UserDbContext.GetCachedList(UserDbContext.SongInfo).SingleOrDefault(i => i.SourceId == source && i.SongId == s.Id)?.SongIdSource)).ToList();
             songsToUpload = songsToUpload.Where(s => !string.IsNullOrEmpty(s.SongIdSource)).ToList();
             songsToUpload = songsToUpload.DistinctBy(s => s.SongIdSource).ToList();
 
@@ -582,9 +601,9 @@ namespace PlaylistChaser.Web.Controllers
         private string getPlaylistDescriptionText(PlaylistInfo info)
         {
             var playlistDescription = info.Description;
-            var playlist = db.GetCachedList(db.Playlist).Single(p => p.Id == info.PlaylistId);
-            var playlistSongIds = db.GetCachedList(db.PlaylistSong).Where(ps => ps.PlaylistId == playlist.Id).Select(ps => ps.Id).ToList();
-            var playlistSongStates = db.GetCachedList(db.PlaylistSongState).Where(pss => pss.SourceId == info.SourceId && pss.StateId == PlaylistSongStates.Added && playlistSongIds.Contains(pss.PlaylistSongId)).ToList();
+            var playlist = UserDbContext.GetCachedList(UserDbContext.Playlist).Single(p => p.Id == info.PlaylistId);
+            var playlistSongIds = UserDbContext.GetCachedList(UserDbContext.PlaylistSong).Where(ps => ps.PlaylistId == playlist.Id).Select(ps => ps.Id).ToList();
+            var playlistSongStates = UserDbContext.GetCachedList(UserDbContext.PlaylistSongState).Where(pss => pss.SourceId == info.SourceId && pss.StateId == PlaylistSongStates.Added && playlistSongIds.Contains(pss.PlaylistSongId)).ToList();
 
             var songsUploaded = playlistSongStates.Count();
             var songsTotal = playlistSongIds.Count();
@@ -594,7 +613,7 @@ namespace PlaylistChaser.Web.Controllers
             {
                 case PLaylistTypes.Simple:
 
-                    var originalInfo = db.GetCachedList(db.PlaylistInfo).Single(i => i.SourceId == playlist.MainSourceId && i.PlaylistId == playlist.Id);
+                    var originalInfo = UserDbContext.GetCachedList(UserDbContext.PlaylistInfo).Single(i => i.SourceId == playlist.MainSourceId && i.PlaylistId == playlist.Id);
 
 
                     var originalSource = originalInfo.SourceId.ToString();
@@ -612,8 +631,8 @@ namespace PlaylistChaser.Web.Controllers
                 case PLaylistTypes.Combined:
                     playlistDescription = "A combined playlist consisting of:\n";
 
-                    var playlistIds = db.GetCachedList(db.CombinedPlaylistEntry).Where(e => e.CombinedPlaylistId == playlist.Id).Select(e => e.PlaylistId).ToList();
-                    var playlists = db.GetCachedList(db.Playlist).Where(p => playlistIds.Contains(p.Id)).ToList();
+                    var playlistIds = UserDbContext.GetCachedList(UserDbContext.CombinedPlaylistEntry).Where(e => e.CombinedPlaylistId == playlist.Id).Select(e => e.PlaylistId).ToList();
+                    var playlists = UserDbContext.GetCachedList(UserDbContext.Playlist).Where(p => playlistIds.Contains(p.Id)).ToList();
                     foreach (var entryPlaylist in playlists)
                         playlistDescription += $"{entryPlaylist.ChannelName} - {entryPlaylist.Name}\n";
 
@@ -642,8 +661,8 @@ namespace PlaylistChaser.Web.Controllers
                 Url = url,
                 LastSynced = DateTime.Now
             };
-            db.PlaylistInfo.Add(playlistInfo);
-            db.SaveChanges();
+            UserDbContext.PlaylistInfo.Add(playlistInfo);
+            UserDbContext.SaveChanges();
             return playlistInfo;
         }
 
@@ -652,10 +671,10 @@ namespace PlaylistChaser.Web.Controllers
         /// </summary>
         private List<Song> getMissingSongs(int playlistId, Sources source)
         {
-            var songs = db.GetCachedList(db.Song);
-            var songStates = db.GetCachedList(db.SongState);
-            var playlistSongs = db.GetCachedList(db.PlaylistSong);
-            var playlistSongStates = db.GetCachedList(db.PlaylistSongState);
+            var songs = UserDbContext.GetCachedList(UserDbContext.Song);
+            var songStates = UserDbContext.GetCachedList(UserDbContext.SongState);
+            var playlistSongs = UserDbContext.GetCachedList(UserDbContext.PlaylistSong);
+            var playlistSongStates = UserDbContext.GetCachedList(UserDbContext.PlaylistSongState);
 
 
             //get songs that should be in playlist
@@ -687,7 +706,7 @@ namespace PlaylistChaser.Web.Controllers
             if (songsToUpload.GroupBy(x => x.SongIdSource).Where(x => x.Count() > 1).Any())
                 throw new Exception("There are duplicates");
 
-            var songStates = db.GetCachedList(db.SongState).Where(i => i.SourceId == source && songsToUpload.Select(s => s.SongId).Contains(i.SongId)).ToList();
+            var songStates = UserDbContext.GetCachedList(UserDbContext.SongState).Where(i => i.SourceId == source && songsToUpload.Select(s => s.SongId).Contains(i.SongId)).ToList();
             if (songStates.Any(i => !(i.StateId == SongStates.Available)))
                 throw new Exception("All songs must be available");
 
@@ -696,7 +715,8 @@ namespace PlaylistChaser.Web.Controllers
             var timeElapsedList = new List<int>();
             int nAdded = 0;
             int nSkipped = 0;
-            ReturnModel returnObj = null;
+            var returnObj = new ReturnModel();
+
             switch (source)
             {
                 case Sources.Youtube:
@@ -765,15 +785,15 @@ namespace PlaylistChaser.Web.Controllers
         #region update PlaylistSongState
         private void updatePlaylistSongsState(Sources source, string playlistIdSource, List<string> songIdsSource, bool success)
         {
-            var playlistId = db.GetCachedList(db.PlaylistInfo).Single(i => i.SourceId == source && i.PlaylistIdSource == playlistIdSource).PlaylistId;
-            var songIds = db.GetCachedList(db.SongInfo).Where(s => s.SourceId == source && songIdsSource.Contains(s.SongIdSource)).Select(s => s.SongId);
-            var playlistSongIds = db.GetCachedList(db.PlaylistSong).Where(ps => ps.PlaylistId == playlistId && songIds.Contains(ps.SongId)).Select(ps => ps.Id).ToList();
+            var playlistId = UserDbContext.GetCachedList(UserDbContext.PlaylistInfo).Single(i => i.SourceId == source && i.PlaylistIdSource == playlistIdSource).PlaylistId;
+            var songIds = UserDbContext.GetCachedList(UserDbContext.SongInfo).Where(s => s.SourceId == source && songIdsSource.Contains(s.SongIdSource)).Select(s => s.SongId);
+            var playlistSongIds = UserDbContext.GetCachedList(UserDbContext.PlaylistSong).Where(ps => ps.PlaylistId == playlistId && songIds.Contains(ps.SongId)).Select(ps => ps.Id).ToList();
             var stateId = (success ? PlaylistSongStates.Added : PlaylistSongStates.NotAdded);
             updatePlaylistSongsState(source, playlistSongIds, stateId);
         }
         private void updatePlaylistSongsState(Sources source, List<int> playlistSongIds, PlaylistSongStates state)
         {
-            var playlistSongStates = db.PlaylistSongState.Where(pss => pss.SourceId == source);
+            var playlistSongStates = UserDbContext.PlaylistSongState.Where(pss => pss.SourceId == source);
 
             playlistSongIds.ForEach(psId =>
             {
@@ -781,38 +801,38 @@ namespace PlaylistChaser.Web.Controllers
                 if (playlistSongState == null)
                 {
                     playlistSongState = new PlaylistSongState { PlaylistSongId = psId, SourceId = source, StateId = state, LastChecked = DateTime.Now };
-                    db.PlaylistSongState.Add(playlistSongState);
+                    UserDbContext.PlaylistSongState.Add(playlistSongState);
                 }
                 else
                 {
                     playlistSongState.StateId = state;
                     playlistSongState.LastChecked = DateTime.Now;
                 }
-                db.SaveChanges();
+                UserDbContext.SaveChanges();
             });
         }
         private void updatePlaylistSongState(Sources source, string playlistIdSource, string songIdSource, bool success)
         {
-            var playlistId = db.GetCachedList(db.PlaylistInfo).Single(i => i.SourceId == source && i.PlaylistIdSource == playlistIdSource).PlaylistId;
-            var songId = db.GetCachedList(db.SongInfo).Single(s => s.SourceId == source && s.SongIdSource == songIdSource).SongId;
-            var playlistSongId = db.GetCachedList(db.PlaylistSong).Single(ps => ps.PlaylistId == playlistId && ps.SongId == songId).Id;
+            var playlistId = UserDbContext.GetCachedList(UserDbContext.PlaylistInfo).Single(i => i.SourceId == source && i.PlaylistIdSource == playlistIdSource).PlaylistId;
+            var songId = UserDbContext.GetCachedList(UserDbContext.SongInfo).Single(s => s.SourceId == source && s.SongIdSource == songIdSource).SongId;
+            var playlistSongId = UserDbContext.GetCachedList(UserDbContext.PlaylistSong).Single(ps => ps.PlaylistId == playlistId && ps.SongId == songId).Id;
             var stateId = (success ? PlaylistSongStates.Added : PlaylistSongStates.NotAdded);
             updatePlaylistSongState(source, playlistSongId, stateId);
         }
         private void updatePlaylistSongState(Sources source, int playlistSongId, PlaylistSongStates stateId)
         {
-            var playlistSongState = db.PlaylistSongState.SingleOrDefault(pss => pss.SourceId == source && pss.PlaylistSongId == playlistSongId);
+            var playlistSongState = UserDbContext.PlaylistSongState.SingleOrDefault(pss => pss.SourceId == source && pss.PlaylistSongId == playlistSongId);
             if (playlistSongState == null)
             {
                 playlistSongState = new PlaylistSongState { PlaylistSongId = playlistSongId, SourceId = source, StateId = stateId, LastChecked = DateTime.Now };
-                db.PlaylistSongState.Add(playlistSongState);
+                UserDbContext.PlaylistSongState.Add(playlistSongState);
             }
             else
             {
                 playlistSongState.StateId = stateId;
                 playlistSongState.LastChecked = DateTime.Now;
             }
-            db.SaveChanges();
+            UserDbContext.SaveChanges();
         }
         #endregion
 
@@ -829,7 +849,7 @@ namespace PlaylistChaser.Web.Controllers
             {
                 case Sources.Youtube:
                     //add playlist to YT
-                    var playlistdescription = string.Format("songs by: {0}", string.Join(',', db.GetCachedList(db.Playlist).Where(p => playlistIdsList.Contains(p.Id)).Select(p => p.ChannelName)));
+                    var playlistdescription = string.Format("songs by: {0}", string.Join(',', UserDbContext.GetCachedList(UserDbContext.Playlist).Where(p => playlistIdsList.Contains(p.Id)).Select(p => p.ChannelName)));
                     info = await ytHelper.CreatePlaylist(playlistName, playlistdescription);
                     break;
                 default:
@@ -838,8 +858,8 @@ namespace PlaylistChaser.Web.Controllers
 
             var playlistId = addPlaylistToDb(info.Name, info.CreatorName, PLaylistTypes.Simple, source, info.PlaylistIdSource, info.IsMine, info.Url, info.Description);
 
-            db.CombinedPlaylistEntry.AddRange(playlistIdsList.Select(i => new CombinedPlaylistEntry { CombinedPlaylistId = playlistId, PlaylistId = i }));
-            db.SaveChanges();
+            UserDbContext.CombinedPlaylistEntry.AddRange(playlistIdsList.Select(i => new CombinedPlaylistEntry { CombinedPlaylistId = playlistId, PlaylistId = i }));
+            UserDbContext.SaveChanges();
 
             //add playlistSongs
             syncCombinedPlaylistLocal(playlistId);
@@ -850,16 +870,16 @@ namespace PlaylistChaser.Web.Controllers
 
         private void syncCombinedPlaylistLocal(int playlistId)
         {
-            var playlistIds = db.GetCachedList(db.CombinedPlaylistEntry).Where(cp => cp.CombinedPlaylistId == playlistId).Select(cp => cp.PlaylistId);
-            var availSongIds = db.GetCachedList(db.PlaylistSong).Where(ps => playlistIds.Contains(ps.PlaylistId)).Select(ps => ps.SongId).Distinct();
-            var curSongIds = db.GetCachedList(db.PlaylistSong).Where(ps => ps.PlaylistId == playlistId).Select(ps => ps.SongId).Distinct();
+            var playlistIds = UserDbContext.GetCachedList(UserDbContext.CombinedPlaylistEntry).Where(cp => cp.CombinedPlaylistId == playlistId).Select(cp => cp.PlaylistId);
+            var availSongIds = UserDbContext.GetCachedList(UserDbContext.PlaylistSong).Where(ps => playlistIds.Contains(ps.PlaylistId)).Select(ps => ps.SongId).Distinct();
+            var curSongIds = UserDbContext.GetCachedList(UserDbContext.PlaylistSong).Where(ps => ps.PlaylistId == playlistId).Select(ps => ps.SongId).Distinct();
             var newPlaylistSongs = availSongIds.Where(s => !curSongIds.Contains(s)).Select(i => new PlaylistSong { PlaylistId = playlistId, SongId = i }).ToList();
-            db.PlaylistSong.AddRange(newPlaylistSongs);
-            db.SaveChanges();
+            UserDbContext.PlaylistSong.AddRange(newPlaylistSongs);
+            UserDbContext.SaveChanges();
             foreach (Sources src in Enum.GetValues(typeof(Sources)))
-                db.PlaylistSongState.AddRange(newPlaylistSongs.Select(ps => new PlaylistSongState { PlaylistSongId = ps.Id, SourceId = src, StateId = PlaylistSongStates.NotAdded, LastChecked = DateTime.Now }));
+                UserDbContext.PlaylistSongState.AddRange(newPlaylistSongs.Select(ps => new PlaylistSongState { PlaylistSongId = ps.Id, SourceId = src, StateId = PlaylistSongStates.NotAdded, LastChecked = DateTime.Now }));
 
-            db.SaveChanges();
+            UserDbContext.SaveChanges();
         }
 
         #endregion
@@ -870,11 +890,11 @@ namespace PlaylistChaser.Web.Controllers
         {
             try
             {
-                var playlist = db.GetCachedList(db.Playlist).Single(p => p.Id == id);
+                var playlist = UserDbContext.GetCachedList(UserDbContext.Playlist).Single(p => p.Id == id);
 
                 //delete at source
                 //  check if it exists
-                var info = db.PlaylistInfo.SingleOrDefault(i => i.PlaylistId == id && i.SourceId == source);
+                var info = UserDbContext.PlaylistInfo.SingleOrDefault(i => i.PlaylistId == id && i.SourceId == source);
                 if (info == null)
                     return new JsonResult(new { success = false, message = "you don't have a playlist at this source" });
 
@@ -899,14 +919,14 @@ namespace PlaylistChaser.Web.Controllers
                     return new JsonResult(new { success = false, message = $"couldn't delete playlist on {source.ToString()}" });
 
                 //remove info
-                db.PlaylistInfo.Remove(info);
-                db.SaveChanges();
+                UserDbContext.PlaylistInfo.Remove(info);
+                UserDbContext.SaveChanges();
 
                 //remove PlaylistSongStates
-                var playlistSongIds = db.GetCachedList(db.PlaylistSong).Where(ps => ps.PlaylistId == id).Select(ps => ps.Id).ToList();
-                var playlistSongStates = db.PlaylistSongState.Where(pss => pss.SourceId == source && playlistSongIds.Contains(pss.PlaylistSongId));
-                db.PlaylistSongState.RemoveRange(playlistSongStates);
-                db.SaveChanges();
+                var playlistSongIds = UserDbContext.GetCachedList(UserDbContext.PlaylistSong).Where(ps => ps.PlaylistId == id).Select(ps => ps.Id).ToList();
+                var playlistSongStates = UserDbContext.PlaylistSongState.Where(pss => pss.SourceId == source && playlistSongIds.Contains(pss.PlaylistSongId));
+                UserDbContext.PlaylistSongState.RemoveRange(playlistSongStates);
+                UserDbContext.SaveChanges();
 
                 return new JsonResult(new { success = true });
             }
@@ -919,27 +939,27 @@ namespace PlaylistChaser.Web.Controllers
         {
             try
             {
-                var playlist = db.Playlist.Single(p => p.Id == id);
+                var playlist = UserDbContext.Playlist.Single(p => p.Id == id);
 
                 //check if all sources where deleted
-                if (db.GetCachedList(db.PlaylistInfo).Where(i => i.PlaylistId == id && i.IsMine).Any())
+                if (UserDbContext.GetCachedList(UserDbContext.PlaylistInfo).Where(i => i.PlaylistId == id && i.IsMine).Any())
                     return new JsonResult(new { success = false, message = "You still have Playlists at sources" });
 
                 //remove foreign playlistinfos
-                db.PlaylistInfo.RemoveRange(db.PlaylistInfo.Where(i => i.PlaylistId == id));
+                UserDbContext.PlaylistInfo.RemoveRange(UserDbContext.PlaylistInfo.Where(i => i.PlaylistId == id));
 
                 //delete from db
                 //  remove playlist songs 
-                var playlistSongs = db.PlaylistSong.Where(ps => ps.PlaylistId == id);
+                var playlistSongs = UserDbContext.PlaylistSong.Where(ps => ps.PlaylistId == id);
                 //      remove their states
-                db.PlaylistSongState.RemoveRange(db.PlaylistSongState.Where(pss => playlistSongs.Select(ps => ps.Id).Contains(pss.PlaylistSongId))); ;
-                db.SaveChanges();
-                db.PlaylistSong.RemoveRange(playlistSongs);
-                db.SaveChanges();
+                UserDbContext.PlaylistSongState.RemoveRange(UserDbContext.PlaylistSongState.Where(pss => playlistSongs.Select(ps => ps.Id).Contains(pss.PlaylistSongId))); ;
+                UserDbContext.SaveChanges();
+                UserDbContext.PlaylistSong.RemoveRange(playlistSongs);
+                UserDbContext.SaveChanges();
 
                 //  remove playlist
-                db.Playlist.Remove(playlist);
-                db.SaveChanges();
+                UserDbContext.Playlist.Remove(playlist);
+                UserDbContext.SaveChanges();
 
                 //  remove thumbnail
                 removePlaylistThumbnail(playlist.ThumbnailId);
@@ -961,10 +981,10 @@ namespace PlaylistChaser.Web.Controllers
             if (thumbnailId != null)
             {
                 //could be same as song thumbnail
-                if (!db.GetCachedList(db.Song).Any(s => s.ThumbnailId == thumbnailId))
+                if (!UserDbContext.GetCachedList(UserDbContext.Song).Any(s => s.ThumbnailId == thumbnailId))
                 {
-                    db.Thumbnail.Remove(db.Thumbnail.Single(t => t.Id == thumbnailId));
-                    db.SaveChanges();
+                    UserDbContext.Thumbnail.Remove(UserDbContext.Thumbnail.Single(t => t.Id == thumbnailId));
+                    UserDbContext.SaveChanges();
                     return true;
                 }
             }
@@ -988,7 +1008,7 @@ namespace PlaylistChaser.Web.Controllers
         {
             try
             {
-                var info = db.GetCachedList(db.PlaylistInfo).Single(i => i.SourceId == source && i.PlaylistId == playlistId);
+                var info = UserDbContext.GetCachedList(UserDbContext.PlaylistInfo).Single(i => i.SourceId == source && i.PlaylistId == playlistId);
                 List<SongInfo> songInfos;
                 switch (source)
                 {
@@ -1015,9 +1035,9 @@ namespace PlaylistChaser.Web.Controllers
         {
             try
             {
-                var songInfos = db.GetCachedList(db.SongInfo).Where(i => i.SourceId == source);
-                var songIds = db.GetCachedList(db.PlaylistSong).Where(ps => ps.PlaylistId == id).Select(ps => ps.SongId);
-                var songs = db.Song.Where(p => songIds.Contains(p.Id));
+                var songInfos = UserDbContext.GetCachedList(UserDbContext.SongInfo).Where(i => i.SourceId == source);
+                var songIds = UserDbContext.GetCachedList(UserDbContext.PlaylistSong).Where(ps => ps.PlaylistId == id).Select(ps => ps.SongId);
+                var songs = UserDbContext.Song.Where(p => songIds.Contains(p.Id));
                 if (onlyWithNoThumbnails)
                     songs = songs.Where(s => s.ThumbnailId == null);
                 var sourceIds = songInfos.Where(i => songs.Any(s => s.Id == i.SongId)).Select(i => i.SongIdSource);
@@ -1043,7 +1063,7 @@ namespace PlaylistChaser.Web.Controllers
                     var thumbnailId = getThumbnailId(thumbnailSource.Value, song.ThumbnailId);
                     song.ThumbnailId = thumbnailId;
                 }
-                db.SaveChanges();
+                UserDbContext.SaveChanges();
                 return new JsonResult(new { success = true });
             }
             catch (Exception ex)
@@ -1056,7 +1076,7 @@ namespace PlaylistChaser.Web.Controllers
         {
             try
             {
-                var playlists = db.Playlist.ToList();
+                var playlists = UserDbContext.Playlist.ToList();
                 var toastId = GetToastId();
                 await progressHub.InitProgressToast("Update playlist thumbnails", toastId, true);
                 var timeElapsedList = new List<int>();
@@ -1067,7 +1087,7 @@ namespace PlaylistChaser.Web.Controllers
                     if (IsCancelled(toastId, out var startTime)) break;
 
                     SourceThumbnail sourceThumbnail;
-                    var infos = db.GetCachedList(db.PlaylistInfo).Where(i => i.PlaylistId == playlist.Id);
+                    var infos = UserDbContext.GetCachedList(UserDbContext.PlaylistInfo).Where(i => i.PlaylistId == playlist.Id);
 
                     var info = infos.SingleOrDefault(i => i.SourceId == (source ?? playlist.MainSourceId));
                     if (info == null)
@@ -1091,7 +1111,7 @@ namespace PlaylistChaser.Web.Controllers
                     var msgDisplay = ToastMessageDisplay(true, playlists.Count, startTime, ref timeElapsedList, ref nCompleted, ref nSkipped);
                     await progressHub.UpdateProgressToast("Updating playlist thumbnails...", nCompleted, playlists.Count, msgDisplay, toastId, true);
                 }
-                db.SaveChanges();
+                UserDbContext.SaveChanges();
 
                 await progressHub.EndProgressToast(toastId);
                 return new JsonResult(new { success = true });
@@ -1105,24 +1125,24 @@ namespace PlaylistChaser.Web.Controllers
         private int getThumbnailId(SourceThumbnail sourceThumbnail, int? thumbnailId)
         {
             //if new thumbnail already in db
-            var thumbnail = db.GetCachedList(db.Thumbnail).SingleOrDefault(t => t.Url == sourceThumbnail.Url);
+            var thumbnail = UserDbContext.GetCachedList(UserDbContext.Thumbnail).SingleOrDefault(t => t.Url == sourceThumbnail.Url);
             if (thumbnail != null)
                 return thumbnail.Id;
 
             //overwrite existing thumbnail
             if (thumbnailId.HasValue)
             {
-                thumbnail = db.Thumbnail.Single(t => t.Id == thumbnailId);
+                thumbnail = UserDbContext.Thumbnail.Single(t => t.Id == thumbnailId);
                 thumbnail.FileContents = sourceThumbnail.FileContents;
-                db.SaveChanges();
+                UserDbContext.SaveChanges();
                 return thumbnail.Id;
             }
 
             //add new Thumbnail to db
             thumbnail = new Thumbnail { Url = sourceThumbnail.Url, FileContents = sourceThumbnail.FileContents };
-            db.Thumbnail.Add(thumbnail);
+            UserDbContext.Thumbnail.Add(thumbnail);
             thumbnail.FileContents = sourceThumbnail.FileContents;
-            db.SaveChanges();
+            UserDbContext.SaveChanges();
             return thumbnail.Id;
         }
 
@@ -1135,7 +1155,7 @@ namespace PlaylistChaser.Web.Controllers
             if (!thumbnailId.HasValue)
                 return null;
 
-            var thumbnail = db.GetCachedList(db.Thumbnail).SingleOrDefault(t => t.Id == thumbnailId);
+            var thumbnail = UserDbContext.GetCachedList(UserDbContext.Thumbnail).SingleOrDefault(t => t.Id == thumbnailId);
             if (thumbnail == null)
                 return null;
 
@@ -1149,7 +1169,7 @@ namespace PlaylistChaser.Web.Controllers
         {
             try
             {
-                var info = db.GetCachedList(db.PlaylistInfo).Single(i => i.SourceId == source && i.PlaylistId == playlistId);
+                var info = UserDbContext.GetCachedList(UserDbContext.PlaylistInfo).Single(i => i.SourceId == source && i.PlaylistId == playlistId);
 
                 List<SongInfo> songInfos;
                 switch (source)
@@ -1177,24 +1197,24 @@ namespace PlaylistChaser.Web.Controllers
 
         private void removeAllPlaylistSongStates(Sources source, int playlistId)
         {
-            var playlistSongIds = db.GetCachedList(db.PlaylistSong).Where(ps => ps.PlaylistId == playlistId).Select(ps => ps.Id).ToList();
-            var playlistSongStates = db.PlaylistSongState.Where(pss => pss.SourceId == source && playlistSongIds.Contains(pss.PlaylistSongId));
-            db.PlaylistSongState.RemoveRange(playlistSongStates);
-            db.SaveChanges();
+            var playlistSongIds = UserDbContext.GetCachedList(UserDbContext.PlaylistSong).Where(ps => ps.PlaylistId == playlistId).Select(ps => ps.Id).ToList();
+            var playlistSongStates = UserDbContext.PlaylistSongState.Where(pss => pss.SourceId == source && playlistSongIds.Contains(pss.PlaylistSongId));
+            UserDbContext.PlaylistSongState.RemoveRange(playlistSongStates);
+            UserDbContext.SaveChanges();
         }
 
         private void addPlaylistSongStates(Sources source, int playlistId, List<string> songIdsAtSource, PlaylistSongStates playlistSongState = PlaylistSongStates.Added)
         {
-            var songids = db.GetCachedList(db.SongInfo).Where(i => i.SourceId == source && songIdsAtSource.Contains(i.SongIdSource)).Select(i => i.SongId).ToList();
-            var playlistSongIds = db.GetCachedList(db.PlaylistSong).Where(ps => ps.PlaylistId == playlistId && songids.Contains(ps.SongId)).Select(ps => ps.Id).ToList();
+            var songids = UserDbContext.GetCachedList(UserDbContext.SongInfo).Where(i => i.SourceId == source && songIdsAtSource.Contains(i.SongIdSource)).Select(i => i.SongId).ToList();
+            var playlistSongIds = UserDbContext.GetCachedList(UserDbContext.PlaylistSong).Where(ps => ps.PlaylistId == playlistId && songids.Contains(ps.SongId)).Select(ps => ps.Id).ToList();
 
             addPlaylistSongStates(source, playlistSongIds, playlistSongState);
         }
         private void addPlaylistSongStates(Sources source, List<int> playlistSongIds, PlaylistSongStates playlistSongState)
         {
             var newPlaylistSongStates = playlistSongIds.Select(id => new PlaylistSongState { PlaylistSongId = id, SourceId = source, StateId = playlistSongState, LastChecked = DateTime.Now });
-            db.PlaylistSongState.AddRange(newPlaylistSongStates);
-            db.SaveChanges();
+            UserDbContext.PlaylistSongState.AddRange(newPlaylistSongStates);
+            UserDbContext.SaveChanges();
         }
         #endregion
     }
