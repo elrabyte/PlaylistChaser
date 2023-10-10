@@ -128,5 +128,6 @@
     <Build Include="VIEWPROG\Functions\getCurrentUserId.sql" />
     <Build Include="VIEWPROG\Views\AspNetUsers.sql" />
     <Build Include="NewDbScripts\InBuiltValues\InsertRoles.sql" />
+    <Build Include="VIEWPROG\Views\AspNetUserRoles.sql" />
   </ItemGroup>
 </Project>

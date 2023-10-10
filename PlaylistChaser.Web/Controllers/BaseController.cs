@@ -120,7 +120,8 @@ namespace PlaylistChaser.Web.Controllers
 
         public int? getCurrentUserId()
         {
-            if (int.TryParse(User?.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var userId))
+            int userId;
+            if (int.TryParse(User?.FindFirst(ClaimTypes.NameIdentifier)?.Value, out userId))
                 return userId;
             else
                 return null;

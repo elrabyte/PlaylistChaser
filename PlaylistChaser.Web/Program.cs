@@ -1,3 +1,4 @@
+using ats.Desk.Web.Util;
 using Hangfire;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -113,7 +114,7 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Playlist}/{action=Index}/{id?}");
 
-app.UseHangfireDashboard();
+app.UseHangfireDashboard("/hangfire", new DashboardOptions { Authorization = new[] { new HangfireAuthorization() } });
 
 app.UseEndpoints(endpoints =>
 {

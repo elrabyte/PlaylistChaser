@@ -9,7 +9,6 @@ using PlaylistChaser.Web.Models.SearchModel;
 using PlaylistChaser.Web.Util;
 using PlaylistChaser.Web.Util.API;
 using System.Data.Entity;
-using System.Security.Claims;
 using static PlaylistChaser.Web.Util.BuiltInIds;
 using static PlaylistChaser.Web.Util.Helper;
 using Playlist = PlaylistChaser.Web.Models.Playlist;
@@ -19,10 +18,9 @@ namespace PlaylistChaser.Web.Controllers
 {
     public class PlaylistController : BaseController
     {
-        public PlaylistController(IConfiguration configuration, SongController songController, IHubContext<ProgressHub> hubContext, IMemoryCache memoryCache, AdminDBContext dbAdmin)
+        public PlaylistController(IConfiguration configuration, IHubContext<ProgressHub> hubContext, IMemoryCache memoryCache, AdminDBContext dbAdmin)
             : base(configuration, hubContext, memoryCache, dbAdmin)
         {
-            this.songController = songController;
             RecurringJob.AddOrUpdate("SyncPlaylists", () => SyncPlaylists(), Cron.Daily);
         }
 
@@ -62,7 +60,6 @@ namespace PlaylistChaser.Web.Controllers
                 return _spottyHelper;
             }
         }
-        private SongController songController;
         #endregion
 
         #region Views
@@ -441,7 +438,8 @@ namespace PlaylistChaser.Web.Controllers
             }
 
             //add songs to db
-            addSongsToDb(songInfos);
+            var dbHelper = new DbHelper(UserDbContext);
+            dbHelper.AddSongsToDb(songInfos);
 
             //get local variants from songs at source
             var songSourceIds = songInfos.Select(i => i.SongIdSource).ToList();
@@ -456,9 +454,6 @@ namespace PlaylistChaser.Web.Controllers
 
             return new ReturnModel();
         }
-
-        private List<Song> addSongsToDb(List<SongInfo> songsFromPlaylist)
-            => songController.AddSongsToDb(songsFromPlaylist);
 
         /// <summary>
         /// add songs if not already and connect to playlist
@@ -694,7 +689,62 @@ namespace PlaylistChaser.Web.Controllers
             return notAddedSongs;
         }
         private async Task<List<FoundSong>> findSongs(List<Song> missingSongs, Sources source)
-            => await songController.FindSongs(missingSongs, source);
+        {
+            var toastId = GetToastId();
+            await progressHub.InitProgressToast("Find Songs", toastId, true);
+
+            //only songs that weren't checked before
+            var missingSongsList = missingSongs.Where(s => UserDbContext.SongState.SingleOrDefault(ss => ss.SongId == s.Id && ss.SourceId == source) == null
+                                                           || UserDbContext.SongState.Single(ss => ss.SongId == s.Id && ss.SourceId == source).StateId == SongStates.NotChecked);
+
+            if (!missingSongsList.Any())
+            {
+                await progressHub.EndProgressToast(toastId);
+                return null;
+            }
+
+            //check if songs exists
+            var findSongs = missingSongsList.Select(s => new FindSong(s.Id, s.ArtistName, s.SongName)).ToList();
+
+            int nFound = 0;
+            int nSkipped = 0;
+            var foundSongs = new List<FoundSong>();
+            FoundSong foundSong;
+            var timeElapsedList = new List<int>();
+            foreach (var findSong in findSongs)
+            {
+                if (IsCancelled(toastId, out var startTime)) break;
+
+                switch (source)
+                {
+                    case Sources.Youtube:
+                        foundSong = ytHelper.FindSong(findSong);
+                        break;
+                    case Sources.Spotify:
+                        foundSong = spottyHelper.FindSong(findSong);
+                        break;
+                    default:
+                        throw new NotImplementedException(ErrorHelper.NotImplementedForThatSource);
+                }
+
+                var newSongInfo = foundSong.NewSongInfo;
+                var stateId = SongStates.Available;
+                if (newSongInfo.ArtistName == "NotAvailable")
+                    stateId = SongStates.NotAvailable;
+
+                var dbHelper = new DbHelper(UserDbContext);
+                var returnObj = dbHelper.AddFoundSongToDb(newSongInfo.SongId, newSongInfo.Name, newSongInfo.ArtistName, newSongInfo.SourceId, newSongInfo.SongIdSource, newSongInfo.Url, stateId);
+
+                var msgDisplay = ToastMessageDisplay(returnObj.Success, findSongs.Count, startTime, ref timeElapsedList, ref nFound, ref nSkipped);
+
+                await progressHub.UpdateProgressToast("Finding songs...", nFound, findSongs.Count, msgDisplay, toastId, true);
+
+                foundSongs.Add(foundSong);
+            }
+            await progressHub.EndProgressToast(toastId);
+
+            return foundSongs;
+        }
         private async Task<ReturnModel> uploadSongsToPlaylist(Sources source, string playlistIdSource, List<UploadSong> songsToUpload)
         {
             if (!songsToUpload.Any())

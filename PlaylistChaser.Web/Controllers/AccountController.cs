@@ -8,7 +8,6 @@ using PlaylistChaser.Web.Models;
 using PlaylistChaser.Web.Models.ViewModel;
 using PlaylistChaser.Web.Util;
 using PlaylistChaser.Web.Util.API;
-using System.Security.Claims;
 using static PlaylistChaser.Web.Util.BuiltInIds;
 
 namespace PlaylistChaser.Web.Controllers
