@@ -7,8 +7,8 @@ using PlaylistChaser.Web.Models;
 using PlaylistChaser.Web.Models.SearchModel;
 using PlaylistChaser.Web.Util;
 using PlaylistChaser.Web.Util.API;
+using System.Data;
 using System.Data.Entity;
-using System.Security.Claims;
 using static PlaylistChaser.Web.Util.BuiltInIds;
 using static PlaylistChaser.Web.Util.Helper;
 
@@ -45,7 +45,8 @@ namespace PlaylistChaser.Web.Controllers
             {
                 if (_spottyHelper == null)
                 {
-                    if (!int.TryParse(HttpContext.User.FindFirst(ClaimTypes.NameIdentifier).Value, out var userId))
+                    var userId = getCurrentUserId();
+                    if (userId == null)
                         return null;
 
                     var oAuth = UserDbContext.GetCachedList(UserDbContext.OAuth2Credential).Single(c => c.UserId == userId && c.Provider == Sources.Spotify.ToString());
@@ -59,6 +60,7 @@ namespace PlaylistChaser.Web.Controllers
         #region Views
 
         #region View
+        [AuthorizeRole(Roles.Administrator)]
         public async Task<ActionResult> Index()
         {
             var model = new SongIndexModel
@@ -74,12 +76,14 @@ namespace PlaylistChaser.Web.Controllers
         #region Edit
 
         [HttpGet]
+        [AuthorizeRole(Roles.Administrator)]
         public ActionResult _EditPartial(int id)
         {
             var song = UserDbContext.GetCachedList(UserDbContext.Song).Single(s => s.Id == id);
             return PartialView(song);
         }
         [HttpPost]
+        [AuthorizeRole(Roles.Administrator)]
         public ActionResult _EditPartial(int id, Song uiSong)
         {
             var song = UserDbContext.Song.Single(s => s.Id == id);
@@ -92,12 +96,14 @@ namespace PlaylistChaser.Web.Controllers
         }
 
         [HttpGet]
+        [AuthorizeRole(Roles.Administrator)]
         public ActionResult _SongInfoEditPartial(Sources source, int songId)
         {
-            var songInfo = UserDbContext.GetCachedList(UserDbContext.SongInfo).Single(s => s.SourceId == source && s.SongId == songId);
+            var songInfo = UserDbContext.GetCachedList(UserDbContext.SongInfo).SingleOrDefault(s => s.SourceId == source && s.SongId == songId);
             return PartialView(songInfo);
         }
         [HttpPost]
+        [AuthorizeRole(Roles.Administrator)]
         public ActionResult _SongInfoEditPartial(Sources sourceId, int songId, SongInfo uiSongInfo)
         {
             var songInfo = UserDbContext.SongInfo.Single(s => s.SourceId == sourceId && s.SongId == songId);

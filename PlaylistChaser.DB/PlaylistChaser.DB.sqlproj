@@ -127,5 +127,6 @@
     <Build Include="dbo\OAuth2Credential.sql" />
     <Build Include="VIEWPROG\Functions\getCurrentUserId.sql" />
     <Build Include="VIEWPROG\Views\AspNetUsers.sql" />
+    <Build Include="NewDbScripts\InBuiltValues\InsertRoles.sql" />
   </ItemGroup>
 </Project>

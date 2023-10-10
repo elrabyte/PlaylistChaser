@@ -3,9 +3,12 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Memory;
 using PlaylistChaser.Web.Database;
 using PlaylistChaser.Web.Models;
+using PlaylistChaser.Web.Util;
+using static PlaylistChaser.Web.Util.BuiltInIds;
 
 namespace PlaylistChaser.Web.Controllers
 {
+    [AuthorizeRole(Roles.Administrator)]
     public class AdminController : BaseController
     {
         public AdminController(IConfiguration configuration, IHubContext<ProgressHub> hubContext, IMemoryCache memoryCache, AdminDBContext dbAdmin)

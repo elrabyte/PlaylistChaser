@@ -106,7 +106,7 @@ namespace PlaylistChaser.Web.Controllers
         #region Details
         public ActionResult _PlaylistInfosDetailsPartial(int playlistId)
         {
-            
+
             var playlistInfos = UserDbContext.GetCachedList(UserDbContext.PlaylistInfo).Where(s => s.PlaylistId == playlistId).ToList();
             return PartialView(playlistInfos);
         }
@@ -151,9 +151,10 @@ namespace PlaylistChaser.Web.Controllers
                 Playlist playlist;
                 if (isNew)
                 {
-                    if (!int.TryParse(HttpContext.User.FindFirst(ClaimTypes.NameIdentifier).Value, out var userId))
+                    var userId = getCurrentUserId();
+                    if (userId == null)
                         throw new Exception("can't get userId");
-                    playlist = new Playlist { UserId = userId };
+                    playlist = new Playlist { UserId = userId.Value };
                     UserDbContext.Playlist.Add(playlist);
                 }
                 else
@@ -237,11 +238,12 @@ namespace PlaylistChaser.Web.Controllers
         /// <returns>Playlistid</returns>
         private int addPlaylistToDb(string playlistName, string channelName, PLaylistTypes playlistType, Sources source, string playlistIdSource, bool isMine, string url, string description = null, int? thumbnailId = null)
         {
-            if (!int.TryParse(HttpContext.User.FindFirst(ClaimTypes.NameIdentifier).Value, out var userId))
+            var userId = getCurrentUserId();
+            if (userId == null)
                 throw new Exception("can't get userId");
 
             //add playlist to db
-            var playlist = new Playlist { Name = playlistName, ChannelName = channelName, PlaylistTypeId = playlistType, Description = description, ThumbnailId = thumbnailId, MainSourceId = source, UserId = userId };
+            var playlist = new Playlist { Name = playlistName, ChannelName = channelName, PlaylistTypeId = playlistType, Description = description, ThumbnailId = thumbnailId, MainSourceId = source, UserId = userId.Value };
             UserDbContext.Playlist.Add(playlist);
             UserDbContext.SaveChanges();
 
@@ -276,7 +278,7 @@ namespace PlaylistChaser.Web.Controllers
                 int nSkipped = 0;
                 var playlists = UserDbContext.GetCachedList(UserDbContext.Playlist).ToList();
                 var timeElapsedList = new List<int>();
-                ReturnModel returnObj = null;
+                var returnObj = new ReturnModel();
                 foreach (var playlist in playlists)
                 {
                     if (IsCancelled(toastId, out var startTime)) break;
@@ -329,7 +331,7 @@ namespace PlaylistChaser.Web.Controllers
                 int nSkipped = 0;
                 var playlists = UserDbContext.GetCachedList(UserDbContext.Playlist).ToList();
                 var timeElapsedList = new List<int>();
-                ReturnModel returnObj = null;
+                var returnObj = new ReturnModel();
                 foreach (var playlist in playlists)
                 {
                     if (IsCancelled(toastId, out var startTime)) break;
@@ -498,7 +500,7 @@ namespace PlaylistChaser.Web.Controllers
                 int nSkipped = 0;
                 var playlists = UserDbContext.GetCachedList(UserDbContext.Playlist).ToList();
                 var timeElapsedList = new List<int>();
-                ReturnModel returnObj = null;
+                var returnObj = new ReturnModel();
 
                 var playlistIds = playlists.Select(p => p.Id).ToList();
 
@@ -713,7 +715,8 @@ namespace PlaylistChaser.Web.Controllers
             var timeElapsedList = new List<int>();
             int nAdded = 0;
             int nSkipped = 0;
-            ReturnModel returnObj = null;
+            var returnObj = new ReturnModel();
+
             switch (source)
             {
                 case Sources.Youtube:

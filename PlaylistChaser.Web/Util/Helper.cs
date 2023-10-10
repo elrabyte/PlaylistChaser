@@ -91,7 +91,7 @@ namespace PlaylistChaser.Web.Util
         }
         #endregion
 
-        public static string SourcesToJs(List<Models.Source> sources)
+        public static string SourcesToJs(List<Source> sources)
         {
             var sourcesJs = string.Join(',', sources.Select(src => Newtonsoft.Json.JsonConvert.SerializeObject(src)));
             return $"[{sourcesJs}]";

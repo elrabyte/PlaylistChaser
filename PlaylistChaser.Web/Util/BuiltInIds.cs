@@ -32,5 +32,10 @@
             Playlist,
             Song
         }
+
+        public enum Roles
+        {
+            Administrator
+        }
     }
 }
