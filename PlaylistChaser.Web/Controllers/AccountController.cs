@@ -6,6 +6,7 @@ using Microsoft.Extensions.Caching.Memory;
 using PlaylistChaser.Web.Database;
 using PlaylistChaser.Web.Models;
 using PlaylistChaser.Web.Models.ViewModel;
+using PlaylistChaser.Web.Util;
 using PlaylistChaser.Web.Util.API;
 using System.Security.Claims;
 using static PlaylistChaser.Web.Util.BuiltInIds;
@@ -152,15 +153,15 @@ namespace PlaylistChaser.Web.Controllers
 
         #region User
         [HttpGet]
-        [AllowAnonymous]
+        [AuthorizeRole(Roles.Administrator)]
         public ActionResult Register()
         {
             return View(new RegisterViewModel());
         }
 
         [HttpPost]
-        [AllowAnonymous]
         [ValidateAntiForgeryToken]
+        [AuthorizeRole(Roles.Administrator)]
         public async Task<ActionResult> Register(RegisterViewModel model)
         {
             if (ModelState.IsValid)
