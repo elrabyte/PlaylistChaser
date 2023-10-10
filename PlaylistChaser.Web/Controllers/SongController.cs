@@ -343,7 +343,7 @@ namespace PlaylistChaser.Web.Controllers
                 else
                     return new JsonResult(new { success = false, message = "no songIds or playlistId passed" });
 
-                var res = FindSongs(songs.ToList(), source);
+                var res = findSongs(songs.ToList(), source);
 
                 return new JsonResult(new { success = true });
             }
@@ -353,7 +353,7 @@ namespace PlaylistChaser.Web.Controllers
             }
         }
 
-        public async Task<List<FoundSong>> FindSongs(List<Song> missingSongs, Sources source)
+        private async Task<List<FoundSong>> findSongs(List<Song> missingSongs, Sources source)
         {
             var toastId = GetToastId();
             await progressHub.InitProgressToast("Find Songs", toastId, true);
@@ -396,7 +396,9 @@ namespace PlaylistChaser.Web.Controllers
                 var stateId = SongStates.Available;
                 if (newSongInfo.ArtistName == "NotAvailable")
                     stateId = SongStates.NotAvailable;
-                var returnObj = addFoundSongToDb(newSongInfo.SongId, newSongInfo.Name, newSongInfo.ArtistName, newSongInfo.SourceId, newSongInfo.SongIdSource, newSongInfo.Url, stateId);
+
+                var dbHelper = new DbHelper(UserDbContext);
+                var returnObj = dbHelper.AddFoundSongToDb(newSongInfo.SongId, newSongInfo.Name, newSongInfo.ArtistName, newSongInfo.SourceId, newSongInfo.SongIdSource, newSongInfo.Url, stateId);
 
                 var msgDisplay = ToastMessageDisplay(returnObj.Success, findSongs.Count, startTime, ref timeElapsedList, ref nFound, ref nSkipped);
 
@@ -409,88 +411,5 @@ namespace PlaylistChaser.Web.Controllers
             return foundSongs;
         }
         #endregion
-
-        #region Add song to db
-        private ReturnModel addFoundSongToDb(int songId, string songName, string artistName, Sources source, string songIdSource, string url, SongStates stateId = SongStates.Available)
-        {
-            try
-            {
-                if (UserDbContext.GetCachedList(UserDbContext.SongInfo).Any(i => i.SongId == songId && i.SourceId == source))
-                    return new ReturnModel("A songInfo already exists for that source");
-
-                if (UserDbContext.GetCachedList(UserDbContext.SongInfo).Any(i => i.SongIdSource == songIdSource && i.SourceId == source))
-                    return new ReturnModel("There's already a songinfo with that SongIdSource");
-
-                //add song info
-                var newSongInfo = new SongInfo { SongId = songId, SourceId = source, SongIdSource = songIdSource, Name = songName, ArtistName = artistName, Url = url };
-                UserDbContext.SongInfo.Add(newSongInfo);
-
-                //add song state
-                var newSongState = new SongState { SongId = songId, SourceId = source, StateId = stateId, LastChecked = DateTime.Now };
-                UserDbContext.SongState.AddRange(newSongState);
-
-                UserDbContext.SaveChanges();
-                return new ReturnModel();
-            }
-            catch (Exception ex)
-            {
-                return new ReturnModel(ex.Message);
-            }
-        }
-
-        internal List<Song> AddSongsToDb(List<SongInfo> songsToAdd)
-        {
-            {
-                var addedSongs = new List<Song>();
-
-                //check if songs are already in db
-                //TODO: for now only check if it wasnt added from same source
-                //      on youtube songname & artist name dont have to be a unique combination
-                //      fuck you anguish with your stupid ass song titles
-
-
-                //remove duplicates
-                songsToAdd = songsToAdd.DistinctBy(i => i.SongIdSource).ToList();
-
-                //add song
-                foreach (var newSong in songsToAdd)
-                {
-                    //skip already added
-                    if (UserDbContext.GetCachedList(UserDbContext.SongInfo).Any(s => s.SourceId == newSong.SourceId && s.SongIdSource == newSong.SongIdSource))
-                        continue;
-
-                    var success = addSongs(newSong.Name, newSong.ArtistName, newSong.SourceId, newSong.SongIdSource, newSong.Url);
-                };
-
-                return addedSongs;
-            }
-        }
-        private ReturnModel addSongs(string songName, string artistName, Sources source, string songIdSource, string url)
-        {
-            try
-            {
-                //add song
-                var newSong = new Song { SongName = songName, ArtistName = artistName };
-                UserDbContext.Song.Add(newSong);
-                UserDbContext.SaveChanges();
-
-                //add song info
-                var newSongInfo = new SongInfo { SongId = newSong.Id, SourceId = source, SongIdSource = songIdSource, Name = songName, ArtistName = artistName, Url = url };
-                UserDbContext.SongInfo.Add(newSongInfo);
-
-                //add song state
-                var newSongState = new SongState { SongId = newSong.Id, SourceId = source, StateId = SongStates.Available, LastChecked = DateTime.Now };
-                UserDbContext.SongState.AddRange(newSongState);
-
-                UserDbContext.SaveChanges();
-
-                return new ReturnModel();
-            }
-            catch (Exception ex)
-            {
-                return new ReturnModel(ex.Message);
-            }
-        }
-        #endregion       
     }
 }

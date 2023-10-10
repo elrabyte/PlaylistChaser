@@ -10,7 +10,8 @@ namespace PlaylistChaser.Web.Database
     {
         string dbUserName;
         string dbPassword;
-        public UserDbContext(DbContextOptions<UserDbContext> options, IMemoryCache memoryCache, IConfiguration configuration, string dbUserName, string dbPassword) : base(options, memoryCache, configuration) {
+        public UserDbContext(DbContextOptions<UserDbContext> options, IMemoryCache memoryCache, IConfiguration configuration, string dbUserName, string dbPassword) : base(options, memoryCache, configuration)
+        {
             this.dbUserName = dbUserName;
             this.dbPassword = dbPassword;
         }

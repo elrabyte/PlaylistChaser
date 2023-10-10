@@ -35,7 +35,7 @@
 
         public enum Roles
         {
-            Administrator
+            Administrator = 1
         }
     }
 }
