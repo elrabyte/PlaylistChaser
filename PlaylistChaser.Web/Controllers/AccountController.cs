@@ -66,6 +66,8 @@ namespace PlaylistChaser.Web.Controllers
             }
 
         }
+
+        [HttpGet]
         public async Task<ActionResult> AcceptSpotifyCode(string code)
         {
             var clientId = configuration["Spotify:ClientId"];
@@ -120,6 +122,8 @@ namespace PlaylistChaser.Web.Controllers
                 return new JsonResult(new { success = false, message = ex.Message });
             }
         }
+
+        [HttpGet]
         public async Task<ActionResult> AcceptYoutubeCode(string code)
         {
             var clientId = configuration["Youtube:ClientId"];
