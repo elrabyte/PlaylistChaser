@@ -1,9 +1,11 @@
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using PlaylistChaser.Model;
 
 namespace PlaylistChaser.Api.Database
 {
-    public class AdminDBContext : DbContext
+    public class AdminDBContext : IdentityDbContext<User, IdentityRole<int>, int>
     {
         public AdminDBContext(DbContextOptions<AdminDBContext> options) : base(options) { }
 

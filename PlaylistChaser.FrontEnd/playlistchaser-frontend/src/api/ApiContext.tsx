@@ -6,12 +6,15 @@ import React, {
   useState,
   useEffect,
 } from "react";
-import { Client, Playlist } from "./api-client"; // Import your NSwag generated client
+import { AddPlaylistModel, Client, Playlist } from "./api-client"; // Import your NSwag generated client
 import { ShowError } from "../components/Toast";
 
 // Define the shape of the API context
 interface ApiContextProps {
   getPlaylists: () => Promise<Playlist[]>;
+  getPlaylist: (playlistId: number) => Promise<Playlist>;
+  addPlaylist: (url: string) => Promise<void>;
+  deletePlaylist: (playlistId: number) => Promise<void>;
 }
 
 // Create the API context
@@ -42,7 +45,7 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     const client = new Client("http://localhost:5026");
     const getPlaylists = () => {
       return client
-        .playlistAll()
+        .getAllPlaylists()
         .then((playlists) => {
           return playlists;
         })
@@ -51,9 +54,35 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
           return Promise.resolve([]);
         });
     };
+    const getPlaylist = (playlistId: number) => {
+      return client
+        .playlist(playlistId)
+        .then((playlist) => {
+          return playlist;
+        })
+        .catch((error) => {
+          setErrorMessage(error.toString());
+          throw Error(errorMessage);
+        });
+    };
+    const addPlaylist = (url: string) => {
+      return client
+        .addPlaylist(new AddPlaylistModel({ playlistUrl: url }))
+        .catch((error) => {
+          setErrorMessage(error.toString());
+        });
+    };
+    const deletePlaylist = (playlistId: number) => {
+      return client.removePlaylist(playlistId).catch((error) => {
+        setErrorMessage(error.toString());
+      });
+    };
 
     value = {
       getPlaylists,
+      getPlaylist,
+      addPlaylist,
+      deletePlaylist,
     };
   } catch (error) {
     setErrorMessage("an unexcepted error occured");

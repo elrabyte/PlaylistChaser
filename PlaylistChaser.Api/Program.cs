@@ -1,20 +1,27 @@
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Writers;
 using PlaylistChaser.Api.Database;
-using System;
-using System.IO;
-using System.Text.Json;
+using PlaylistChaser.Model;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-
 builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(); // Adds Swagger generation
+builder.Services.AddSwaggerGen();
 
-// Register DbContext with PostgreSQL
+builder.Services.AddIdentity<User, IdentityRole<int>>()
+    .AddEntityFrameworkStores<AdminDBContext>()
+    .AddDefaultTokenProviders();
+builder.Services.Configure<IdentityOptions>(options =>
+{
+    options.Password.RequireDigit = false;
+    options.Password.RequireLowercase = false;
+    options.Password.RequireUppercase = false;
+    options.Password.RequireNonAlphanumeric = false;
+    options.Password.RequiredLength = 4;
+});
+
 builder.Services.AddDbContext<AdminDBContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 

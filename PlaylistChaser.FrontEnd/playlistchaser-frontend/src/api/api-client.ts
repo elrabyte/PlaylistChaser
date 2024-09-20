@@ -19,10 +19,48 @@ export class Client {
     }
 
     /**
+     * @param body (optional) 
      * @return OK
      */
-    playlistAll(): Promise<Playlist[]> {
-        let url_ = this.baseUrl + "/api/Playlist";
+    registerUser(body: RegisterUserModel | undefined): Promise<void> {
+        let url_ = this.baseUrl + "/api/Account/register-user";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(body);
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processRegisterUser(_response);
+        });
+    }
+
+    protected processRegisterUser(response: Response): Promise<void> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            return;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
+    /**
+     * @return OK
+     */
+    getAllPlaylists(): Promise<Playlist[]> {
+        let url_ = this.baseUrl + "/api/Playlist/get-all-playlists";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: RequestInit = {
@@ -33,11 +71,11 @@ export class Client {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processPlaylistAll(_response);
+            return this.processGetAllPlaylists(_response);
         });
     }
 
-    protected processPlaylistAll(response: Response): Promise<Playlist[]> {
+    protected processGetAllPlaylists(response: Response): Promise<Playlist[]> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
@@ -65,7 +103,7 @@ export class Client {
     /**
      * @return OK
      */
-    playlist(id: number): Promise<string> {
+    playlist(id: number): Promise<Playlist> {
         let url_ = this.baseUrl + "/api/Playlist/{id}";
         if (id === undefined || id === null)
             throw new Error("The parameter 'id' must be defined.");
@@ -84,15 +122,14 @@ export class Client {
         });
     }
 
-    protected processPlaylist(response: Response): Promise<string> {
+    protected processPlaylist(response: Response): Promise<Playlist> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             let result200: any = null;
             let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-                result200 = resultData200 !== undefined ? resultData200 : <any>null;
-    
+            result200 = Playlist.fromJS(resultData200);
             return result200;
             });
         } else if (status !== 200 && status !== 204) {
@@ -100,15 +137,126 @@ export class Client {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<string>(null as any);
+        return Promise.resolve<Playlist>(null as any);
     }
+
+    /**
+     * @param body (optional) 
+     * @return OK
+     */
+    addPlaylist(body: AddPlaylistModel | undefined): Promise<void> {
+        let url_ = this.baseUrl + "/api/Playlist/add-playlist";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(body);
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processAddPlaylist(_response);
+        });
+    }
+
+    protected processAddPlaylist(response: Response): Promise<void> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            return;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
+    /**
+     * @return OK
+     */
+    removePlaylist(id: number): Promise<void> {
+        let url_ = this.baseUrl + "/api/Playlist/remove-playlist/{id}";
+        if (id === undefined || id === null)
+            throw new Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "PUT",
+            headers: {
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processRemovePlaylist(_response);
+        });
+    }
+
+    protected processRemovePlaylist(response: Response): Promise<void> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            return;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<void>(null as any);
+    }
+}
+
+export class AddPlaylistModel implements IAddPlaylistModel {
+    playlistUrl!: string;
+
+    constructor(data?: IAddPlaylistModel) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.playlistUrl = _data["playlistUrl"];
+        }
+    }
+
+    static fromJS(data: any): AddPlaylistModel {
+        data = typeof data === 'object' ? data : {};
+        let result = new AddPlaylistModel();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["playlistUrl"] = this.playlistUrl;
+        return data;
+    }
+}
+
+export interface IAddPlaylistModel {
+    playlistUrl: string;
 }
 
 export class Playlist implements IPlaylist {
     id?: number;
     name!: string;
     channelName!: string;
-    thumbnailId?: number | undefined;
+    thumbnailId?: number;
+    thumbnail?: Thumbnail;
     playlistTypeId!: PlaylistTypes;
     description?: string | undefined;
     mainSourceId?: Sources;
@@ -130,6 +278,7 @@ export class Playlist implements IPlaylist {
             this.name = _data["name"];
             this.channelName = _data["channelName"];
             this.thumbnailId = _data["thumbnailId"];
+            this.thumbnail = _data["thumbnail"] ? Thumbnail.fromJS(_data["thumbnail"]) : <any>undefined;
             this.playlistTypeId = _data["playlistTypeId"];
             this.description = _data["description"];
             this.mainSourceId = _data["mainSourceId"];
@@ -151,6 +300,7 @@ export class Playlist implements IPlaylist {
         data["name"] = this.name;
         data["channelName"] = this.channelName;
         data["thumbnailId"] = this.thumbnailId;
+        data["thumbnail"] = this.thumbnail ? this.thumbnail.toJSON() : <any>undefined;
         data["playlistTypeId"] = this.playlistTypeId;
         data["description"] = this.description;
         data["mainSourceId"] = this.mainSourceId;
@@ -164,7 +314,8 @@ export interface IPlaylist {
     id?: number;
     name: string;
     channelName: string;
-    thumbnailId?: number | undefined;
+    thumbnailId?: number;
+    thumbnail?: Thumbnail;
     playlistTypeId: PlaylistTypes;
     description?: string | undefined;
     mainSourceId?: Sources;
@@ -177,9 +328,93 @@ export enum PlaylistTypes {
     _2 = 2,
 }
 
+export class RegisterUserModel implements IRegisterUserModel {
+    email!: string;
+    password!: string;
+
+    constructor(data?: IRegisterUserModel) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.email = _data["email"];
+            this.password = _data["password"];
+        }
+    }
+
+    static fromJS(data: any): RegisterUserModel {
+        data = typeof data === 'object' ? data : {};
+        let result = new RegisterUserModel();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["email"] = this.email;
+        data["password"] = this.password;
+        return data;
+    }
+}
+
+export interface IRegisterUserModel {
+    email: string;
+    password: string;
+}
+
 export enum Sources {
     _1 = 1,
     _2 = 2,
+}
+
+export class Thumbnail implements IThumbnail {
+    id?: number;
+    fileContents!: string;
+    url?: string | undefined;
+
+    constructor(data?: IThumbnail) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.id = _data["id"];
+            this.fileContents = _data["fileContents"];
+            this.url = _data["url"];
+        }
+    }
+
+    static fromJS(data: any): Thumbnail {
+        data = typeof data === 'object' ? data : {};
+        let result = new Thumbnail();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["id"] = this.id;
+        data["fileContents"] = this.fileContents;
+        data["url"] = this.url;
+        return data;
+    }
+}
+
+export interface IThumbnail {
+    id?: number;
+    fileContents: string;
+    url?: string | undefined;
 }
 
 export class User implements IUser {

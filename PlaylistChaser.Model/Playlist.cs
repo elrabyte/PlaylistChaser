@@ -9,10 +9,12 @@ namespace PlaylistChaser.Model
         [Key, DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int Id { get; set; }
         [Required]
-        public string? Name { get; set; }
+        public string Name { get; set; }
         [Required]
-        public string? ChannelName { get; set; }
-        public int? ThumbnailId { get; set; }
+        public string ChannelName { get; set; }
+        public int ThumbnailId { get; set; }
+        [ForeignKey(nameof(ThumbnailId))]
+        public Thumbnail Thumbnail { get; set; }
         [Required]
         public PlaylistTypes PlaylistTypeId { get; set; }
         public string? Description { get; set; }
