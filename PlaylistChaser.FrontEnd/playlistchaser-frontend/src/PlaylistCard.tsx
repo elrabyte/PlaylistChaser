@@ -16,13 +16,13 @@ import { useRef, useState } from "react";
 type PlaylistCardProps = {
   playlist: Playlist;
   isSelected: boolean;
-  setIsSelected: (playlistId: number) => void;
+  onClick: (playlistId: number) => void;
   deletePlaylist: (playlistId: number) => void;
 };
 export const PlaylistCard = ({
   playlist,
   isSelected,
-  setIsSelected,
+  onClick,
   deletePlaylist,
 }: PlaylistCardProps) => {
   const [showOptions, setShowOptions] = useState<boolean>(false);
@@ -70,7 +70,7 @@ export const PlaylistCard = ({
       <Card variant="outlined" sx={cardStyle}>
         <CardActionArea
           onClick={() => {
-            setIsSelected(playlist.id!);
+            onClick(playlist.id!);
           }}
         >
           <CardHeader

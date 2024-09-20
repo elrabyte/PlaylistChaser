@@ -88,5 +88,20 @@ namespace PlaylistChaser.Api.Controllers
             adminDBContext.SaveChanges();
             return Ok();
         }
+        [HttpPut]
+        [Route("remove-playlists")]
+        public ActionResult RemovePlaylists([FromBody] List<int> ids)
+        {
+            var playlists = adminDBContext.Playlist.Include(p => p.Thumbnail).Where(p => ids.Contains(p.Id));
+            var thumbnails = playlists.Select(p => p.Thumbnail);
+            var playlistInfos = adminDBContext.PlaylistInfo.Where(i => ids.Contains(i.PlaylistId));
+            adminDBContext.Playlist.RemoveRange(playlists);
+            adminDBContext.Thumbnail.RemoveRange(thumbnails);
+            adminDBContext.PlaylistInfo.RemoveRange(playlistInfos);
+
+            adminDBContext.SaveChanges();
+
+            return Ok();
+        }
     }
 }

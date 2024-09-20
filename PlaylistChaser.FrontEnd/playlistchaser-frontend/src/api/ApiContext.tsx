@@ -15,6 +15,7 @@ interface ApiContextProps {
   getPlaylist: (playlistId: number) => Promise<Playlist>;
   addPlaylist: (url: string) => Promise<void>;
   deletePlaylist: (playlistId: number) => Promise<void>;
+  deletePlaylists: (playlistIds: number[]) => Promise<void>;
 }
 
 // Create the API context
@@ -78,11 +79,18 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
       });
     };
 
+    const deletePlaylists = (playlistIds: number[]) => {
+      return client.removePlaylists(playlistIds).catch((error) => {
+        setErrorMessage(error.toString());
+      });
+    };
+
     value = {
       getPlaylists,
       getPlaylist,
       addPlaylist,
       deletePlaylist,
+      deletePlaylists,
     };
   } catch (error) {
     setErrorMessage("an unexcepted error occured");

@@ -30,7 +30,7 @@ export const AddPlaylist = ({ addPlaylist }: AddPlaylistProps) => {
   };
 
   return (
-    <Box>
+    <Grid container spacing={2}>
       <TextField
         label="YT-Playlist Url"
         type="url"
@@ -40,6 +40,7 @@ export const AddPlaylist = ({ addPlaylist }: AddPlaylistProps) => {
         }}
       />
       <Button
+        size="small"
         disabled={disabled}
         variant="contained"
         endIcon={<Add />}
@@ -47,6 +48,6 @@ export const AddPlaylist = ({ addPlaylist }: AddPlaylistProps) => {
       >
         Add Playlist
       </Button>
-    </Box>
+    </Grid>
   );
 };
