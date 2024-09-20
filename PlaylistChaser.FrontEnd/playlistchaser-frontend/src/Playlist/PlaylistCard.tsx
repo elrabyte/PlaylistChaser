@@ -2,7 +2,7 @@ import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import CardMedia from "@mui/material/CardMedia";
 import Typography from "@mui/material/Typography";
-import { Playlist, PlaylistTypes } from "./api/api-client";
+import { Playlist, PlaylistTypes } from "../api/api-client";
 import { SxProps, Theme } from "@mui/material/styles";
 import CardActionArea from "@mui/material/CardActionArea";
 import IconButton, { IconButtonProps } from "@mui/material/IconButton";

@@ -10,9 +10,11 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-builder.Services.AddIdentity<User, IdentityRole<int>>()
+builder.Services
+    .AddIdentity<User, IdentityRole<int>>()
     .AddEntityFrameworkStores<AdminDBContext>()
     .AddDefaultTokenProviders();
+
 builder.Services.Configure<IdentityOptions>(options =>
 {
     options.Password.RequireDigit = false;
@@ -27,12 +29,14 @@ builder.Services.AddDbContext<AdminDBContext>(options =>
 
 builder.Services.AddCors(options =>
 {
+    var frontEndUrl = builder.Configuration.GetValue<string>("FrontEndUrl");
     options.AddPolicy("AllowFrontend",
         builder => builder
-            .WithOrigins("http://localhost:3000")
+            .WithOrigins(frontEndUrl)
             .AllowAnyHeader()
             .AllowAnyMethod()
-            .AllowCredentials());
+            .AllowCredentials()
+            );
 });
 
 var app = builder.Build();

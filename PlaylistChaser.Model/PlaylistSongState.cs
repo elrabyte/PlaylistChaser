@@ -9,7 +9,7 @@ namespace PlaylistChaser.Model
     public class PlaylistSongState
     {
         public int PlaylistSongId { get; set; }
-        public Sources SourceId { get; set; }
+        public SourceId SourceId { get; set; }
         [Required]
         public PlaylistSongStates StateId { get; set; }
         [Required]
@@ -22,9 +22,9 @@ namespace PlaylistChaser.Model
             {
                 switch (SourceId)
                 {
-                    case Sources.Youtube:
+                    case SourceId.Youtube:
                         return "<i class=\"bi bi-youtube\"></i>";
-                    case Sources.Spotify:
+                    case SourceId.Spotify:
                         return "<i class=\"bi bi-spotify\"></i>";
                     default:
                         return null;

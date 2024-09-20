@@ -11,7 +11,7 @@ namespace PlaylistChaser.Model
         public int PlaylistId { get; set; }
         [ForeignKey(nameof(PlaylistId))]
         public Playlist Playlist { get; set; }
-        public Sources SourceId { get; set; }
+        public SourceId SourceId { get; set; }
         [Required]
         public string PlaylistIdSource { get; set; }
         [Required]

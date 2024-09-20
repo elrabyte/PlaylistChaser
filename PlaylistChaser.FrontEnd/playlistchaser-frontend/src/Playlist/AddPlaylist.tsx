@@ -3,8 +3,8 @@ import Grid from "@mui/material/Grid2";
 import { PlaylistCard } from "./PlaylistCard";
 
 import Container from "@mui/material/Container";
-import { useApi } from "./api/ApiContext";
-import { Playlist } from "./api/api-client";
+import { useApi } from "../api/ApiContext";
+import { Playlist } from "../api/api-client";
 import { Box, Button, TextField } from "@mui/material";
 import { Add } from "@mui/icons-material";
 import Playlists from "./Playlists";

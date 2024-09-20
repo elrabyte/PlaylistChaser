@@ -3,9 +3,10 @@ import Grid from "@mui/material/Grid2";
 import { PlaylistCard } from "./PlaylistCard";
 
 import Container from "@mui/material/Container";
-import { useApi } from "./api/ApiContext";
-import { Playlist } from "./api/api-client";
+import { useApi } from "../api/ApiContext";
+import { Playlist } from "../api/api-client";
 import {
+  Badge,
   Box,
   Button,
   Divider,
@@ -84,16 +85,18 @@ const Playlists = () => {
       </Grid>
       <Grid container sx={{ p: 2 }}>
         <Grid>
-          <ToggleButton
-            color="primary"
-            value="check"
-            selected={selectionMode}
-            onChange={() => {
-              setSelectionMode(!selectionMode);
-            }}
-          >
-            <Check />
-          </ToggleButton>
+          <Badge badgeContent={selectedPlaylistIds.length} color="primary">
+            <ToggleButton
+              color="primary"
+              value="check"
+              selected={selectionMode}
+              onChange={() => {
+                setSelectionMode(!selectionMode);
+              }}
+            >
+              <Check />
+            </ToggleButton>
+          </Badge>
         </Grid>
         <Grid visibility={selectionMode ? "visible" : "hidden"}>
           <IconButton

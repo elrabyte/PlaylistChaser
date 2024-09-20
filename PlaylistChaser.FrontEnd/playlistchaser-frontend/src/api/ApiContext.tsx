@@ -16,6 +16,8 @@ interface ApiContextProps {
   addPlaylist: (url: string) => Promise<void>;
   deletePlaylist: (playlistId: number) => Promise<void>;
   deletePlaylists: (playlistIds: number[]) => Promise<void>;
+  getLoginUrl: () => Promise<string>;
+  checkAuthenticated: () => Promise<boolean>;
 }
 
 // Create the API context
@@ -85,12 +87,28 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
       });
     };
 
+    const checkAuthenticated = () => {
+      return client.checkAuthenticated().catch((error) => {
+        setErrorMessage(error.toString());
+        return false;
+      });
+    };
+
+    const getLoginUrl = () => {
+      return client.getLoginUrl().catch((error) => {
+        setErrorMessage(error.toString());
+        throw Error();
+      });
+    };
+
     value = {
       getPlaylists,
       getPlaylist,
       addPlaylist,
       deletePlaylist,
       deletePlaylists,
+      getLoginUrl,
+      checkAuthenticated,
     };
   } catch (error) {
     setErrorMessage("an unexcepted error occured");

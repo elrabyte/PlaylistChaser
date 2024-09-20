@@ -1,6 +1,6 @@
 ﻿namespace PlaylistChaser.Model.BuiltInIds
 {
-    public enum Sources
+    public enum SourceId
     {
         Youtube = 1,
         Spotify = 2

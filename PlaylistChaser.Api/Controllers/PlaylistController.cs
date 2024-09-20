@@ -55,7 +55,7 @@ namespace PlaylistChaser.Api.Controllers
             var insertPlaylistInfo = new PlaylistInfo
             {
                 Playlist = insertPlaylist,
-                SourceId = Sources.Youtube,
+                SourceId = SourceId.Spotify,
                 PlaylistIdSource = "ytPlaylistId",
                 Name = "test",
                 CreatorName = "test",

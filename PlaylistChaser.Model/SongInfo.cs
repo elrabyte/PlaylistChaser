@@ -11,7 +11,7 @@ namespace PlaylistChaser.Model
         public int SongId { get; set; }
         [ForeignKey(nameof(SongId))]
         public Song Song { get; set; }
-        public Sources SourceId { get; set; }
+        public SourceId SourceId { get; set; }
 
         [Required]
         public string SongIdSource { get; set; }
@@ -29,9 +29,9 @@ namespace PlaylistChaser.Model
             {
                 switch (SourceId)
                 {
-                    case Sources.Youtube:
+                    case SourceId.Youtube:
                         return "<i class=\"bi bi-youtube\"></i>";
-                    case Sources.Spotify:
+                    case SourceId.Spotify:
                         return "<i class=\"bi bi-spotify\"></i>";
                     default:
                         return null;

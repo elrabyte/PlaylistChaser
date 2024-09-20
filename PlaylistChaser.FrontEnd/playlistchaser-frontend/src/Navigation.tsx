@@ -2,23 +2,23 @@ import React, { useState } from "react";
 import Box from "@mui/material/Box";
 import Tabs from "@mui/material/Tabs";
 import Tab from "@mui/material/Tab";
+import TabList from "@mui/lab/TabList";
 
 export type NavigationProps = {
-  currentTab: number;
-  setCurrentTab: (currentTab: number) => void;
+  setCurrentTab: (currentTab: string) => void;
 };
 
-export const Navigation = ({ currentTab, setCurrentTab }: NavigationProps) => {
+export const Navigation = ({ setCurrentTab }: NavigationProps) => {
   return (
     <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
-      <Tabs
-        value={currentTab}
+      <TabList
         onChange={(e, value) => {
           setCurrentTab(value);
         }}
       >
-        <Tab label="Playlists" />
-      </Tabs>
+        <Tab label="Playlists" value="0" />
+        <Tab label="Account" value="1" />
+      </TabList>
     </Box>
   );
 };
