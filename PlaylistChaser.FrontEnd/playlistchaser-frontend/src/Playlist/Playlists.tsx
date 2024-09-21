@@ -16,12 +16,16 @@ import {
 } from "@mui/material";
 import { Add, Check, Delete } from "@mui/icons-material";
 import { AddPlaylist } from "./AddPlaylist";
+import { PlaylistDetail } from "./PlaylistDetail";
 
 const Playlists = () => {
   const api = useApi();
   const { getPlaylists } = api;
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [selectedPlaylistIds, setSelectedPlaylistIds] = useState<number[]>([]);
+  const [selectedPlaylistId, setSelectedPlaylistId] = useState<
+    number | undefined
+  >();
   const [selectionMode, setSelectionMode] = useState<boolean>(false);
 
   useEffect(() => {
@@ -54,11 +58,13 @@ const Playlists = () => {
   };
   const onClick = (playlistId: number) => {
     if (selectionMode) {
+      addSelectedPlaylistId(playlistId);
+    } else {
       setSelectedPlaylistId(playlistId);
     }
   };
 
-  const setSelectedPlaylistId = (playlistId: number) => {
+  const addSelectedPlaylistId = (playlistId: number) => {
     let ids = [...selectedPlaylistIds];
     const index = ids.indexOf(playlistId);
     const wasSelected = index > -1;
@@ -77,6 +83,14 @@ const Playlists = () => {
     setSelectedPlaylistIds([]);
     fetchPlaylists();
   };
+
+  const repullPlaylist = (playlistId: number) => {
+    api.syncFromOrigin(playlistId);
+  };
+
+  useEffect(() => {
+    console.log("selectedPlaylistId", selectedPlaylistId);
+  }, [selectedPlaylistId]);
 
   return (
     <Box>
@@ -122,12 +136,21 @@ const Playlists = () => {
                   isSelected={isSelected}
                   onClick={onClick}
                   deletePlaylist={deletePlaylist}
+                  repullPlaylist={repullPlaylist}
                 />
               </Grid>
             );
           })}
         </Grid>
       </Box>
+      {selectedPlaylistId && (
+        <PlaylistDetail
+          playlistId={selectedPlaylistId}
+          handleClose={() => {
+            setSelectedPlaylistId(undefined);
+          }}
+        />
+      )}
     </Box>
   );
 };

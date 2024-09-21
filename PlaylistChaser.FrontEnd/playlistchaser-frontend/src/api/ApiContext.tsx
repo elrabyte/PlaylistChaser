@@ -5,7 +5,7 @@ import React, {
   useState,
   useEffect,
 } from "react";
-import { Client, Playlist } from "./api-client"; // Import your NSwag generated client
+import { Client, Playlist, PlaylistPopulated } from "./api-client"; // Import your NSwag generated client
 import { ShowError } from "../components/Toast";
 
 // Define the shape of the API context
@@ -21,6 +21,8 @@ interface ApiContextProps {
   checkHasAccesstoken: () => Promise<boolean>;
   getThumbnailUrl: (playlistId: number) => string;
   validatePlaylistUrl: (url: string) => Promise<boolean>;
+  getPlaylistPopulated: (playlistId: number) => Promise<PlaylistPopulated>;
+  syncFromOrigin: (playlistId: number) => Promise<void>;
 }
 
 // Create the API context
@@ -125,6 +127,24 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
       });
     };
 
+    const getPlaylistPopulated = (playlistId: number) => {
+      return client
+        .getPlaylistPopulated(playlistId)
+        .then((playlist) => {
+          return playlist;
+        })
+        .catch((error) => {
+          setErrorMessage(error.toString());
+          throw Error(errorMessage);
+        });
+    };
+
+    const syncFromOrigin = (playlistId: number) => {
+      return client.syncFromOrigin(playlistId).catch((error) => {
+        setErrorMessage(error.toString());
+      });
+    };
+
     value = {
       getPlaylists,
       getPlaylist,
@@ -137,6 +157,8 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
       checkHasAccesstoken,
       getThumbnailUrl,
       validatePlaylistUrl,
+      getPlaylistPopulated,
+      syncFromOrigin,
     };
   } catch (error) {
     setErrorMessage("an unexcepted error occured");

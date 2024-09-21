@@ -63,13 +63,13 @@ namespace PlaylistChaser.Api.Database
                 if (db.SongInfo.Any(s => s.SourceId == newSong.SourceId && s.SongIdSource == newSong.SongIdSource))
                     continue;
 
-                var success = AddSongToDb(newSong.Name, newSong.ArtistName, newSong.SourceId, newSong.SongIdSource, newSong.Url);
+                var success = InsertSong(newSong.Name, newSong.ArtistName, newSong.SourceId, newSong.SongIdSource, newSong.Url);
             };
 
             return addedSongs;
         }
 
-        private ActionResult AddSongToDb(string songName, string artistName, SourceId source, string songIdSource, string url)
+        private ActionResult InsertSong(string songName, string artistName, SourceId source, string songIdSource, string url)
         {
             try
             {
@@ -83,7 +83,7 @@ namespace PlaylistChaser.Api.Database
                 db.SongInfo.Add(newSongInfo);
 
                 //add song state
-                var newSongState = new SongState { SongId = newSong.Id, SourceId = source, StateId = SongStates.Available, LastChecked = DateTime.Now };
+                var newSongState = new SongState { SongId = newSong.Id, SourceId = source, StateId = SongStates.Available, LastChecked = DateTime.UtcNow };
                 db.SongState.AddRange(newSongState);
 
                 db.SaveChanges();
@@ -96,5 +96,26 @@ namespace PlaylistChaser.Api.Database
             }
         }
 
+        public void AddSongsToLocalPlaylist(SourceId sourceId, int playlistId, List<Song> songsToAdd)
+        {
+            //only add new songs
+            var curSongIds = db.PlaylistSong.Where(ps => ps.PlaylistId == playlistId).Select(ps => ps.SongId).ToList();
+            var newSongIds = songsToAdd.Select(s => s.Id).Where(i => !curSongIds.Contains(i)).ToList();
+
+            var newPlaylistSongs = newSongIds.Select(i => new PlaylistSong { PlaylistId = playlistId, SongId = i }).ToList();
+            InsertPlaylistSongs(sourceId, newPlaylistSongs);
+        }
+
+        public void InsertPlaylistSongs(SourceId sourceId, List<PlaylistSong> playlistSongs)
+        {
+            db.PlaylistSong.AddRange(playlistSongs);
+            db.SaveChanges();
+
+            playlistSongs.ForEach(ps =>
+            {
+                db.PlaylistSongState.Add(new PlaylistSongState { PlaylistSongId = ps.Id, SourceId = sourceId, StateId = PlaylistSongStates.Added, LastChecked = DateTime.Now });
+            });
+            db.SaveChanges();
+        }
     }
 }

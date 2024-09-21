@@ -114,6 +114,46 @@
         }
       }
     },
+    "/api/Playlist/get-playlist-populated/{id}": {
+      "get": {
+        "tags": [
+          "Playlist"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaylistPopulated"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaylistPopulated"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaylistPopulated"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/Playlist/remove-playlist/{id}": {
       "put": {
         "tags": [
@@ -182,6 +222,29 @@
     },
     "/api/Playlist/get-thumbnail/{playlistId}": {
       "get": {
+        "tags": [
+          "Playlist"
+        ],
+        "parameters": [
+          {
+            "name": "playlistId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Playlist/sync-from-origin/{playlistId}": {
+      "post": {
         "tags": [
           "Playlist"
         ],
@@ -443,6 +506,7 @@
         "required": [
           "channelName",
           "name",
+          "originSourceId",
           "playlistTypeId",
           "userId"
         ],
@@ -474,7 +538,7 @@
             "type": "string",
             "nullable": true
           },
-          "mainSourceId": {
+          "originSourceId": {
             "$ref": "#/components/schemas/SourceId"
           },
           "userId": {
@@ -538,6 +602,22 @@
         },
         "additionalProperties": false
       },
+      "PlaylistPopulated": {
+        "type": "object",
+        "properties": {
+          "playlist": {
+            "$ref": "#/components/schemas/Playlist"
+          },
+          "songs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Song"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "PlaylistTypes": {
         "enum": [
           1,
@@ -561,6 +641,33 @@
           "password": {
             "minLength": 1,
             "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "Song": {
+        "required": [
+          "artistName",
+          "songName"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "songName": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "artistName": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "thumbnailId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
           }
         },
         "additionalProperties": false

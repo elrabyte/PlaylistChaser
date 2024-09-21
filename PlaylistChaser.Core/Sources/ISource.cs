@@ -8,7 +8,6 @@ namespace PlaylistChaser.Core.Sources
     {
         SourceId SourceId { get; }
 
-
         #region Playlist
 
         PlaylistInfo GetPlaylistByUrl(string url);

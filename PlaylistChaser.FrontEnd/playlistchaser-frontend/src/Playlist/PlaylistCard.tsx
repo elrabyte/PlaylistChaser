@@ -7,7 +7,7 @@ import { SxProps, Theme } from "@mui/material/styles";
 import CardActionArea from "@mui/material/CardActionArea";
 import IconButton from "@mui/material/IconButton";
 
-import { Delete, Height, MoreVert } from "@mui/icons-material";
+import { Delete, Height, MoreVert, Sync } from "@mui/icons-material";
 
 import CardHeader from "@mui/material/CardHeader";
 import { Box, Button, Fade, Menu, MenuItem, Paper, Stack } from "@mui/material";
@@ -20,12 +20,14 @@ type PlaylistCardProps = {
   isSelected: boolean;
   onClick: (playlistId: number) => void;
   deletePlaylist: (playlistId: number) => void;
+  repullPlaylist: (playlistId: number) => void;
 };
 export const PlaylistCard = ({
   playlist,
   isSelected,
   onClick,
   deletePlaylist,
+  repullPlaylist,
 }: PlaylistCardProps) => {
   const [hovering, setHovering] = useState<boolean>(false);
   const { getThumbnailUrl } = useApi();
@@ -116,20 +118,36 @@ export const PlaylistCard = ({
             <Typography sx={{ fontSize: 20 }}>{playlist.name}</Typography>
           </Stack>
 
-          <Stack direction={"row-reverse"} spacing={1} sx={cardFooterStyle}>
-            <Fade in={hovering}>
-              <IconButton
-                color="error"
-                aria-label="delete"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  setShowConfirmDeleteDialog(true);
-                }}
-              >
-                <Delete />
-              </IconButton>
-            </Fade>
+          <Stack direction={"row"} spacing={1} sx={cardFooterStyle}>
+            <Stack style={{ width: "50%" }} direction={"row"}>
+              <Fade in={hovering}>
+                <IconButton
+                  aria-label="sync"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    repullPlaylist(playlist.id!);
+                  }}
+                >
+                  <Sync />
+                </IconButton>
+              </Fade>
+            </Stack>
+            <Stack style={{ width: "50%" }} direction={"row-reverse"}>
+              <Fade in={hovering}>
+                <IconButton
+                  color="error"
+                  aria-label="delete"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    setShowConfirmDeleteDialog(true);
+                  }}
+                >
+                  <Delete />
+                </IconButton>
+              </Fade>
+            </Stack>
           </Stack>
         </Paper>
       </CardActionArea>

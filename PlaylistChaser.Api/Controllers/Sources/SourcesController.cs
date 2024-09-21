@@ -1,10 +1,8 @@
-﻿using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.AspNetCore.Mvc;
+using PlaylistChaser.Api.Database;
+using PlaylistChaser.Core.Sources;
 using PlaylistChaser.Model;
 using PlaylistChaser.Model.BuiltInIds;
-using PlaylistChaser.Core.Sources;
-using PlaylistChaser.Api.Database;
 
 namespace PlaylistChaser.Api.Controllers.Sources
 {
@@ -112,7 +110,7 @@ namespace PlaylistChaser.Api.Controllers.Sources
                     PlaylistTypeId = PlaylistTypes.Simple,
                     Description = playlistInfo.Description,
                     Thumbnail = playlistThumbnail,
-                    MainSourceId = source.SourceId,
+                    OriginSourceId = source.SourceId,
                     UserId = 1
                 };
                 adminDBContext.Playlist.Add(playlist);
