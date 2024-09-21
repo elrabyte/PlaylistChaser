@@ -2,11 +2,10 @@ import React, {
   createContext,
   useContext,
   ReactNode,
-  useMemo,
   useState,
   useEffect,
 } from "react";
-import { AddPlaylistModel, Client, Playlist } from "./api-client"; // Import your NSwag generated client
+import { Client, Playlist } from "./api-client"; // Import your NSwag generated client
 import { ShowError } from "../components/Toast";
 
 // Define the shape of the API context
@@ -17,7 +16,11 @@ interface ApiContextProps {
   deletePlaylist: (playlistId: number) => Promise<void>;
   deletePlaylists: (playlistIds: number[]) => Promise<void>;
   getLoginUrl: () => Promise<string>;
-  checkAuthenticated: () => Promise<boolean>;
+  refreshAccesstoken: () => Promise<void>;
+  checkAccesstokenExpired: () => Promise<boolean>;
+  checkHasAccesstoken: () => Promise<boolean>;
+  getThumbnailUrl: (playlistId: number) => string;
+  validatePlaylistUrl: (url: string) => Promise<boolean>;
 }
 
 // Create the API context
@@ -45,7 +48,8 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
 
   let value: ApiContextProps | undefined;
   try {
-    const client = new Client("http://localhost:5026");
+    const baseUrl = "http://localhost:5026";
+    const client = new Client(baseUrl);
     const getPlaylists = () => {
       return client
         .getAllPlaylists()
@@ -69,11 +73,9 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
         });
     };
     const addPlaylist = (url: string) => {
-      return client
-        .addPlaylist(new AddPlaylistModel({ playlistUrl: url }))
-        .catch((error) => {
-          setErrorMessage(error.toString());
-        });
+      return client.addPlaylist(url).catch((error) => {
+        setErrorMessage(error.toString());
+      });
     };
     const deletePlaylist = (playlistId: number) => {
       return client.removePlaylist(playlistId).catch((error) => {
@@ -87,8 +89,14 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
       });
     };
 
-    const checkAuthenticated = () => {
-      return client.checkAuthenticated().catch((error) => {
+    const checkAccesstokenExpired = () => {
+      return client.checkAccesstokenExpired().catch((error) => {
+        setErrorMessage(error.toString());
+        return false;
+      });
+    };
+    const checkHasAccesstoken = () => {
+      return client.checkHasAccesstoken().catch((error) => {
         setErrorMessage(error.toString());
         return false;
       });
@@ -100,6 +108,22 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
         throw Error();
       });
     };
+    const refreshAccesstoken = () => {
+      return client.refreshAccesstoken().catch((error) => {
+        setErrorMessage(error.toString());
+        throw Error();
+      });
+    };
+    const getThumbnailUrl = (playlistId: number) => {
+      return `${baseUrl}/api/Playlist/get-thumbnail/${playlistId}`;
+    };
+
+    const validatePlaylistUrl = (url: string) => {
+      return client.validatePlaylistUrl(url).catch((error) => {
+        setErrorMessage(error.toString());
+        return false;
+      });
+    };
 
     value = {
       getPlaylists,
@@ -108,7 +132,11 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
       deletePlaylist,
       deletePlaylists,
       getLoginUrl,
-      checkAuthenticated,
+      refreshAccesstoken,
+      checkAccesstokenExpired,
+      checkHasAccesstoken,
+      getThumbnailUrl,
+      validatePlaylistUrl,
     };
   } catch (error) {
     setErrorMessage("an unexcepted error occured");

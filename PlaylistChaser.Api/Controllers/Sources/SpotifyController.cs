@@ -1,10 +1,7 @@
-﻿using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
-using PlaylistChaser.Model;
-using PlaylistChaser.Model.BuiltInIds;
-using PlaylistChaser.Core.Sources;
+﻿using Microsoft.AspNetCore.Mvc;
 using PlaylistChaser.Api.Database;
+using PlaylistChaser.Core.Sources;
+using PlaylistChaser.Model.BuiltInIds;
 
 namespace PlaylistChaser.Api.Controllers.Sources
 {
@@ -14,7 +11,7 @@ namespace PlaylistChaser.Api.Controllers.Sources
     {
         private readonly IConfiguration configuration;
         private readonly AdminDBContext adminDBContext;
-        public SpotifyController(UserManager<User> userManager, IConfiguration configuration, AdminDBContext adminDBContext) : base(new SpotifyApiHelper(""), userManager, configuration, adminDBContext)
+        public SpotifyController(IConfiguration configuration, AdminDBContext adminDBContext) : base(SourceId.Spotify, configuration, adminDBContext)
         {
             this.configuration = configuration;
             this.adminDBContext = adminDBContext;
@@ -71,8 +68,11 @@ namespace PlaylistChaser.Api.Controllers.Sources
             if (userId == null)
                 return new JsonResult(new { success = false, message = "Can't get userId" });
 
-            var isAlreadyAuthenticated = base.CheckAuthenticated();
-            if (isAlreadyAuthenticated) return new RedirectResult(frontEndUrl);
+            var hasAccessToken = base.CheckHasAccessToken();
+            if (hasAccessToken) return new RedirectResult(frontEndUrl);
+
+            var accessTokenExpired = base.CheckAccesstokenExpired();
+            if (!accessTokenExpired) return new RedirectResult(frontEndUrl);
 
             var oAuth = await SpotifyApiHelper.GetOauthCredential(code, clientId, clientSecret, redirectUri, userId);
             adminDBContext.OAuth2Credential.Add(oAuth);

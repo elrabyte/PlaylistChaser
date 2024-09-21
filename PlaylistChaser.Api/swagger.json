@@ -114,37 +114,6 @@
         }
       }
     },
-    "/api/Playlist/add-playlist": {
-      "put": {
-        "tags": [
-          "Playlist"
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AddPlaylistModel"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AddPlaylistModel"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/AddPlaylistModel"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
     "/api/Playlist/remove-playlist/{id}": {
       "put": {
         "tags": [
@@ -211,6 +180,29 @@
         }
       }
     },
+    "/api/Playlist/get-thumbnail/{playlistId}": {
+      "get": {
+        "tags": [
+          "Playlist"
+        ],
+        "parameters": [
+          {
+            "name": "playlistId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/Spotify/LoginToSpotify": {
       "post": {
         "tags": [
@@ -244,7 +236,7 @@
         }
       }
     },
-    "/api/Spotify/check-authenticated": {
+    "/api/Spotify/check-has-accesstoken": {
       "post": {
         "tags": [
           "Spotify"
@@ -269,6 +261,47 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/Spotify/check-accesstoken-expired": {
+      "post": {
+        "tags": [
+          "Spotify"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Spotify/refresh-accesstoken": {
+      "post": {
+        "tags": [
+          "Spotify"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
           }
         }
       }
@@ -304,23 +337,108 @@
           }
         }
       }
+    },
+    "/api/Spotify/get-playlist/{url}": {
+      "get": {
+        "tags": [
+          "Spotify"
+        ],
+        "parameters": [
+          {
+            "name": "url",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaylistInfo"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaylistInfo"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaylistInfo"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Spotify/validate-playlist-url": {
+      "post": {
+        "tags": [
+          "Spotify"
+        ],
+        "parameters": [
+          {
+            "name": "url",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Spotify/add-playlist": {
+      "post": {
+        "tags": [
+          "Spotify"
+        ],
+        "parameters": [
+          {
+            "name": "url",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
-      "AddPlaylistModel": {
-        "required": [
-          "playlistUrl"
-        ],
-        "type": "object",
-        "properties": {
-          "playlistUrl": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "additionalProperties": false
-      },
       "Playlist": {
         "required": [
           "channelName",
@@ -365,6 +483,57 @@
           },
           "user": {
             "$ref": "#/components/schemas/User"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PlaylistInfo": {
+        "required": [
+          "creatorName",
+          "isMine",
+          "lastSynced",
+          "name",
+          "playlistIdSource",
+          "url"
+        ],
+        "type": "object",
+        "properties": {
+          "playlistId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "playlist": {
+            "$ref": "#/components/schemas/Playlist"
+          },
+          "sourceId": {
+            "$ref": "#/components/schemas/SourceId"
+          },
+          "playlistIdSource": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "name": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "creatorName": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "isMine": {
+            "type": "boolean"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "url": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "lastSynced": {
+            "type": "string",
+            "format": "date-time"
           }
         },
         "additionalProperties": false

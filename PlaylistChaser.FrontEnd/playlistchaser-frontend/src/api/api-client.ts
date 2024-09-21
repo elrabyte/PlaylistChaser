@@ -141,44 +141,6 @@ export class Client {
     }
 
     /**
-     * @param body (optional) 
-     * @return OK
-     */
-    addPlaylist(body: AddPlaylistModel | undefined): Promise<void> {
-        let url_ = this.baseUrl + "/api/Playlist/add-playlist";
-        url_ = url_.replace(/[?&]$/, "");
-
-        const content_ = JSON.stringify(body);
-
-        let options_: RequestInit = {
-            body: content_,
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-            }
-        };
-
-        return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processAddPlaylist(_response);
-        });
-    }
-
-    protected processAddPlaylist(response: Response): Promise<void> {
-        const status = response.status;
-        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200) {
-            return response.text().then((_responseText) => {
-            return;
-            });
-        } else if (status !== 200 && status !== 204) {
-            return response.text().then((_responseText) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            });
-        }
-        return Promise.resolve<void>(null as any);
-    }
-
-    /**
      * @return OK
      */
     removePlaylist(id: number): Promise<void> {
@@ -255,6 +217,42 @@ export class Client {
     /**
      * @return OK
      */
+    getThumbnail(playlistId: number): Promise<void> {
+        let url_ = this.baseUrl + "/api/Playlist/get-thumbnail/{playlistId}";
+        if (playlistId === undefined || playlistId === null)
+            throw new Error("The parameter 'playlistId' must be defined.");
+        url_ = url_.replace("{playlistId}", encodeURIComponent("" + playlistId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processGetThumbnail(_response);
+        });
+    }
+
+    protected processGetThumbnail(response: Response): Promise<void> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            return;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
+    /**
+     * @return OK
+     */
     loginToSpotify(): Promise<void> {
         let url_ = this.baseUrl + "/api/Spotify/LoginToSpotify";
         url_ = url_.replace(/[?&]$/, "");
@@ -289,8 +287,8 @@ export class Client {
      * @param code (optional) 
      * @return OK
      */
-    spotify(code: string | undefined): Promise<void> {
-        let url_ = this.baseUrl + "/api/Spotify?";
+    acceptSpotifyCode(code: string | undefined): Promise<void> {
+        let url_ = this.baseUrl + "/api/Spotify/AcceptSpotifyCode?";
         if (code === null)
             throw new Error("The parameter 'code' cannot be null.");
         else if (code !== undefined)
@@ -298,17 +296,17 @@ export class Client {
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: RequestInit = {
-            method: "POST",
+            method: "GET",
             headers: {
             }
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processSpotify(_response);
+            return this.processAcceptSpotifyCode(_response);
         });
     }
 
-    protected processSpotify(response: Response): Promise<void> {
+    protected processAcceptSpotifyCode(response: Response): Promise<void> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
@@ -326,8 +324,8 @@ export class Client {
     /**
      * @return OK
      */
-    checkAuthenticated(): Promise<boolean> {
-        let url_ = this.baseUrl + "/api/Spotify/check-authenticated";
+    checkHasAccesstoken(): Promise<boolean> {
+        let url_ = this.baseUrl + "/api/Spotify/check-has-accesstoken";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: RequestInit = {
@@ -338,11 +336,11 @@ export class Client {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processCheckAuthenticated(_response);
+            return this.processCheckHasAccesstoken(_response);
         });
     }
 
-    protected processCheckAuthenticated(response: Response): Promise<boolean> {
+    protected processCheckHasAccesstoken(response: Response): Promise<boolean> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
@@ -359,6 +357,77 @@ export class Client {
             });
         }
         return Promise.resolve<boolean>(null as any);
+    }
+
+    /**
+     * @return OK
+     */
+    checkAccesstokenExpired(): Promise<boolean> {
+        let url_ = this.baseUrl + "/api/Spotify/check-accesstoken-expired";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "POST",
+            headers: {
+                "Accept": "text/plain"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processCheckAccesstokenExpired(_response);
+        });
+    }
+
+    protected processCheckAccesstokenExpired(response: Response): Promise<boolean> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+                result200 = resultData200 !== undefined ? resultData200 : <any>null;
+    
+            return result200;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<boolean>(null as any);
+    }
+
+    /**
+     * @return OK
+     */
+    refreshAccesstoken(): Promise<void> {
+        let url_ = this.baseUrl + "/api/Spotify/refresh-accesstoken";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "POST",
+            headers: {
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processRefreshAccesstoken(_response);
+        });
+    }
+
+    protected processRefreshAccesstoken(response: Response): Promise<void> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            return;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<void>(null as any);
     }
 
     /**
@@ -398,42 +467,127 @@ export class Client {
         }
         return Promise.resolve<string>(null as any);
     }
-}
 
-export class AddPlaylistModel implements IAddPlaylistModel {
-    playlistUrl!: string;
+    /**
+     * @return OK
+     */
+    getPlaylist(url: string): Promise<PlaylistInfo> {
+        let url_ = this.baseUrl + "/api/Spotify/get-playlist/{url}";
+        if (url === undefined || url === null)
+            throw new Error("The parameter 'url' must be defined.");
+        url_ = url_.replace("{url}", encodeURIComponent("" + url));
+        url_ = url_.replace(/[?&]$/, "");
 
-    constructor(data?: IAddPlaylistModel) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (<any>this)[property] = (<any>data)[property];
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+                "Accept": "text/plain"
             }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processGetPlaylist(_response);
+        });
+    }
+
+    protected processGetPlaylist(response: Response): Promise<PlaylistInfo> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = PlaylistInfo.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
         }
+        return Promise.resolve<PlaylistInfo>(null as any);
     }
 
-    init(_data?: any) {
-        if (_data) {
-            this.playlistUrl = _data["playlistUrl"];
+    /**
+     * @param url (optional) 
+     * @return OK
+     */
+    validatePlaylistUrl(url: string | undefined): Promise<boolean> {
+        let url_ = this.baseUrl + "/api/Spotify/validate-playlist-url?";
+        if (url === null)
+            throw new Error("The parameter 'url' cannot be null.");
+        else if (url !== undefined)
+            url_ += "url=" + encodeURIComponent("" + url) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "POST",
+            headers: {
+                "Accept": "text/plain"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processValidatePlaylistUrl(_response);
+        });
+    }
+
+    protected processValidatePlaylistUrl(response: Response): Promise<boolean> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+                result200 = resultData200 !== undefined ? resultData200 : <any>null;
+    
+            return result200;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
         }
+        return Promise.resolve<boolean>(null as any);
     }
 
-    static fromJS(data: any): AddPlaylistModel {
-        data = typeof data === 'object' ? data : {};
-        let result = new AddPlaylistModel();
-        result.init(data);
-        return result;
+    /**
+     * @param url (optional) 
+     * @return OK
+     */
+    addPlaylist(url: string | undefined): Promise<void> {
+        let url_ = this.baseUrl + "/api/Spotify/add-playlist?";
+        if (url === null)
+            throw new Error("The parameter 'url' cannot be null.");
+        else if (url !== undefined)
+            url_ += "url=" + encodeURIComponent("" + url) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "POST",
+            headers: {
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processAddPlaylist(_response);
+        });
     }
 
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["playlistUrl"] = this.playlistUrl;
-        return data;
+    protected processAddPlaylist(response: Response): Promise<void> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            return;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<void>(null as any);
     }
-}
-
-export interface IAddPlaylistModel {
-    playlistUrl: string;
 }
 
 export class Playlist implements IPlaylist {
@@ -506,6 +660,78 @@ export interface IPlaylist {
     mainSourceId?: SourceId;
     userId: number;
     user?: User;
+}
+
+export class PlaylistInfo implements IPlaylistInfo {
+    playlistId?: number;
+    playlist?: Playlist;
+    sourceId?: SourceId;
+    playlistIdSource!: string;
+    name!: string;
+    creatorName!: string;
+    isMine!: boolean;
+    description?: string | undefined;
+    url!: string;
+    lastSynced!: Date;
+
+    constructor(data?: IPlaylistInfo) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.playlistId = _data["playlistId"];
+            this.playlist = _data["playlist"] ? Playlist.fromJS(_data["playlist"]) : <any>undefined;
+            this.sourceId = _data["sourceId"];
+            this.playlistIdSource = _data["playlistIdSource"];
+            this.name = _data["name"];
+            this.creatorName = _data["creatorName"];
+            this.isMine = _data["isMine"];
+            this.description = _data["description"];
+            this.url = _data["url"];
+            this.lastSynced = _data["lastSynced"] ? new Date(_data["lastSynced"].toString()) : <any>undefined;
+        }
+    }
+
+    static fromJS(data: any): PlaylistInfo {
+        data = typeof data === 'object' ? data : {};
+        let result = new PlaylistInfo();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["playlistId"] = this.playlistId;
+        data["playlist"] = this.playlist ? this.playlist.toJSON() : <any>undefined;
+        data["sourceId"] = this.sourceId;
+        data["playlistIdSource"] = this.playlistIdSource;
+        data["name"] = this.name;
+        data["creatorName"] = this.creatorName;
+        data["isMine"] = this.isMine;
+        data["description"] = this.description;
+        data["url"] = this.url;
+        data["lastSynced"] = this.lastSynced ? this.lastSynced.toISOString() : <any>undefined;
+        return data;
+    }
+}
+
+export interface IPlaylistInfo {
+    playlistId?: number;
+    playlist?: Playlist;
+    sourceId?: SourceId;
+    playlistIdSource: string;
+    name: string;
+    creatorName: string;
+    isMine: boolean;
+    description?: string | undefined;
+    url: string;
+    lastSynced: Date;
 }
 
 export enum PlaylistTypes {

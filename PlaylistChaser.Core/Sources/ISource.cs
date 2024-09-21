@@ -6,16 +6,22 @@ namespace PlaylistChaser.Core.Sources
 {
     public interface ISource
     {
-        public SourceId SourceId { get; } 
+        SourceId SourceId { get; }
+
+
         #region Playlist
-        public PlaylistInfo GetPlaylistById(string playlistId);
-        public Task<PlaylistInfo> CreatePlaylist(string playlistName, string? description = null, bool isPublic = true);
-        public Task<ActionResult> UpdatePlaylist(string IdAtSource, string? playlistName = null, string? playlistDescription = null, bool isPublic = true);
-        public Task<ActionResult> DeletePlaylist(string youtubePlaylistId);
+
+        PlaylistInfo GetPlaylistByUrl(string url);
+        PlaylistInfo GetPlaylistById(string playlistId);
+        Task<PlaylistInfo> CreatePlaylist(string playlistName, string? description = null, bool isPublic = true);
+        Task<ActionResult> UpdatePlaylist(string IdAtSource, string? playlistName = null, string? playlistDescription = null, bool isPublic = true);
+        Task<ActionResult> DeletePlaylist(string youtubePlaylistId);
         #endregion
 
         #region Song
-        public List<SongInfo> GetPlaylistSongs(string playlistId);
+        List<SongInfo> GetPlaylistSongs(string playlistId);
+        Task<Thumbnail> GetPlaylistThumbnail(string playlistIdSource);
+        bool ValidatePlaylistUrl(string url);
         #endregion
     }
 }

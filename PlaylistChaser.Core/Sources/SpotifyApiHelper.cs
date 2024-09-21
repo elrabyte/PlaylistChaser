@@ -16,16 +16,20 @@ namespace PlaylistChaser.Core.Sources
 
         public SpotifyApiHelper(string accessToken)
         {
-            if (accessToken == null)
+            if (string.IsNullOrWhiteSpace(accessToken))
             {
-                throw new Exception("Not logged in yet");
+                Console.WriteLine("Not logged in yet");
             }
 
             spotify = new SpotifyClient(accessToken);
         }
         #region Playlist
         public PlaylistInfo GetPlaylistByUrl(string playlistUrl)
-            => GetPlaylistById(GetPlaylistId(playlistUrl));
+        {
+            if (!TryGetPlaylistId(playlistUrl, out string playlistId)) throw new Exception("invalid playlist url");
+
+            return GetPlaylistById(playlistId);
+        }
         public PlaylistInfo GetPlaylistById(string playlistId)
             => toPlaylistModel(spotify.Playlists.Get(playlistId).Result);
 
@@ -174,16 +178,20 @@ namespace PlaylistChaser.Core.Sources
         }
 
         //#region Thumbnail
-        //public async Task<SourceThumbnail> GetPlaylistThumbnail(string id)
-        //{
-        //    var playlist = await spotify.Playlists.Get(id);
-        //    var thumbnail = playlist.Images.OrderByDescending(i => i.Height).FirstOrDefault();
-        //    if (thumbnail == null)
-        //        return null;
-        //    var fileContents = await Helper.GetImageByUrl(thumbnail.Url);
+        public async Task<Thumbnail> GetPlaylistThumbnail(string id)
+        {
+            var playlist = await spotify.Playlists.Get(id);
+            var thumbnail = playlist.Images.OrderByDescending(i => i.Height).FirstOrDefault();
+            if (thumbnail == null)
+                return null;
+            var fileContents = await Helper.GetImageByUrl(thumbnail.Url);
 
-        //    return new SourceThumbnail(thumbnail.Url, fileContents);
-        //}
+            return new Thumbnail
+            {
+                Url = thumbnail.Url,
+                FileContents = fileContents
+            };
+        }
 
         //public async Task<Dictionary<string, SourceThumbnail>> GetSongsThumbnailBySongIds(List<string> songIds)
         //{
@@ -269,7 +277,7 @@ namespace PlaylistChaser.Core.Sources
                 CreatorName = spotifyPlaylist.Owner.DisplayName,
                 Description = string.IsNullOrEmpty(spotifyPlaylist.Description) ? null : spotifyPlaylist.Description,
                 PlaylistIdSource = spotifyPlaylist.Id,
-                SourceId = SourceId.Spotify,
+                SourceId = SourceId,
                 IsMine = isMine,
                 Url = getPlaylistUrl(spotifyPlaylist.Id)
             };
@@ -290,12 +298,18 @@ namespace PlaylistChaser.Core.Sources
 
         #endregion
 
-        internal string GetPlaylistId(string url)
+        //https://open.spotify.com/playlist/1FG7wsm7OaAKar8Ojn8wNo  => 1FG7wsm7OaAKar8Ojn8wNo
+        private bool TryGetPlaylistId(string url, out string playlistId)
         {
+            playlistId = null;
+
             var pattern = @"playlist/(\w+)";
             Regex rg = new Regex(pattern);
             var match = rg.Match(url);
-            return match.Groups[1].Value;
+            if (!match.Success) return false;
+
+            playlistId = match.Groups[1].Value;
+            return true;
         }
         private string getPlaylistUrl(string playlistId)
             => PlaylistUrlStart + playlistId;
@@ -304,6 +318,10 @@ namespace PlaylistChaser.Core.Sources
             => "https://open.spotify.com/track/" + songId;
 
 
+        public bool ValidatePlaylistUrl(string url)
+        {
+            return TryGetPlaylistId(url, out string playlistId);
+        }
         #endregion
 
 

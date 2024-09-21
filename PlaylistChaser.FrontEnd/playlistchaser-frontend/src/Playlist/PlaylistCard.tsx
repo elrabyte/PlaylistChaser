@@ -5,13 +5,15 @@ import Typography from "@mui/material/Typography";
 import { Playlist, PlaylistTypes } from "../api/api-client";
 import { SxProps, Theme } from "@mui/material/styles";
 import CardActionArea from "@mui/material/CardActionArea";
-import IconButton, { IconButtonProps } from "@mui/material/IconButton";
+import IconButton from "@mui/material/IconButton";
 
-import { Delete, Edit, MoreVert } from "@mui/icons-material";
+import { Delete, Height, MoreVert } from "@mui/icons-material";
 
 import CardHeader from "@mui/material/CardHeader";
-import { Menu, MenuItem } from "@mui/material";
+import { Box, Button, Fade, Menu, MenuItem, Paper, Stack } from "@mui/material";
 import { useRef, useState } from "react";
+import { useApi } from "../api/ApiContext";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 
 type PlaylistCardProps = {
   playlist: Playlist;
@@ -25,8 +27,10 @@ export const PlaylistCard = ({
   onClick,
   deletePlaylist,
 }: PlaylistCardProps) => {
-  const [showOptions, setShowOptions] = useState<boolean>(false);
-  const optionsButton = useRef(null);
+  const [hovering, setHovering] = useState<boolean>(false);
+  const { getThumbnailUrl } = useApi();
+
+  const [showConfirmDeleteDialog, setShowConfirmDeleteDialog] = useState(false);
 
   const playlistTypeStyle = () => {
     const combined: SxProps<Theme> = {
@@ -46,63 +50,97 @@ export const PlaylistCard = ({
     return {};
   };
 
-  const cardStyle = { ...playlistTypeStyle(), ...selectedStyle() };
+  const cardBackground: SxProps<Theme> = {
+    backgroundImage: `url(${getThumbnailUrl(playlist.id!)})`,
+    position: "absolute",
+    top: "0",
+    left: "0",
+    bottom: "0",
+    right: "0",
 
+    backgroundSize: "cover",
+    backgroundPosition: "center",
+    filter: "brightness(50%) blur(1px)",
+    zIndex: "-1",
+  };
+
+  const baseStyle: SxProps<Theme> = {
+    minHeight: "150px",
+    backgroundColor: "transparent",
+    display: "grid",
+  };
+  const cardStyle: SxProps<Theme> = {
+    ...baseStyle,
+    ...playlistTypeStyle(),
+    ...selectedStyle(),
+  };
+
+  const cardHeaderBase: SxProps<Theme> = {
+    alignSelf: "start",
+    backgroundImage:
+      "linear-gradient(to bottom, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0))",
+    p: 1,
+  };
+  const cardHeader: SxProps<Theme> = {
+    ...cardHeaderBase,
+  };
+
+  const cardFooterBaseStyle: SxProps<Theme> = {
+    alignSelf: "end",
+    backgroundImage:
+      "linear-gradient(to bottom, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.7))",
+  };
+  const cardFooterStyle: SxProps<Theme> = {
+    ...cardFooterBaseStyle,
+  };
   return (
     <>
-      <Menu
-        anchorEl={optionsButton?.current}
-        open={showOptions}
-        onClose={() => {
-          setShowOptions(false);
+      <CardActionArea
+        sx={{ overflow: "hidden" }}
+        onClick={() => {
+          onClick(playlist.id!);
+        }}
+        onMouseEnter={(e) => {
+          setHovering(true);
+        }}
+        onMouseLeave={() => {
+          setHovering(false);
         }}
       >
-        <MenuItem
-          onClick={() => {
-            setShowOptions(false);
-            deletePlaylist(playlist.id!);
-          }}
-        >
-          <Delete />
-          Delete
-        </MenuItem>
-      </Menu>
-      <Card variant="outlined" sx={cardStyle}>
-        <CardActionArea
-          onClick={() => {
-            onClick(playlist.id!);
-          }}
-        >
-          <CardHeader
-            action={
+        <Box sx={cardBackground} />
+        <Paper sx={cardStyle} square={false}>
+          <Stack direction={"column"} sx={cardHeader}>
+            <Typography sx={{ color: "text.secondary", fontSize: 14 }}>
+              {playlist.channelName}
+            </Typography>
+            <Typography sx={{ fontSize: 20 }}>{playlist.name}</Typography>
+          </Stack>
+
+          <Stack direction={"row-reverse"} spacing={1} sx={cardFooterStyle}>
+            <Fade in={hovering}>
               <IconButton
-                aria-label="settings"
-                ref={optionsButton}
+                color="error"
+                aria-label="delete"
                 onClick={(e) => {
                   e.stopPropagation();
                   e.preventDefault();
-                  setShowOptions(true);
+                  setShowConfirmDeleteDialog(true);
                 }}
               >
-                <MoreVert />
+                <Delete />
               </IconButton>
-            }
-          />
-          <CardMedia
-            component="img"
-            alt="thumbnail"
-            image={playlist.thumbnail?.fileContents?.toString()}
-          />
-          <CardContent>
-            <Typography gutterBottom variant="h5" component="div">
-              {playlist.name}
-            </Typography>
-            <Typography variant="body2" sx={{ color: "text.secondary" }}>
-              {playlist.description}
-            </Typography>
-          </CardContent>
-        </CardActionArea>
-      </Card>
+            </Fade>
+          </Stack>
+        </Paper>
+      </CardActionArea>
+      <ConfirmDialog
+        open={showConfirmDeleteDialog}
+        setOpen={setShowConfirmDeleteDialog}
+        handleConfirm={() => {
+          deletePlaylist(playlist.id!);
+        }}
+        title={`Are you sure you want to delete the playlist '${playlist.name}' ?`}
+      />
     </>
   );
 };

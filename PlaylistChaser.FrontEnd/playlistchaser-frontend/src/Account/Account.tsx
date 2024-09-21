@@ -16,21 +16,46 @@ import { get } from "https";
 
 export const Account = () => {
   const api = useApi();
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [hasAccessToken, setHasAccessToken] = useState<boolean>();
+  const [accessTokenExpired, setAccessTokenExpired] = useState<boolean>();
 
   useEffect(() => {
-    checkAuthenticated();
+    checkHasAccesstoken();
   }, []);
 
-  const checkAuthenticated = async () => {
-    const isAuthenticated = await api.checkAuthenticated();
-    setIsAuthenticated(isAuthenticated);
+  const checkHasAccesstoken = async () => {
+    const hasAccessToken = await api.checkHasAccesstoken();
+    setHasAccessToken(hasAccessToken);
   };
-
-  const authenticate = async () => {
+  useEffect(() => {
+    if (hasAccessToken && !accessTokenExpired) {
+      checkAccesstokenExpired();
+    } else if (hasAccessToken && accessTokenExpired) {
+      getToken();
+    }
+  }, [hasAccessToken]);
+  const getToken = async () => {
     const returnUrl = await api.getLoginUrl();
     console.log("returnUrl", returnUrl);
     window.location.assign(returnUrl);
+  };
+
+  const checkAccesstokenExpired = async () => {
+    const accessTokenExpired = await api.checkAccesstokenExpired();
+    setAccessTokenExpired(accessTokenExpired);
+  };
+  useEffect(() => {
+    if (accessTokenExpired) {
+      refreshToken();
+    }
+  }, [accessTokenExpired]);
+  const refreshToken = async () => {
+    await api.refreshAccesstoken();
+    setAccessTokenExpired(false);
+  };
+
+  const isAuthenticated = () => {
+    return hasAccessToken && accessTokenExpired == false;
   };
 
   return (
@@ -40,19 +65,31 @@ export const Account = () => {
           <Stack direction={"row"}>
             <SvgIcon titleAccess="Spotify Icon" />
 
-            {isAuthenticated ? (
+            {isAuthenticated() && (
               <Button variant="outlined" disabled startIcon={<LockOpen />}>
                 Authenticated
               </Button>
-            ) : (
+            )}
+            {hasAccessToken == false && (
               <Button
                 variant="outlined"
                 startIcon={<Lock />}
                 onClick={() => {
-                  authenticate();
+                  getToken();
                 }}
               >
-                Authenticate
+                Login to Spotify
+              </Button>
+            )}
+            {hasAccessToken && accessTokenExpired && (
+              <Button
+                variant="outlined"
+                startIcon={<Lock />}
+                onClick={() => {
+                  refreshToken();
+                }}
+              >
+                Refresh Token
               </Button>
             )}
           </Stack>

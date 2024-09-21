@@ -13,15 +13,35 @@ type AddPlaylistProps = {
   addPlaylist: (url: string) => void;
 };
 export const AddPlaylist = ({ addPlaylist }: AddPlaylistProps) => {
+  const api = useApi();
   const [url, setUrl] = useState<string>("");
-  const [disabled, setDisabled] = useState<boolean>(true);
+  const [isValid, setIsValid] = useState<boolean | undefined>();
+  const [disabled, setDisabled] = useState<boolean>(false);
 
-  useEffect(() => {
+  const errorMessage = "not a valid url";
+  const helperMessage =
+    "only following urls: https://open.spotify.com/playlist/1FG7wsm7OaAKar8Ojn8wNo";
+
+  const validateUrl = () => {
     if (!url || url.length === 0) {
-      setDisabled(true);
+      setIsValid(undefined);
       return;
     }
+    api.validatePlaylistUrl(url).then((isValid) => {
+      setIsValid(isValid);
+    });
+  };
+
+  useEffect(() => {
+    if (!isValid) return;
     setDisabled(false);
+  }, [isValid]);
+
+  useEffect(() => {
+    console.log("url", url);
+    setDisabled(true);
+    setIsValid(undefined);
+    validateUrl();
   }, [url]);
 
   const submit = () => {
@@ -32,11 +52,20 @@ export const AddPlaylist = ({ addPlaylist }: AddPlaylistProps) => {
   return (
     <Grid container spacing={2}>
       <TextField
-        label="YT-Playlist Url"
+        fullWidth
+        error={isValid === false}
+        label="Spotify Playlist-Url"
         type="url"
+        helperText={isValid == false ? errorMessage : helperMessage}
         value={url}
+        onInput={(e) => {
+          setUrl((e.target as HTMLInputElement | HTMLTextAreaElement).value);
+        }}
         onChange={(e) => {
           setUrl(e.target.value);
+        }}
+        onBlur={() => {
+          validateUrl();
         }}
       />
       <Button

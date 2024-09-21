@@ -32,47 +32,6 @@ namespace PlaylistChaser.Api.Controllers
         }
 
         [HttpPut]
-        [Route("add-playlist")]
-        public ActionResult AddPlaylist([FromBody] AddPlaylistModel addPlaylist)
-        {
-            var isValid = validatePlaylistUrl(addPlaylist.PlaylistUrl);
-            if (!isValid) return BadRequest("Invalid Playlist-Url");
-
-            var insertThumbnail = new Thumbnail { FileContents = [] };
-            adminDBContext.Thumbnail.Add(insertThumbnail);
-
-            var insertPlaylist = new Playlist
-            {
-                UserId = 1,
-                Thumbnail = insertThumbnail,
-                Name = "Test",
-                ChannelName = "test",
-                PlaylistTypeId = PlaylistTypes.Simple,
-
-            };
-            adminDBContext.Playlist.Add(insertPlaylist);
-
-            var insertPlaylistInfo = new PlaylistInfo
-            {
-                Playlist = insertPlaylist,
-                SourceId = SourceId.Spotify,
-                PlaylistIdSource = "ytPlaylistId",
-                Name = "test",
-                CreatorName = "test",
-                IsMine = false,
-                Url = addPlaylist.PlaylistUrl,
-                LastSynced = DateTime.UtcNow,
-            };
-            adminDBContext.PlaylistInfo.Add(insertPlaylistInfo);
-
-            adminDBContext.SaveChanges();
-            return Ok();
-        }
-        private bool validatePlaylistUrl(string url)
-        {
-            return true;
-        }
-        [HttpPut]
         [Route("remove-playlist/{id}")]
         public ActionResult RemovePlaylist(int id)
         {
@@ -102,6 +61,16 @@ namespace PlaylistChaser.Api.Controllers
             adminDBContext.SaveChanges();
 
             return Ok();
+        }
+
+        [HttpGet]
+        [Route("get-thumbnail/{playlistId}")]
+        public ActionResult GetThumbnail(int playlistId)
+        {
+            var playlist = adminDBContext.Playlist.Include(p => p.Thumbnail).Single(p => p.Id == playlistId);
+            var fileContents = playlist?.Thumbnail?.FileContents;
+
+            return fileContents != null ? File(fileContents, "image/jpeg") : null;
         }
     }
 }
