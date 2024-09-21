@@ -3,12 +3,14 @@ import { useApi } from "../api/ApiContext";
 import {
   Button,
   CircularProgress,
+  Divider,
   Paper,
   Stack,
   Typography,
 } from "@mui/material";
 import { useEffect, useState } from "react";
 import { Playlist, PlaylistPopulated } from "../api/api-client";
+import { SongGrid } from "../Song/SongGrid";
 
 type PlaylistDetailProps = {
   playlistId: number;
@@ -28,7 +30,8 @@ export const PlaylistDetail = ({
       setPlaylistDetail(playlistDetail);
     });
   }, []);
-  const playlist = playlistDetail?.playlist;
+
+  const { playlist, songs } = playlistDetail ?? {};
 
   return (
     <Backdrop
@@ -36,14 +39,25 @@ export const PlaylistDetail = ({
       open
       onClick={handleClose}
     >
-      <Paper square={false} sx={{ width: "60%", height: "80%" }}>
+      <Paper
+        square={false}
+        sx={{ width: "60%", height: "80%" }}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+      >
         {playlist && (
-          <Stack direction={"column"}>
-            <Typography sx={{ color: "text.secondary", fontSize: 14 }}>
-              {playlist.channelName}
-            </Typography>
-            <Typography sx={{ fontSize: 20 }}>{playlist.name}</Typography>
-          </Stack>
+          <>
+            <Stack direction={"column"}>
+              <Typography sx={{ color: "text.secondary", fontSize: 14 }}>
+                {playlist.channelName}
+              </Typography>
+              <Typography sx={{ fontSize: 20 }}>{playlist.name}</Typography>
+            </Stack>
+            <Divider />
+            {songs && <SongGrid songs={songs} />}
+          </>
         )}
       </Paper>
     </Backdrop>
