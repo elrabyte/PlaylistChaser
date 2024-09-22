@@ -68,15 +68,12 @@ namespace PlaylistChaser.Api.Controllers.Sources
             if (userId == null)
                 return new JsonResult(new { success = false, message = "Can't get userId" });
 
-            var hasAccessToken = base.CheckHasAccessToken();
-            if (hasAccessToken) return new RedirectResult(frontEndUrl);
-
-            var accessTokenExpired = base.CheckAccesstokenExpired();
-            if (!accessTokenExpired) return new RedirectResult(frontEndUrl);
-
-            var oAuth = await SpotifyApiHelper.GetOauthCredential(code, clientId, clientSecret, redirectUri, userId);
-            adminDBContext.OAuth2Credential.Add(oAuth);
-            adminDBContext.SaveChanges();
+            if (!base.CheckHasAccessToken() || (base.CheckHasAccessToken() && base.CheckAccesstokenExpired()))
+            {
+                var oAuth = await SpotifyApiHelper.GetOauthCredential(code, clientId, clientSecret, redirectUri, userId);
+                adminDBContext.OAuth2Credential.Add(oAuth);
+                adminDBContext.SaveChanges();
+            }
 
             return new RedirectResult(frontEndUrl);
         }

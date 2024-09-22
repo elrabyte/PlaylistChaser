@@ -1,19 +1,15 @@
 import React, { useEffect, useState } from "react";
-import Grid from "@mui/material/Grid2";
-import { PlaylistCard } from "./PlaylistCard";
-
-import Container from "@mui/material/Container";
 import { useApi } from "../api/ApiContext";
-import { Playlist } from "../api/api-client";
-import { Box, Button, TextField } from "@mui/material";
+import { Box, Button, Stack, TextField } from "@mui/material";
 import { Add } from "@mui/icons-material";
-import Playlists from "./Playlists";
+import { useAccount } from "../api/AccountContext";
 
 type AddPlaylistProps = {
   addPlaylist: (url: string) => void;
 };
 export const AddPlaylist = ({ addPlaylist }: AddPlaylistProps) => {
   const api = useApi();
+  const accountContext = useAccount();
   const [url, setUrl] = useState<string>("");
   const [isValid, setIsValid] = useState<boolean | undefined>();
   const [disabled, setDisabled] = useState<boolean>(false);
@@ -50,33 +46,41 @@ export const AddPlaylist = ({ addPlaylist }: AddPlaylistProps) => {
   };
 
   return (
-    <Grid container spacing={2}>
-      <TextField
-        fullWidth
-        error={isValid === false}
-        label="Spotify Playlist-Url"
-        type="url"
-        helperText={isValid == false ? errorMessage : helperMessage}
-        value={url}
-        onInput={(e) => {
-          setUrl((e.target as HTMLInputElement | HTMLTextAreaElement).value);
-        }}
-        onChange={(e) => {
-          setUrl(e.target.value);
-        }}
-        onBlur={() => {
-          validateUrl();
-        }}
-      />
-      <Button
-        size="small"
-        disabled={disabled}
-        variant="contained"
-        endIcon={<Add />}
-        onClick={submit}
-      >
-        Add Playlist
-      </Button>
-    </Grid>
+    <Box sx={{ display: "flex", alignItems: "start", columnGap: "10px" }}>
+      {accountContext.isAuthenticated() ? (
+        <>
+          <TextField
+            fullWidth
+            error={isValid === false}
+            label="Spotify Playlist-Url"
+            type="url"
+            helperText={isValid == false ? errorMessage : helperMessage}
+            value={url}
+            onInput={(e) => {
+              setUrl(
+                (e.target as HTMLInputElement | HTMLTextAreaElement).value
+              );
+            }}
+            onChange={(e) => {
+              setUrl(e.target.value);
+            }}
+            onBlur={() => {
+              validateUrl();
+            }}
+          />
+          <Button
+            size="small"
+            disabled={disabled}
+            variant="contained"
+            endIcon={<Add />}
+            onClick={submit}
+          >
+            Add Playlist
+          </Button>
+        </>
+      ) : (
+        <></>
+      )}
+    </Box>
   );
 };

@@ -113,7 +113,7 @@ namespace PlaylistChaser.Api.Database
 
             playlistSongs.ForEach(ps =>
             {
-                db.PlaylistSongState.Add(new PlaylistSongState { PlaylistSongId = ps.Id, SourceId = sourceId, StateId = PlaylistSongStates.Added, LastChecked = DateTime.Now });
+                db.PlaylistSongState.Add(new PlaylistSongState { PlaylistSongId = ps.Id, SourceId = sourceId, StateId = PlaylistSongStates.Added, LastChecked = DateTime.UtcNow });
             });
             db.SaveChanges();
         }

@@ -15,10 +15,6 @@ interface ApiContextProps {
   addPlaylist: (url: string) => Promise<void>;
   deletePlaylist: (playlistId: number) => Promise<void>;
   deletePlaylists: (playlistIds: number[]) => Promise<void>;
-  getLoginUrl: () => Promise<string>;
-  refreshAccesstoken: () => Promise<void>;
-  checkAccesstokenExpired: () => Promise<boolean>;
-  checkHasAccesstoken: () => Promise<boolean>;
   getThumbnailUrl: (playlistId: number) => string;
   validatePlaylistUrl: (url: string) => Promise<boolean>;
   getPlaylistPopulated: (playlistId: number) => Promise<PlaylistPopulated>;
@@ -45,6 +41,7 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (!errorMessage) return;
     console.error(errorMessage);
+
     setShowErrorMessage(true);
   }, [errorMessage]);
 
@@ -91,31 +88,6 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
       });
     };
 
-    const checkAccesstokenExpired = () => {
-      return client.checkAccesstokenExpired().catch((error) => {
-        setErrorMessage(error.toString());
-        return false;
-      });
-    };
-    const checkHasAccesstoken = () => {
-      return client.checkHasAccesstoken().catch((error) => {
-        setErrorMessage(error.toString());
-        return false;
-      });
-    };
-
-    const getLoginUrl = () => {
-      return client.getLoginUrl().catch((error) => {
-        setErrorMessage(error.toString());
-        throw Error();
-      });
-    };
-    const refreshAccesstoken = () => {
-      return client.refreshAccesstoken().catch((error) => {
-        setErrorMessage(error.toString());
-        throw Error();
-      });
-    };
     const getThumbnailUrl = (playlistId: number) => {
       return `${baseUrl}/api/Playlist/get-thumbnail/${playlistId}`;
     };
@@ -151,10 +123,6 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
       addPlaylist,
       deletePlaylist,
       deletePlaylists,
-      getLoginUrl,
-      refreshAccesstoken,
-      checkAccesstokenExpired,
-      checkHasAccesstoken,
       getThumbnailUrl,
       validatePlaylistUrl,
       getPlaylistPopulated,

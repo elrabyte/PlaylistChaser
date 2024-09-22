@@ -21,7 +21,8 @@ namespace PlaylistChaser.Api.Controllers
         [Route("get-all-playlists")]
         public ActionResult<IEnumerable<Playlist>> GetPlaylists()
         {
-            return adminDBContext.Playlist.ToList();
+            var playlists = adminDBContext.Playlist.ToList();
+            return playlists; 
         }
 
         [HttpGet("{id}")]
