@@ -266,29 +266,19 @@
         }
       }
     },
-    "/api/Spotify/LoginToSpotify": {
+    "/api/Playlist/sync-to-destinations/{playlistId}": {
       "post": {
         "tags": [
-          "Spotify"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/Spotify/AcceptSpotifyCode": {
-      "get": {
-        "tags": [
-          "Spotify"
+          "Playlist"
         ],
         "parameters": [
           {
-            "name": "code",
-            "in": "query",
+            "name": "playlistId",
+            "in": "path",
+            "required": true,
             "schema": {
-              "type": "string"
+              "type": "integer",
+              "format": "int32"
             }
           }
         ],
@@ -299,116 +289,22 @@
         }
       }
     },
-    "/api/Spotify/check-has-accesstoken": {
-      "post": {
-        "tags": [
-          "Spotify"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "type": "boolean"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "type": "boolean"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "type": "boolean"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/Spotify/check-accesstoken-expired": {
-      "post": {
-        "tags": [
-          "Spotify"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "type": "boolean"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "type": "boolean"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "type": "boolean"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/Spotify/refresh-accesstoken": {
-      "post": {
-        "tags": [
-          "Spotify"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/Spotify/get-login-url": {
+    "/api/{sourceId}/Source/get-playlist/{url}": {
       "get": {
         "tags": [
-          "Spotify"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "type": "string",
-                  "format": "uri"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "type": "string",
-                  "format": "uri"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "type": "string",
-                  "format": "uri"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/Spotify/get-playlist/{url}": {
-      "get": {
-        "tags": [
-          "Spotify"
+          "Source"
         ],
         "parameters": [
           {
             "name": "url",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sourceId",
             "in": "path",
             "required": true,
             "schema": {
@@ -440,15 +336,23 @@
         }
       }
     },
-    "/api/Spotify/validate-playlist-url": {
+    "/api/{sourceId}/Source/validate-playlist-url": {
       "post": {
         "tags": [
-          "Spotify"
+          "Source"
         ],
         "parameters": [
           {
             "name": "url",
             "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sourceId",
+            "in": "path",
+            "required": true,
             "schema": {
               "type": "string"
             }
@@ -478,10 +382,10 @@
         }
       }
     },
-    "/api/Spotify/add-playlist": {
+    "/api/{sourceId}/Source/add-playlist": {
       "post": {
         "tags": [
-          "Spotify"
+          "Source"
         ],
         "parameters": [
           {
@@ -490,11 +394,67 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "sourceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
           "200": {
             "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/{sourceId}/Source/GetValidSourceIdsList": {
+      "get": {
+        "tags": [
+          "Source"
+        ],
+        "parameters": [
+          {
+            "name": "sourceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SourceId"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SourceId"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SourceId"
+                  }
+                }
+              }
+            }
           }
         }
       }

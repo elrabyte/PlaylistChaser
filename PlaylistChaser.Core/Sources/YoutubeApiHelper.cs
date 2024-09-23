@@ -5,18 +5,21 @@ using Google.Apis.Services;
 using Google.Apis.Util.Store;
 using Google.Apis.YouTube.v3;
 using Google.Apis.YouTube.v3.Data;
-using PlaylistChaser.Web.Models;
+using Microsoft.AspNetCore.Mvc;
+using PlaylistChaser.Model;
+using PlaylistChaser.Model.BuiltInIds;
+using PlaylistChaser.Model.SearchModel;
 using System.Text.RegularExpressions;
 using YoutubeExplode;
 using YoutubeExplode.Common;
 using YoutubeExplode.Playlists;
 using YoutubeExplode.Search;
-using static PlaylistChaser.Web.Util.BuiltInIds;
 using Playlist = Google.Apis.YouTube.v3.Data.Playlist;
+using Thumbnail = PlaylistChaser.Model.Thumbnail;
 
-namespace PlaylistChaser.Web.Util.API
+namespace PlaylistChaser.Core.Sources
 {
-    public class YoutubeApiHelper : ISource
+    public class YoutubeApiHelper : IDestination
     {
         private YouTubeService ytService;
         private YoutubeClient ytServiceReadOnly;
@@ -24,8 +27,9 @@ namespace PlaylistChaser.Web.Util.API
 
         public static string PlaylistUrlStart = "https://www.youtube.com/playlist?list=";
 
-        public YoutubeApiHelper() { }
-        public YoutubeApiHelper(string accessToken)
+        public SourceId SourceId => throw new NotImplementedException();
+
+        internal YoutubeApiHelper(string accessToken)
         {
             ytService = new YouTubeService(new BaseClientService.Initializer
             {
@@ -69,11 +73,6 @@ namespace PlaylistChaser.Web.Util.API
             return myPlaylists.Select(p => p.Id).Contains(playlistId);
         }
 
-        /// <summary>   
-        /// Creates the Playlist on Youtube
-        /// </summary>
-        /// <param name="playlistName">Name of the Playlist</param>
-        /// <returns>returns the YT-Playlist in local Model</returns>
         public async Task<PlaylistInfo> CreatePlaylist(string playlistName, string? description = null, bool isPublic = true)
         {
             // Create a new, private playlist in the authorized user's channel.
@@ -87,22 +86,21 @@ namespace PlaylistChaser.Web.Util.API
             return toPlaylistModel(newPlaylist);
         }
 
-        public async Task<ReturnModel> DeletePlaylist(string youtubePlaylistId)
+        public async Task<ActionResult> DeletePlaylist(string youtubePlaylistId)
         {
             try
             {
                 await ytService.Playlists.Delete(youtubePlaylistId).ExecuteAsync();
 
-                return new ReturnModel();
+                return new OkResult();
             }
             catch (Exception ex)
             {
-                return new ReturnModel(ex.Message);
+                return new OkObjectResult(new { message = ex.Message });
             }
 
         }
-
-        public async Task<ReturnModel> UpdatePlaylist(string playlistId, string? playlistName = null, string? description = null, bool isPublic = true)
+        public async Task<IActionResult> UpdatePlaylist(string playlistId, string? playlistName, string? description, bool isPublic = true)
         {
             try
             {
@@ -111,40 +109,24 @@ namespace PlaylistChaser.Web.Util.API
                 playlist.Snippet.Description = description;
                 playlist.Status.PrivacyStatus = isPublic ? "public" : "private";
                 await ytService.Playlists.Update(playlist, "snippet,status").ExecuteAsync();
-                return new ReturnModel();
+                return new OkResult();
             }
             catch (Exception ex)
             {
-                return new ReturnModel(ex.Message);
+                return new OkObjectResult(new { message = ex.Message });
             }
 
         }
         #endregion
 
         #region OAuth Credential
-
-        /// <summary>
-        /// Refresh Existing Token
-        /// </summary>
-        /// <param name="clientId"></param>
-        /// <param name="clientSecret"></param>
-        /// <param name="refreshToken"></param>
-        /// <returns></returns>
-        static async internal Task<OAuth2Credential> GetOauthCredential(string clientId, string clientSecret, string refreshToken, int userId)
+        public async Task<OAuth2Credential> GetOAuthCredential(string clientId, string clientSecret, string refreshToken, int userId)
         {
             var oAuth = await getToken(clientId, clientSecret, userId, refreshToken: refreshToken);
             return oAuth;
         }
 
-        /// <summary>
-        /// Create new Token
-        /// </summary>
-        /// <param name="code"></param>
-        /// <param name="clientId"></param>
-        /// <param name="clientSecret"></param>
-        /// <param name="redirectUri"></param>
-        /// <returns></returns>
-        static async internal Task<OAuth2Credential> GetOauthCredential(string code, string clientId, string clientSecret, string redirectUri, int userId)
+        public async Task<OAuth2Credential> GetOAuthCredential(string code, string clientId, string clientSecret, string redirectUri, int userId)
         {
             var oAuth = await getToken(clientId, clientSecret, userId, code: code, redirectUri: redirectUri);
             return oAuth;
@@ -170,7 +152,7 @@ namespace PlaylistChaser.Web.Util.API
 
             var oAuth = new OAuth2Credential
             {
-                Provider = Sources.Youtube.ToString(),
+                Provider = SourceId.Youtube.ToString(),
                 AccessToken = credential.AccessToken,
                 RefreshToken = credential.RefreshToken,
                 TokenExpiration = DateTime.Now.AddSeconds((double)credential.ExpiresInSeconds),
@@ -199,11 +181,6 @@ namespace PlaylistChaser.Web.Util.API
         #endregion
 
         #region Playlistsongs
-        /// <summary>
-        /// Gets List of songs in local Song-Model by youtube playlist id
-        /// </summary>
-        /// <param name="playlist">local playlist</param>
-        /// <returns></returns>
         public List<SongInfo> GetPlaylistSongs(string playlistId)
             => toSongModels(getPlaylistSongs(playlistId));
         public List<SongInfo> GetPlaylistSongsReadOnly(string playlistId)
@@ -312,7 +289,7 @@ namespace PlaylistChaser.Web.Util.API
         /// </summary>
         /// <param name="id">local playlist </param>
         /// <returns></returns>
-        public async Task<SourceThumbnail> GetPlaylistThumbnail(string id)
+        public async Task<Thumbnail> GetPlaylistThumbnail(string id)
         {
             var ytPlaylist = getPlaylist(id);
 
@@ -327,9 +304,9 @@ namespace PlaylistChaser.Web.Util.API
 
             var fileContents = await Helper.GetImageByUrl(thumbnail.Url);
 
-            return new SourceThumbnail(thumbnail.Url, fileContents);
+            return new Thumbnail { Url = thumbnail.Url, FileContents = fileContents };
         }
-        public async Task<SourceThumbnail> GetPlaylistThumbnailReadOnly(string id)
+        public async Task<Thumbnail> GetPlaylistThumbnailReadOnly(string id)
         {
             var ytPlaylist = getPlaylistReadonly(id);
 
@@ -340,7 +317,7 @@ namespace PlaylistChaser.Web.Util.API
 
             var fileContents = await Helper.GetImageByUrl(thumbnail.Url);
 
-            return new SourceThumbnail(thumbnail.Url, fileContents);
+            return new Thumbnail { Url = thumbnail.Url, FileContents = fileContents };
         }
 
         /// <summary>
@@ -428,7 +405,7 @@ namespace PlaylistChaser.Web.Util.API
         #endregion
 
         #region Add songs to playlist
-        public ReturnModel AddSongToPlaylist(string playlistId, string songId)
+        public ActionResult AddSongToPlaylist(string playlistId, string songId)
         {
             try
             {
@@ -441,11 +418,11 @@ namespace PlaylistChaser.Web.Util.API
 
                 var request = ytService.PlaylistItems.Insert(playlistItem, "snippet");
                 var response = request.Execute();
-                return new ReturnModel();
+                return new OkResult();
             }
             catch (Exception ex)
             {
-                return new ReturnModel(ex.Message);
+                return new BadRequestObjectResult(ex.Message);
             }
         }
         #endregion
@@ -457,7 +434,7 @@ namespace PlaylistChaser.Web.Util.API
         {
             return new PlaylistInfo
             {
-                SourceId = Sources.Youtube,
+                SourceId = SourceId.Youtube,
                 PlaylistIdSource = ytPlaylist.Id,
                 Url = getPlaylistUrl(ytPlaylist.Id),
                 Name = ytPlaylist.Snippet.Title,
@@ -478,7 +455,7 @@ namespace PlaylistChaser.Web.Util.API
         {
             return new SongInfo
             {
-                SourceId = Sources.Youtube,
+                SourceId = SourceId.Youtube,
                 SongIdSource = ytSong.Id,
                 Name = ytSong.Title,
                 ArtistName = ytSong.Author.ChannelTitle ?? "NotAvailable",
@@ -489,7 +466,7 @@ namespace PlaylistChaser.Web.Util.API
         {
             return new SongInfo
             {
-                SourceId = Sources.Youtube,
+                SourceId = SourceId.Youtube,
                 SongIdSource = ytSong.ResourceId.VideoId,
                 Name = ytSong.Title,
                 ArtistName = ytSong.VideoOwnerChannelTitle ?? "NotAvailable",
@@ -501,7 +478,7 @@ namespace PlaylistChaser.Web.Util.API
         {
             return new SongInfo
             {
-                SourceId = Sources.Youtube,
+                SourceId = SourceId.Youtube,
                 SongIdSource = ytSong.Id,
                 Name = ytSong.Title,
                 ArtistName = ytSong.Author.Title ?? "NotAvailable",
@@ -530,6 +507,32 @@ namespace PlaylistChaser.Web.Util.API
 
         private string getVideoUrl(string videoId)
             => $"https://www.youtube.com/watch?v={videoId}";
-        #endregion        
+
+
+
+
+
+        public bool ValidatePlaylistUrl(string url)
+        {
+            throw new NotImplementedException();
+        }
+
+
+        Task<IActionResult> IDestination.DeletePlaylist(string youtubePlaylistId)
+        {
+            throw new NotImplementedException();
+        }
+
+        bool IDestination.AddSongToPlaylist(string playlistIdSource, string songIdSource)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Uri GetLoginUri(string clientId, string redirectUri)
+        {
+            throw new NotImplementedException();
+        }
+
+        #endregion
     }
 }

@@ -329,8 +329,11 @@ export class Client {
     /**
      * @return OK
      */
-    loginToSpotify(): Promise<void> {
-        let url_ = this.baseUrl + "/api/Spotify/LoginToSpotify";
+    syncToDestinations(playlistId: number): Promise<void> {
+        let url_ = this.baseUrl + "/api/Playlist/sync-to-destinations/{playlistId}";
+        if (playlistId === undefined || playlistId === null)
+            throw new Error("The parameter 'playlistId' must be defined.");
+        url_ = url_.replace("{playlistId}", encodeURIComponent("" + playlistId));
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: RequestInit = {
@@ -340,11 +343,11 @@ export class Client {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processLoginToSpotify(_response);
+            return this.processSyncToDestinations(_response);
         });
     }
 
-    protected processLoginToSpotify(response: Response): Promise<void> {
+    protected processSyncToDestinations(response: Response): Promise<void> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
@@ -357,191 +360,6 @@ export class Client {
             });
         }
         return Promise.resolve<void>(null as any);
-    }
-
-    /**
-     * @param code (optional) 
-     * @return OK
-     */
-    acceptSpotifyCode(code: string | undefined): Promise<void> {
-        let url_ = this.baseUrl + "/api/Spotify/AcceptSpotifyCode?";
-        if (code === null)
-            throw new Error("The parameter 'code' cannot be null.");
-        else if (code !== undefined)
-            url_ += "code=" + encodeURIComponent("" + code) + "&";
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_: RequestInit = {
-            method: "GET",
-            headers: {
-            }
-        };
-
-        return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processAcceptSpotifyCode(_response);
-        });
-    }
-
-    protected processAcceptSpotifyCode(response: Response): Promise<void> {
-        const status = response.status;
-        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200) {
-            return response.text().then((_responseText) => {
-            return;
-            });
-        } else if (status !== 200 && status !== 204) {
-            return response.text().then((_responseText) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            });
-        }
-        return Promise.resolve<void>(null as any);
-    }
-
-    /**
-     * @return OK
-     */
-    checkHasAccesstoken(): Promise<boolean> {
-        let url_ = this.baseUrl + "/api/Spotify/check-has-accesstoken";
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_: RequestInit = {
-            method: "POST",
-            headers: {
-                "Accept": "text/plain"
-            }
-        };
-
-        return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processCheckHasAccesstoken(_response);
-        });
-    }
-
-    protected processCheckHasAccesstoken(response: Response): Promise<boolean> {
-        const status = response.status;
-        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200) {
-            return response.text().then((_responseText) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-                result200 = resultData200 !== undefined ? resultData200 : <any>null;
-    
-            return result200;
-            });
-        } else if (status !== 200 && status !== 204) {
-            return response.text().then((_responseText) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            });
-        }
-        return Promise.resolve<boolean>(null as any);
-    }
-
-    /**
-     * @return OK
-     */
-    checkAccesstokenExpired(): Promise<boolean> {
-        let url_ = this.baseUrl + "/api/Spotify/check-accesstoken-expired";
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_: RequestInit = {
-            method: "POST",
-            headers: {
-                "Accept": "text/plain"
-            }
-        };
-
-        return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processCheckAccesstokenExpired(_response);
-        });
-    }
-
-    protected processCheckAccesstokenExpired(response: Response): Promise<boolean> {
-        const status = response.status;
-        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200) {
-            return response.text().then((_responseText) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-                result200 = resultData200 !== undefined ? resultData200 : <any>null;
-    
-            return result200;
-            });
-        } else if (status !== 200 && status !== 204) {
-            return response.text().then((_responseText) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            });
-        }
-        return Promise.resolve<boolean>(null as any);
-    }
-
-    /**
-     * @return OK
-     */
-    refreshAccesstoken(): Promise<void> {
-        let url_ = this.baseUrl + "/api/Spotify/refresh-accesstoken";
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_: RequestInit = {
-            method: "POST",
-            headers: {
-            }
-        };
-
-        return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processRefreshAccesstoken(_response);
-        });
-    }
-
-    protected processRefreshAccesstoken(response: Response): Promise<void> {
-        const status = response.status;
-        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200) {
-            return response.text().then((_responseText) => {
-            return;
-            });
-        } else if (status !== 200 && status !== 204) {
-            return response.text().then((_responseText) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            });
-        }
-        return Promise.resolve<void>(null as any);
-    }
-
-    /**
-     * @return OK
-     */
-    getLoginUrl(): Promise<string> {
-        let url_ = this.baseUrl + "/api/Spotify/get-login-url";
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_: RequestInit = {
-            method: "GET",
-            headers: {
-                "Accept": "text/plain"
-            }
-        };
-
-        return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processGetLoginUrl(_response);
-        });
-    }
-
-    protected processGetLoginUrl(response: Response): Promise<string> {
-        const status = response.status;
-        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200) {
-            return response.text().then((_responseText) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-                result200 = resultData200 !== undefined ? resultData200 : <any>null;
-    
-            return result200;
-            });
-        } else if (status !== 200 && status !== 204) {
-            return response.text().then((_responseText) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            });
-        }
-        return Promise.resolve<string>(null as any);
     }
 
     /**

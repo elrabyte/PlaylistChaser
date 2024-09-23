@@ -1,11 +1,12 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using PlaylistChaser.Model;
+using PlaylistChaser.Model.BuiltInIds;
+using PlaylistChaser.Model.SearchModel;
 using SpotifyAPI.Web;
 using System.Text.RegularExpressions;
-using SourceId = PlaylistChaser.Model.BuiltInIds.SourceId;
 namespace PlaylistChaser.Core.Sources
 {
-    public class SpotifyApiHelper : ISource
+    public class SpotifyApiHelper : ISource, IAuth
     {
         private SpotifyClient spotify;
         static string[] scopes = { Scopes.PlaylistModifyPrivate, Scopes.PlaylistModifyPublic, Scopes.UserReadPrivate };
@@ -73,17 +74,19 @@ namespace PlaylistChaser.Core.Sources
         #endregion
 
         #region OAuth Credential
-        static async public Task<OAuth2Credential> GetOauthCredential(string code, string clientId, string clientSecret, string redirectUri, int userId)
+        public async Task<OAuth2Credential> GetOAuthCredential(string code, string clientId, string clientSecret, string redirectUri, int userId)
         {
-            var oAuth = await getToken(clientId, clientSecret, userId, code: code, redirectUri: redirectUri);
+            var oAuth = await GetToken(clientId, clientSecret, userId, code: code, redirectUri: redirectUri);
             return oAuth;
         }
-        static async public Task<OAuth2Credential> GetOAuthCredential(string clientId, string clientSecret, string refreshToken, int userId)
+        public async Task<OAuth2Credential> GetOAuthCredential(string clientId, string clientSecret, string refreshToken, int userId)
         {
-            var oAuth = await getToken(clientId, clientSecret, userId, refreshToken: refreshToken);
+            var oAuth = await GetToken(clientId, clientSecret, userId, refreshToken: refreshToken);
             return oAuth;
         }
-        private static async Task<OAuth2Credential> getToken(string clientId, string clientSecret, int userId, string? refreshToken = null, string? code = null, string? redirectUri = null)
+
+
+        private static async Task<OAuth2Credential> GetToken(string clientId, string clientSecret, int userId, string? refreshToken = null, string? code = null, string? redirectUri = null)
         {
             IRefreshableToken response = null;
             DateTime? tokenExpiration = null;
@@ -112,16 +115,6 @@ namespace PlaylistChaser.Core.Sources
 
             return oAuth;
         }
-
-        public static Uri GetLoginUri(string clientId, string redirectUri)
-        {
-            var loginRequest = new LoginRequest(new Uri(redirectUri), clientId, LoginRequest.ResponseType.Code)
-            {
-                Scope = scopes
-            };
-            return loginRequest.ToUri();
-        }
-
         #endregion
 
         #region Playlistsongs
@@ -232,6 +225,8 @@ namespace PlaylistChaser.Core.Sources
             return songs;
         }
 
+
+
         #region Add songs to playlist
         /// <summary>
         ///can add max. 100 songs per request
@@ -250,18 +245,18 @@ namespace PlaylistChaser.Core.Sources
             }
         }
 
-        public ActionResult AddSongToPlaylist(string playlistId, string songId)
+        public bool AddSongToPlaylist(string playlistId, string songId)
         {
             try
             {
                 var trackUri = new List<string> { $"spotify:track:{songId}" };
                 var response = spotify.Playlists.AddItems(playlistId, new PlaylistAddItemsRequest(trackUri)).Result;
 
-                return new OkResult();
+                return true;
             }
             catch (Exception ex)
             {
-                return new BadRequestObjectResult(new { message = ex.Message });
+                return false;
             }
         }
         #endregion
@@ -324,6 +319,65 @@ namespace PlaylistChaser.Core.Sources
         }
         #endregion
 
+        public FoundSong FindSong(FindSong song)
+        {
+            try
+            {
+                var spotifySong = searchSongExact(SearchRequest.Types.Track, song.ArtistName, song.SongName).Result;
+                if (spotifySong != null)
+                {
+                    var newSong = toSongModel(spotifySong);
+                    newSong.SongId = song.SongId;
+                    return new FoundSong(newSong, true);
+                }
+                else
+                {
+                    spotifySong = searchSong(SearchRequest.Types.Track, song.SongName).Result;
+                    if (spotifySong != null)
+                    {
+                        var newSong = toSongModel(spotifySong);
+                        newSong.SongId = song.SongId;
+                        return new FoundSong(newSong, false);
+                    }
+                }
+                return null;
+
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+        private async Task<FullTrack> searchSongExact(SearchRequest.Types type, string artistName, string songName)
+        {
+            var query = string.Format("artist:\"{0}\" track:\"{1}\"", artistName, songName);
+            var searchRequest = new SearchRequest(type, query);
+
+            var response = await spotify.Search.Item(searchRequest);
+            if (response.Tracks.Items?.Count == 1)
+                return response.Tracks.Items.Single();
+            else
+                return null;
+        }
+        private async Task<FullTrack> searchSong(SearchRequest.Types type, string songName)
+        {
+            var searchRequest = new SearchRequest(type, songName);
+
+            var response = await spotify.Search.Item(searchRequest);
+            if (response.Tracks.Items?.Count >= 1)
+                return response.Tracks.Items.First();
+            else
+                return null;
+        }
+
+        public Uri GetLoginUri(string clientId, string redirectUri)
+        {
+            var loginRequest = new LoginRequest(new Uri(redirectUri), clientId, LoginRequest.ResponseType.Code)
+            {
+                Scope = scopes
+            };
+            return loginRequest.ToUri();
+        }
 
 
     }
