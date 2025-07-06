@@ -5,18 +5,18 @@ import React, {
   useState,
   useEffect,
 } from "react";
-import { Client, Playlist, PlaylistPopulated } from "./api-client"; // Import your NSwag generated client
+import { Client, Playlist, PlaylistPopulated, SourceId } from "./api-client"; // Import your NSwag generated client
 import { ShowError } from "../components/Toast";
 
 // Define the shape of the API context
 interface ApiContextProps {
   getPlaylists: () => Promise<Playlist[]>;
   getPlaylist: (playlistId: number) => Promise<Playlist>;
-  addPlaylist: (url: string) => Promise<void>;
+  addPlaylist: (sourceId: SourceId, url: string) => Promise<void>;
   deletePlaylist: (playlistId: number) => Promise<void>;
   deletePlaylists: (playlistIds: number[]) => Promise<void>;
   getThumbnailUrl: (playlistId: number) => string;
-  validatePlaylistUrl: (url: string) => Promise<boolean>;
+  validatePlaylistUrl: (sourceId: SourceId, url: string) => Promise<boolean>;
   getPlaylistPopulated: (playlistId: number) => Promise<PlaylistPopulated>;
   syncFromOrigin: (playlistId: number) => Promise<void>;
 }
@@ -71,8 +71,8 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
           throw Error(errorMessage);
         });
     };
-    const addPlaylist = (url: string) => {
-      return client.addPlaylist(url).catch((error) => {
+    const addPlaylist = (sourceId: SourceId, url: string) => {
+      return client.addPlaylist(sourceId, url).catch((error) => {
         setErrorMessage(error.toString());
       });
     };
@@ -92,8 +92,8 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
       return `${baseUrl}/api/Playlist/get-thumbnail/${playlistId}`;
     };
 
-    const validatePlaylistUrl = (url: string) => {
-      return client.validatePlaylistUrl(url).catch((error) => {
+    const validatePlaylistUrl = (sourceId: SourceId, url: string) => {
+      return client.validatePlaylistUrl(sourceId, url).catch((error) => {
         setErrorMessage(error.toString());
         return false;
       });

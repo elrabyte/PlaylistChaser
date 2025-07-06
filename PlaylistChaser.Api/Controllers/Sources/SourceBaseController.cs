@@ -1,9 +1,8 @@
-﻿using Microsoft.AspNetCore.Http.Extensions;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using PlaylistChaser.Api.Database;
+using PlaylistChaser.Api.Util;
 using PlaylistChaser.Core.Sources;
 using PlaylistChaser.Model.BuiltInIds;
-using System.Collections.Generic;
 
 namespace PlaylistChaser.Api.Controllers.Sources
 {
@@ -15,7 +14,7 @@ namespace PlaylistChaser.Api.Controllers.Sources
         public readonly DbHelper dbHelper;
         public readonly SourceId sourceId;
         public readonly List<SourceId> validSourceIds;
-        public T apiHelper => GetApiHelper(typeof(SpotifyApiHelper));
+        public T apiHelper => GetApiHelper(SourcesHelper.GetApiHelperType(sourceId));
 
         public SourceBaseController(AdminDBContext adminDBContext, IHttpContextAccessor httpContextAccessor)
         {

@@ -1,8 +1,7 @@
 ﻿using PlaylistChaser.Core.Sources;
 using PlaylistChaser.Model.BuiltInIds;
-using System.Reflection;
 
-namespace PlaylistChaser.Api.Controllers.Sources
+namespace PlaylistChaser.Api.Util
 {
     public static class SourcesHelper
     {
@@ -14,6 +13,9 @@ namespace PlaylistChaser.Api.Controllers.Sources
                 case SourceId.Spotify:
                     type = typeof(SpotifyApiHelper);
                     break;
+                case SourceId.Youtube:
+                    type = typeof(YoutubeApiHelper);
+                    break;
                 default:
                     throw new NotImplementedException("not implemented for sourceId: " + sourceId);
             }
@@ -22,23 +24,8 @@ namespace PlaylistChaser.Api.Controllers.Sources
         }
         public static T GetApiHelper<T>(this SourceId sourceId, string accessToken) where T : ISourceBase
         {
-            var type = GetApiHelperType(sourceId);
+            var type = sourceId.GetApiHelperType();
             return (T)Activator.CreateInstance(type, new object[] { accessToken });
         }
-    }
-    public class SourcesHelper<T>
-    {
-        public virtual List<SourceId> GetValidSourceIds()
-        {
-            Assembly assembly = Assembly.GetExecutingAssembly();
-            IEnumerable<Type> sourceImplementations = assembly.GetTypes().Where(t => typeof(ISource).IsAssignableFrom(t) && t.IsClass);
-            var sourceIds = sourceImplementations.Select(type => ((ISource)Activator.CreateInstance(type)).SourceId).ToList();
-            return sourceIds;
-        }
-
-        //public virtual T GetApiHelper()
-        //{
-        //    return (T)Activator.CreateInstance(typeof(T), new object[] { });
-        //}
     }
 }

@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using PlaylistChaser.Core.Sources;
 using PlaylistChaser.Model;
 using PlaylistChaser.Model.BuiltInIds;
 using PlaylistChaser.Model.ViewModel;
@@ -133,7 +132,7 @@ namespace PlaylistChaser.Api.Database
         public string GetAccessToken(SourceId sourceId)
         {
             var oAuth = GetOauth(sourceId);
-            return oAuth.AccessToken;
+            return oAuth?.AccessToken;
         }
 
         public void AddPlaylist(SourceId sourceId, PlaylistInfo playlistInfo, Thumbnail thumbnail)
@@ -275,9 +274,9 @@ namespace PlaylistChaser.Api.Database
             return db.SongInfo.SingleOrDefault(i => i.SourceId == sourceId && i.SongId == songId);
         }
 
-        public void UpdateOAuthCredential(OAuth2Credential newOAuth)
+        public void UpdateOAuthCredential(OAuth2Credential existingOAuth, OAuth2Credential newOAuth)
         {
-            db.OAuth2Credential.Update(newOAuth);
+            db.Entry(existingOAuth).CurrentValues.SetValues(newOAuth);
             db.SaveChanges();
         }
 

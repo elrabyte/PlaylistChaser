@@ -4,7 +4,7 @@ import { PlaylistCard } from "./PlaylistCard";
 
 import Container from "@mui/material/Container";
 import { useApi } from "../api/ApiContext";
-import { Playlist } from "../api/api-client";
+import { Playlist, SourceId } from "../api/api-client";
 import {
   Badge,
   Box,
@@ -51,9 +51,9 @@ const Playlists = () => {
     tmp.splice(index, 1);
     setPlaylists(tmp);
   };
-  const addPlaylist = async (url: string) => {
+  const addPlaylist = async (sourceId: SourceId, url: string) => {
     console.log("addPlaylist");
-    await api.addPlaylist(url);
+    await api.addPlaylist(sourceId, url);
     fetchPlaylists();
   };
   const onClick = (playlistId: number) => {
@@ -95,7 +95,7 @@ const Playlists = () => {
   return (
     <Box>
       <Grid sx={{ p: 2 }}>
-        <AddPlaylist addPlaylist={addPlaylist} />
+        <AddPlaylist sourceId={SourceId.Spotify} addPlaylist={addPlaylist} />
       </Grid>
       <Grid container sx={{ p: 2 }}>
         <Grid>

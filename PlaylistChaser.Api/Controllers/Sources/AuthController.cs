@@ -1,41 +1,36 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using PlaylistChaser.Api.Database;
 using PlaylistChaser.Core.Sources;
-using PlaylistChaser.Model.BuiltInIds;
 
 namespace PlaylistChaser.Api.Controllers.Sources
 {
-    public class AuthController<T>  where T : IAuth
+    public partial class AuthController : SourceBaseController<IAuth>
     {
-        private readonly DbHelper dbHelper;
+
         private readonly string clientId;
         private readonly string clientSecret;
         private readonly string redirectUrl;
         private readonly string frontEndUrl;
-        private readonly T authSource;
-
-        public AuthController(SourceId sourceId, IConfiguration configuration, AdminDBContext adminDBContext)
+        public AuthController(AdminDBContext adminDBContext, IHttpContextAccessor httpContextAccessor, IConfiguration configuration) : base(adminDBContext, httpContextAccessor)
         {
-
-            dbHelper = new DbHelper(adminDBContext);
-
             clientId = configuration[$"{sourceId.ToString()}:ClientId"];
             clientSecret = configuration[$"{sourceId.ToString()}:ClientSecret"];
             redirectUrl = configuration[$"{sourceId.ToString()}:RedirectUri"];
             frontEndUrl = configuration["FrontEndUrl"];
-
-            var accessToken = dbHelper.GetAccessToken(sourceId);
-
-            this.authSource = (T)Activator.CreateInstance(typeof(T), new object[] { accessToken });
         }
 
+        internal override IAuth GetApiHelper(Type type)
+        {
+            var accessToken = dbHelper.GetAccessToken(sourceId);
+            return (IAuth)Activator.CreateInstance(type, new object[] { accessToken });
+        }
 
         [HttpPost]
         [Route("check-has-accesstoken")]
         public bool CheckHasAccessToken()
         {
             var userId = 1;
-            var accessToken = dbHelper.GetOauth(authSource.SourceId)?.AccessToken;
+            var accessToken = dbHelper.GetOauth(apiHelper.SourceId)?.AccessToken;
             return accessToken != null;
         }
         [HttpPost]
@@ -43,7 +38,7 @@ namespace PlaylistChaser.Api.Controllers.Sources
         public bool CheckAccesstokenExpired()
         {
             var userId = 1;
-            var oAuth = dbHelper.GetOauth(authSource.SourceId);
+            var oAuth = dbHelper.GetOauth(apiHelper.SourceId);
             return oAuth.TokenExpiration < DateTime.UtcNow;
         }
 
@@ -54,11 +49,11 @@ namespace PlaylistChaser.Api.Controllers.Sources
             try
             {
                 var userId = 1;
-                var oAuth = dbHelper.GetOauth(authSource.SourceId);
+                var oAuth = dbHelper.GetOauth(apiHelper.SourceId);
                 if (oAuth != null && oAuth.TokenExpiration < DateTime.UtcNow)
                 {
-                    var newOAuth = await authSource.GetOAuthCredential(clientId, clientSecret, oAuth.RefreshToken, userId);
-                    dbHelper.UpdateOAuthCredential(newOAuth);
+                    var newOAuth = await apiHelper.GetOAuthCredential(clientId, clientSecret, oAuth.RefreshToken, userId);
+                    dbHelper.UpdateOAuthCredential(oAuth, newOAuth);
 
                     return new OkResult();
                 }
@@ -75,7 +70,7 @@ namespace PlaylistChaser.Api.Controllers.Sources
         [Route("get-login-url")]
         public Uri GetLoginUrl()
         {
-            return authSource.GetLoginUri(clientId, redirectUrl);
+            return apiHelper.GetLoginUri(clientId, redirectUrl);
         }
 
         [HttpPost]
@@ -88,16 +83,16 @@ namespace PlaylistChaser.Api.Controllers.Sources
                 if (userId == null)
                     return new JsonResult(new { success = false, message = "Can't get userId" });
 
-                var oAuth = dbHelper.GetOauth(authSource.SourceId);
+                var oAuth = dbHelper.GetOauth(apiHelper.SourceId);
                 if (oAuth == null)
                 {
-                    var url = authSource.GetLoginUri(clientId, redirectUrl).ToString();
+                    var url = apiHelper.GetLoginUri(clientId, redirectUrl).ToString();
                     return new OkObjectResult(new { success = true, url = url });
                 }
                 else if (oAuth.TokenExpiration < DateTime.Now) //refresh token
                 {
-                    var newOAuth = await authSource.GetOAuthCredential(clientId, clientSecret, oAuth.RefreshToken, userId);
-                    dbHelper.UpdateOAuthCredential(newOAuth);
+                    var newOAuth = await apiHelper.GetOAuthCredential(clientId, clientSecret, oAuth.RefreshToken, userId);
+                    dbHelper.UpdateOAuthCredential(oAuth, newOAuth);
                 }
 
                 return new JsonResult(new { success = true });
@@ -116,11 +111,18 @@ namespace PlaylistChaser.Api.Controllers.Sources
             if (userId == null)
                 return new JsonResult(new { success = false, message = "Can't get userId" });
 
-            if (!CheckHasAccessToken() || (CheckHasAccessToken() && CheckAccesstokenExpired()))
+            var oAuth = dbHelper.GetOauth(sourceId);
+            var newOAuth = await apiHelper.GetOAuthCredential(code, clientId, clientSecret, redirectUrl, userId);
+            if (oAuth == null)
             {
-                var oAuth = await authSource.GetOAuthCredential(code, clientId, clientSecret, redirectUrl, userId);
-                dbHelper.AddOAuthCredential(oAuth);
+                dbHelper.AddOAuthCredential(newOAuth);
             }
+            else if (oAuth != null && CheckAccesstokenExpired())
+            {
+                dbHelper.UpdateOAuthCredential(oAuth, newOAuth);
+            }
+
+
 
             return new RedirectResult(frontEndUrl);
         }

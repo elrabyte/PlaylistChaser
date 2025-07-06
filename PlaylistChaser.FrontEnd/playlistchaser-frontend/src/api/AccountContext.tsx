@@ -4,18 +4,17 @@ import React, {
   ReactNode,
   useState,
   useEffect,
+  useCallback,
 } from "react";
-import { Client } from "./api-client";
+import { Client, SourceId } from "./api-client";
 import { ShowError } from "../components/Toast";
 
 // Define the shape of the API context
 interface AccountContextProps {
-  refreshAccesstoken: () => Promise<void>;
-  hasAccessToken: boolean | undefined;
-  accessTokenExpired: boolean | undefined;
-  getToken: () => Promise<void>;
-  refreshToken: () => Promise<void>;
-  isAuthenticated: () => boolean;
+  refreshAccesstoken: (sourceId: SourceId) => Promise<void>;
+  getToken: (sourceId: SourceId) => Promise<void>;
+  refreshToken: (sourceId: SourceId) => Promise<void>;
+  isAuthenticated: (sourceId: SourceId) => Promise<boolean>;
 }
 
 // Create the API context
@@ -38,18 +37,23 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [showErrorMessage, setShowErrorMessage] = useState<boolean>(false);
 
-  const [hasAccessToken, setHasAccessToken] = useState<boolean>();
-  const [accessTokenExpired, setAccessTokenExpired] = useState<boolean>();
+  // const [hasAccessToken, setHasAccessToken] = useState<boolean>();
+  // const [accessTokenExpired, setAccessTokenExpired] = useState<boolean>();
 
-  const isAuthenticated = (): boolean => {
-    return hasAccessToken === true && accessTokenExpired === false;
+  const isAuthenticated = async (sourceId: SourceId) => {
+    return (
+      (await checkHasAccesstoken(sourceId)) === true &&
+      (await checkAccesstokenExpired(sourceId)) === false
+    );
   };
 
   let client: Client;
   let value: AccountContextProps | undefined;
 
   useEffect(() => {
-    checkHasAccesstoken();
+    for (let sourceId of Object.values(SourceId)) {
+      checkHasAccesstoken(SourceId[sourceId]);
+    }
   }, []);
 
   useEffect(() => {
@@ -58,33 +62,17 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
     setShowErrorMessage(true);
   }, [errorMessage]);
 
-  useEffect(() => {
-    if (hasAccessToken && !accessTokenExpired) {
-      checkAccesstokenExpired();
-    } else if (hasAccessToken && accessTokenExpired) {
-      getToken();
-    }
-    console.log("hasAccessToken", hasAccessToken);
-  }, [hasAccessToken]);
-
-  useEffect(() => {
-    if (accessTokenExpired) {
-      refreshToken();
-    }
-    console.log("accessTokenExpired", accessTokenExpired);
-  }, [accessTokenExpired]);
-
   try {
     client = new Client(baseUrl);
   } catch (error) {
     setErrorMessage("Couldn't initiate api client");
   }
 
-  function checkAccesstokenExpired() {
+  function checkAccesstokenExpired(sourceId: SourceId) {
     return client
-      .checkAccesstokenExpired()
+      .checkAccesstokenExpired(SourceId[sourceId])
       .then((accessTokenExpired) => {
-        setAccessTokenExpired(accessTokenExpired);
+        return accessTokenExpired;
       })
       .catch((error) => {
         setErrorMessage(error.toString());
@@ -92,16 +80,17 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
       });
   }
 
-  async function getToken() {
-    const returnUrl = await getLoginUrl();
+  async function getToken(sourceId: SourceId) {
+    const returnUrl = await getLoginUrl(sourceId);
     console.log("returnUrl", returnUrl);
     window.location.assign(returnUrl);
   }
-  const checkHasAccesstoken = () => {
+
+  const checkHasAccesstoken = (sourceId: string) => {
     return client
-      .checkHasAccesstoken()
+      .checkHasAccesstoken(sourceId)
       .then((hasAccessToken) => {
-        setHasAccessToken(hasAccessToken);
+        return hasAccessToken;
       })
       .catch((error) => {
         setErrorMessage(error.toString());
@@ -109,27 +98,24 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
       });
   };
 
-  const getLoginUrl = () => {
-    return client.getLoginUrl().catch((error) => {
+  const getLoginUrl = (sourceId: SourceId) => {
+    return client.getLoginUrl(SourceId[sourceId]).catch((error) => {
       setErrorMessage(error.toString());
       throw Error();
     });
   };
-  const refreshAccesstoken = () => {
-    return client.refreshAccesstoken().catch((error) => {
+  const refreshAccesstoken = (sourceId: SourceId) => {
+    return client.refreshAccesstoken(SourceId[sourceId]).catch((error) => {
       setErrorMessage(error.toString());
       throw Error();
     });
   };
 
-  async function refreshToken() {
-    await refreshAccesstoken();
-    setAccessTokenExpired(false);
+  async function refreshToken(sourceId: SourceId) {
+    await refreshAccesstoken(sourceId);
   }
 
   value = {
-    hasAccessToken,
-    accessTokenExpired,
     refreshAccesstoken,
     getToken,
     isAuthenticated,

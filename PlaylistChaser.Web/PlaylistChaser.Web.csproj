@@ -19,8 +19,8 @@
   <ItemGroup>
     <PackageReference Include="BitlyAPI" Version="4.0.1" />
     <PackageReference Include="BuildWebCompiler2022" Version="1.14.10" />
-    <PackageReference Include="Google.Apis.Auth" Version="1.61.0" />
-    <PackageReference Include="Google.Apis.YouTube.v3" Version="1.61.0.3141" />
+    <PackageReference Include="Google.Apis.Auth" Version="1.70.0" />
+    <PackageReference Include="Google.Apis.YouTube.v3" Version="1.69.0.3764" />
     <PackageReference Include="Hangfire.AspNetCore" Version="1.8.5" />
     <PackageReference Include="Hangfire.Core" Version="1.8.5" />
     <PackageReference Include="Hangfire.SqlServer" Version="1.8.5" />
@@ -36,7 +36,7 @@
     </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="6.0.16" />
     <PackageReference Include="SpotifyAPI.Web" Version="7.0.0" />
-    <PackageReference Include="YoutubeExplode" Version="6.3.4" />
+    <PackageReference Include="YoutubeExplode" Version="6.5.4" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="PlaylistChaser.Test" />

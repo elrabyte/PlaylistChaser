@@ -27,9 +27,9 @@ namespace PlaylistChaser.Core.Sources
 
         public static string PlaylistUrlStart = "https://www.youtube.com/playlist?list=";
 
-        public SourceId SourceId => throw new NotImplementedException();
+        public SourceId SourceId => SourceId.Youtube;
 
-        internal YoutubeApiHelper(string accessToken)
+        public YoutubeApiHelper(string accessToken)
         {
             ytService = new YouTubeService(new BaseClientService.Initializer
             {
@@ -141,7 +141,10 @@ namespace PlaylistChaser.Core.Sources
                     ClientSecret = clientSecret
                 },
                 Scopes = scopes,
-                DataStore = new NullDataStore()
+                DataStore = new NullDataStore(),
+                Prompt = "consent",
+
+
             });
 
             TokenResponse credential = null;
@@ -155,7 +158,7 @@ namespace PlaylistChaser.Core.Sources
                 Provider = SourceId.Youtube.ToString(),
                 AccessToken = credential.AccessToken,
                 RefreshToken = credential.RefreshToken,
-                TokenExpiration = DateTime.Now.AddSeconds((double)credential.ExpiresInSeconds),
+                TokenExpiration = DateTime.UtcNow.AddSeconds((double)credential.ExpiresInSeconds),
                 UserId = userId
             };
 
@@ -530,7 +533,18 @@ namespace PlaylistChaser.Core.Sources
 
         public Uri GetLoginUri(string clientId, string redirectUri)
         {
-            throw new NotImplementedException();
+            var flow = new GoogleAuthorizationCodeFlow(new GoogleAuthorizationCodeFlow.Initializer
+            {
+                ClientSecrets = new ClientSecrets
+                {
+                    ClientId = clientId,
+                },
+                Scopes = scopes,
+                DataStore = new NullDataStore()
+            });
+
+            var loginRequest = flow.CreateAuthorizationCodeRequest(redirectUri);
+            return loginRequest.Build();
         }
 
         #endregion

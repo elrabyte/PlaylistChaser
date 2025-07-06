@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using PlaylistChaser.Core.Sources;
 using PlaylistChaser.Model;
 
 namespace PlaylistChaser.Api.Database

@@ -1,6 +1,6 @@
-﻿
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using PlaylistChaser.Model.BuiltInIds;
+
 namespace PlaylistChaser.Api.Util
 {
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, AllowMultiple = true, Inherited = true)]
