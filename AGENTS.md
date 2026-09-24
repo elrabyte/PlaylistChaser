@@ -169,6 +169,18 @@ precedence than plain environment variables). **This was authored without a Dock
 available in-session** — build/run it once before relying on it, and check `PlaylistChaser.Web/Dockerfile`,
 `PlaylistChaser.Client/Dockerfile` and `nginx.conf` if something doesn't come up.
 
+### TrueNAS SCALE / GHCR images
+
+`.github/workflows/docker-publish.yml` builds both images (via `docker/build-push-action`) and
+pushes them to `ghcr.io/<owner>/<repo>-api` / `-client` on push to `master`/`main`, or manually
+via `workflow_dispatch` — this exists because building the images requires a Docker daemon, which
+isn't available in every environment (including the one this was authored in). `docker-compose.truenas.yml`
+is a variant of the root compose file that references those pre-built `ghcr.io` images instead of
+a `build:` context, because TrueNAS SCALE's Apps UI ("Custom App → Install via YAML") expects
+pre-built images, not a build context. TrueNAS CORE has no Docker support at all (FreeBSD-based;
+would need a Linux VM). Only the YAML syntax of these two new files was validated (via `js-yaml`)
+— neither the GitHub Actions run nor an actual TrueNAS deployment was exercised in this session.
+
 ## Things intentionally left alone
 
 - The existing Razor/MVC UI, cookie auth, and SQL-Server-only production configuration are

@@ -15,9 +15,9 @@
 - **PlaylistChaser.Test** — automated tests.
 
 If you just want to run the whole thing locally without installing anything but Docker, skip to
-[Run it with Docker](#run-it-with-docker).
+[Running it with Docker](#running-it-with-docker-recommended).
 
-## Run it with Docker (recommended)
+## Running it with Docker (recommended)
 
 Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/) (or another Docker
 Compose-compatible setup).
@@ -39,6 +39,16 @@ account you register becomes an administrator.
 > `PlaylistChaser.Web/appsettings.Docker.json` (`Spotify:*` / `Youtube:*` sections) before
 > starting the containers. Without them, sign-up/sign-in and browsing already-synced playlists
 > still works.
+
+### Running it on TrueNAS
+
+- **TrueNAS SCALE**: yes — SCALE runs a real Docker engine under the hood. Its Apps UI expects
+  pre-built images rather than a build context though, so use **`docker-compose.truenas.yml`**
+  (not the root one) — see the comments at the top of that file for the exact steps (build the
+  images via the included GitHub Actions workflow, then paste the compose body into
+  *Apps → Discover Apps → Custom App → Install via YAML*).
+- **TrueNAS CORE**: no — CORE is FreeBSD-based and has no Docker support at all. You'd need to
+  run a Linux VM (via bhyve) on it and run Docker inside that VM instead.
 
 ## Running it without Docker
 
