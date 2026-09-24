@@ -1,0 +1,61 @@
+version: "3.9"
+
+# Full PlaylistChaser stack for local/dev use:
+#   docker compose up --build
+# - api:      PlaylistChaser.Web (ASP.NET Core REST API), running against Postgres via the
+#             portable EF Core data-store path (see Database/Abstractions and AGENTS.md).
+# - client:   PlaylistChaser.Client (React SPA), served by nginx, proxies /api to the api
+#             service.
+# - db:       PostgreSQL, schema created automatically on API startup via EF Core migrations.
+#
+# This is the "swap the database backend" / "dockerize" path from the project brief. The
+# original SQL Server + VIEWPROG-stored-procedure deployment (PlaylistChaser.DB) remains the
+# default for the existing production environment and is not part of this compose file.
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: playlistchaser
+      POSTGRES_USER: playlistchaser
+      POSTGRES_PASSWORD: playlistchaser
+    volumes:
+      - playlistchaser-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U playlistchaser"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: PlaylistChaser.Web/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    # Runtime configuration (connection strings, CORS origins, JWT key, ...) comes from
+    # PlaylistChaser.Web/appsettings.Docker.json, not environment variables here - Program.cs
+    # loads appsettings.{ASPNETCORE_ENVIRONMENT}.json explicitly after the default configuration
+    # sources, so it takes precedence over plain environment variables. Edit that file (or bind-
+    # mount your own over it) to change settings for this compose stack.
+    environment:
+      ASPNETCORE_ENVIRONMENT: Docker
+    ports:
+      - "5000:8080"
+
+  client:
+    build:
+      context: ./PlaylistChaser.Client
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ""
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "8080:80"
+
+volumes:
+  playlistchaser-db-data:
