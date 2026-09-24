@@ -358,7 +358,7 @@ namespace PlaylistChaser.Web.Util.API
                 {
                     if (ytSong.Thumbnails.Any())
                     {
-                        var url = ytSong.Thumbnails.OrderBy(t => t.Resolution).First().Url;
+                        var url = ytSong.Thumbnails.OrderBy(t => t.Resolution.Area).First().Url;
                         var fileContents = await Helper.GetImageByUrl(url);
                         var sourceThumbnail = new SourceThumbnail(url, fileContents);
                         songThumbnails.Add(ytSong.Id, sourceThumbnail);
@@ -380,7 +380,7 @@ namespace PlaylistChaser.Web.Util.API
                 {
                     if (ytSong.Thumbnails.Any())
                     {
-                        var url = ytSong.Thumbnails.OrderBy(t => t.Resolution).First().Url;
+                        var url = ytSong.Thumbnails.OrderBy(t => t.Resolution.Area).First().Url;
                         var fileContents = await Helper.GetImageByUrl(url);
                         var sourceThumbnail = new SourceThumbnail(url, fileContents);
                         songThumbnails.Add(ytSong.Id, sourceThumbnail);

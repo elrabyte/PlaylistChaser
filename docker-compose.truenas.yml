@@ -1,0 +1,75 @@
+# TrueNAS SCALE deployment
+#
+# TrueNAS SCALE (not CORE - CORE is FreeBSD-based and has no Docker at all) runs a real Docker
+# engine under the hood, but its "Apps" UI expects pre-built images (`image: ...`), not a build
+# context (`build: ...`) - so you can't paste the root docker-compose.yml as-is into the Custom
+# App YAML editor. This file is a TrueNAS-ready variant that pulls pre-built images instead.
+#
+# 1. Get the images built & published (requires a Docker daemon somewhere - your own machine, or
+#    let GitHub Actions do it): push this repo / merge this branch, and
+#    .github/workflows/docker-publish.yml builds+pushes both images to GHCR automatically.
+#    Or trigger it manually: GitHub repo -> Actions -> "docker-publish" -> Run workflow.
+#    Resulting images: ghcr.io/elrabyte/playlistchaser-api:latest,
+#                       ghcr.io/elrabyte/playlistchaser-client:latest
+#    (adjust the owner/repo below if this ever moves to a different GitHub repo/fork.)
+#
+# 2. In the TrueNAS SCALE UI: Apps -> Discover Apps -> Custom App -> Install via YAML, and paste
+#    this file's `services:` section (TrueNAS's editor expects just the compose body, field
+#    names/support vary a bit by SCALE version - see
+#    https://www.truenas.com/docs/scale/scaleuireference/apps/installcustomappscreens/).
+#    Adjust the host ports below (left side of each "host:container" pair) if 8080/5000 are
+#    already used by another app/service on your NAS.
+#
+# 3. If your SCALE version's YAML editor doesn't like something here (e.g. `depends_on`
+#    conditions, `healthcheck`), the simplest fallback is to SSH into TrueNAS and run
+#    `docker compose -f docker-compose.truenas.yml up -d` directly. This works (SCALE really is
+#    just Docker under the hood) but the app won't show up as a managed "App" in the UI, and a
+#    TrueNAS upgrade could disrupt it - the UI-managed route in step 2 is preferred if it works
+#    for your version.
+#
+# Do you need to configure anything? For a first look (sign up, sign in, browse playlists): no -
+# everything below has working defaults. To actually sync playlists you need real Spotify/YouTube
+# API credentials, and you should replace the placeholder Jwt:Key for anything beyond a quick
+# local test. DO NOT edit appsettings.Docker.json in the repo to add real secrets and push that -
+# the CI workflow bakes that file into the public api image, which would leak them. Instead,
+# create your own secrets file on the NAS (e.g. via a TrueNAS dataset/share) and bind-mount it
+# over the baked-in one, uncommenting the `volumes:` line under `api` below and pointing it at
+# your file's path on the NAS.
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: playlistchaser
+      POSTGRES_USER: playlistchaser
+      POSTGRES_PASSWORD: playlistchaser
+    volumes:
+      - playlistchaser-db-data:/var/lib/postgresql/data
+
+  api:
+    image: ghcr.io/elrabyte/playlistchaser-api:latest
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      ASPNETCORE_ENVIRONMENT: Docker
+    # volumes:
+    #   # Overrides the image's baked-in appsettings.Docker.json with your own copy (containing
+    #   # real Spotify/Youtube credentials and a real Jwt:Key) without committing secrets to git
+    #   # or the public image. Copy PlaylistChaser.Web/appsettings.Docker.json as a starting
+    #   # point onto NAS storage, fill in the real values, then point this at that path:
+    #   - /mnt/your-pool/appdata/playlistchaser/appsettings.Docker.json:/app/appsettings.Docker.json:ro
+    ports:
+      - "5000:8080"
+
+  client:
+    image: ghcr.io/elrabyte/playlistchaser-client:latest
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "8080:80"
+
+volumes:
+  playlistchaser-db-data:
