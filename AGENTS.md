@@ -29,6 +29,15 @@ dotnet test  PlaylistChaser.Test\PlaylistChaser.Test.csproj    # builds fine; so
 # PlaylistChaser.DB\PlaylistChaser.DB.sqlproj does NOT build via `dotnet build` (needs SSDT/VS)
 ```
 
+`PlaylistChaser.Test` now includes `EfCorePlaylistDataStoreTests`, which runs the portable
+database path (`EfCorePlaylistDataStore`) against a real SQLite in-memory database — this proves
+the "swap the DB backend" abstraction actually works end-to-end (per-user filtering, the
+ownership check, the merge operation) without needing Docker/Postgres/SQL Server installed
+anywhere. Run just those with:
+```powershell
+dotnet test PlaylistChaser.Test\PlaylistChaser.Test.csproj --filter "FullyQualifiedName~EfCorePlaylistDataStoreTests"
+```
+
 Both `.csproj` projects target **net8.0** (bumped from net6.0/net7.0 — this environment only has
 the .NET 8/9 runtimes installed; net6/net7 are EOL anyway). EF Core / Identity / SignalR / JWT
 packages were bumped to the matching 8.0.x line.

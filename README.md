@@ -86,9 +86,12 @@ Copy `.env.example` to `.env.local` and point `VITE_API_BASE_URL` at your runnin
 dotnet test PlaylistChaser.Test\PlaylistChaser.Test.csproj
 ```
 
-Most tests pass without any setup. `YoutubeApiTest`'s "get playlist/song" tests call the real
-YouTube API and need a valid access token to pass — they'll fail with an authentication error
-otherwise, which is expected without credentials configured.
+Most tests pass without any setup — including `EfCorePlaylistDataStoreTests`, which runs the
+Postgres/Docker-path database logic against a real (in-memory, no-install-required) SQLite
+database, so you can confirm that part actually works even before trying Docker. `YoutubeApiTest`'s
+"get playlist/song" tests call the real YouTube API and need a valid access token to pass —
+they'll fail with an authentication error otherwise, which is expected without credentials
+configured.
 
 ```powershell
 cd PlaylistChaser.Client
