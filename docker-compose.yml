@@ -11,6 +11,15 @@ version: "3.9"
 # This is the "swap the database backend" / "dockerize" path from the project brief. The
 # original SQL Server + VIEWPROG-stored-procedure deployment (PlaylistChaser.DB) remains the
 # default for the existing production environment and is not part of this compose file.
+#
+# Do you need to configure anything first? No - every value below has a working default, so
+# `docker compose up --build` runs as-is (you can sign up/sign in and browse playlists). To
+# actually sync playlists you need real Spotify/YouTube API credentials in
+# PlaylistChaser.Web/appsettings.Docker.json, and you should replace its placeholder Jwt:Key for
+# anything beyond a quick local test. Careful: that file gets baked into the api image at build
+# time, so if you push those changes and someone else pulls/builds the image, don't put real
+# secrets in it directly - bind-mount your own copy instead (see the commented `volumes:` line
+# under `api` below).
 services:
   db:
     image: postgres:16-alpine
@@ -38,10 +47,13 @@ services:
     # Runtime configuration (connection strings, CORS origins, JWT key, ...) comes from
     # PlaylistChaser.Web/appsettings.Docker.json, not environment variables here - Program.cs
     # loads appsettings.{ASPNETCORE_ENVIRONMENT}.json explicitly after the default configuration
-    # sources, so it takes precedence over plain environment variables. Edit that file (or bind-
-    # mount your own over it) to change settings for this compose stack.
+    # sources, so it takes precedence over plain environment variables.
     environment:
       ASPNETCORE_ENVIRONMENT: Docker
+    # volumes:
+    #   # Uncomment to supply your own secrets (Spotify/Youtube credentials, a real Jwt:Key)
+    #   # without editing/committing the tracked appsettings.Docker.json:
+    #   - ./appsettings.Docker.local.json:/app/appsettings.Docker.json:ro
     ports:
       - "5000:8080"
 

@@ -363,3 +363,5 @@ MigrationBackup/
 FodyWeavers.xsd
 PlaylistChaser.Web/appsettings.Production.json
 PlaylistChaser.Web/appsettings.Development.json
+appsettings.Docker.local.json
+PlaylistChaser.Web/appsettings.Docker.local.json

@@ -26,6 +26,15 @@
 #    just Docker under the hood) but the app won't show up as a managed "App" in the UI, and a
 #    TrueNAS upgrade could disrupt it - the UI-managed route in step 2 is preferred if it works
 #    for your version.
+#
+# Do you need to configure anything? For a first look (sign up, sign in, browse playlists): no -
+# everything below has working defaults. To actually sync playlists you need real Spotify/YouTube
+# API credentials, and you should replace the placeholder Jwt:Key for anything beyond a quick
+# local test. DO NOT edit appsettings.Docker.json in the repo to add real secrets and push that -
+# the CI workflow bakes that file into the public api image, which would leak them. Instead,
+# create your own secrets file on the NAS (e.g. via a TrueNAS dataset/share) and bind-mount it
+# over the baked-in one, uncommenting the `volumes:` line under `api` below and pointing it at
+# your file's path on the NAS.
 
 services:
   db:
@@ -45,6 +54,12 @@ services:
       - db
     environment:
       ASPNETCORE_ENVIRONMENT: Docker
+    # volumes:
+    #   # Overrides the image's baked-in appsettings.Docker.json with your own copy (containing
+    #   # real Spotify/Youtube credentials and a real Jwt:Key) without committing secrets to git
+    #   # or the public image. Copy PlaylistChaser.Web/appsettings.Docker.json as a starting
+    #   # point onto NAS storage, fill in the real values, then point this at that path:
+    #   - /mnt/your-pool/appdata/playlistchaser/appsettings.Docker.json:/app/appsettings.Docker.json:ro
     ports:
       - "5000:8080"
 

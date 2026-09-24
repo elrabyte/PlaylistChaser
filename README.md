@@ -3,6 +3,8 @@
 <p>A handy tool to manage your playlists on Spotify and YouTube.</p>
 <p>Mirror your playlist so it exists on both Spotify and YouTube, and combine multiple playlists into a new one that keeps track of the playlists it was built from.</p>
 
+Repository: **https://github.com/elrabyte/PlaylistChaser**
+
 ## What's in this repo
 
 - **PlaylistChaser.Web** — the ASP.NET Core backend. Serves the original web UI (works out of
@@ -40,6 +42,15 @@ account you register becomes an administrator.
 > starting the containers. Without them, sign-up/sign-in and browsing already-synced playlists
 > still works.
 
+**Do you need to configure anything first?** No — every value has a working default, so
+`docker compose up --build` runs as-is. What you'd want to change before relying on it for real:
+- **Spotify/YouTube API credentials** (empty by default — needed to actually sync playlists).
+- **`Jwt:Key`** — the shipped value is an insecure placeholder, fine for a quick local test only.
+- Don't put real secrets directly into the tracked `appsettings.Docker.json` and push that — it
+  gets baked into the `api` image by the CI workflow below, which would leak them if the image
+  is pulled elsewhere. Use a local override file instead (see the commented `volumes:` line for
+  the `api` service in `docker-compose.yml` / `docker-compose.truenas.yml`).
+
 ### Running it on TrueNAS
 
 - **TrueNAS SCALE**: yes — SCALE runs a real Docker engine under the hood. Its Apps UI expects
@@ -49,6 +60,10 @@ account you register becomes an administrator.
   *Apps → Discover Apps → Custom App → Install via YAML*).
 - **TrueNAS CORE**: no — CORE is FreeBSD-based and has no Docker support at all. You'd need to
   run a Linux VM (via bhyve) on it and run Docker inside that VM instead.
+- The image-build workflow only runs on pushes to `master`/`main` (or a manual trigger) — until
+  this work is merged there, either merge the pull request first, or run it manually from
+  GitHub's Actions tab (`docker-publish` → *Run workflow*, picking this branch) to get images
+  pushed to GHCR before trying the TrueNAS steps above.
 
 ## Running it without Docker
 
