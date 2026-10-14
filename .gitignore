@@ -361,7 +361,10 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
-PlaylistChaser.Web/appsettings.Production.json
-PlaylistChaser.Web/appsettings.Development.json
-appsettings.Docker.local.json
-PlaylistChaser.Web/appsettings.Docker.local.json
+
+# PlaylistChaser rewrite: local dev state and build output
+server/PlaylistChaser/dev.db*
+server/PlaylistChaser/.data/
+server/PlaylistChaser/wwwroot/
+client/dist/
+client/dev-dist/

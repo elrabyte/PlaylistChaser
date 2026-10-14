@@ -1,133 +1,153 @@
 <h1>PlaylistChaser</h1>
 
-<p>A handy tool to manage your playlists on Spotify and YouTube.</p>
-<p>Mirror your playlist so it exists on both Spotify and YouTube, and combine multiple playlists into a new one that keeps track of the playlists it was built from.</p>
+<p>Keep your playlists in sync between YouTube and Spotify.</p>
+
+- **Copy** a playlist from one service to the other. Songs are found automatically, and you can fix any wrong matches.
+- **Combine** several playlists into one and copy that anywhere.
+- **Sync daily** without you doing anything: new songs get added, and songs you removed from a copy stay removed.
+- **Use it on phone or desktop.** It installs to your home screen like an app. On Android you can share a playlist from the YouTube or Spotify app straight into it.
+- **Multiple users**, each with their own playlists and accounts.
 
 Repository: **https://github.com/elrabyte/PlaylistChaser**
 
-## What's in this repo
+## Install (Docker / TrueNAS SCALE)
 
-- **PlaylistChaser.Web** — the ASP.NET Core backend. Serves the original web UI (works out of
-  the box) and a JSON REST API used by the new React app.
-- **PlaylistChaser.Client** — a new React web app (mobile-friendly, works in any phone/desktop
-  browser) that talks to the REST API.
-- **PlaylistChaser.DB** — the SQL Server database project (schema, views, stored procedures) for
-  the original production deployment. Requires Visual Studio with SQL Server Data Tools (SSDT) to
-  build/publish — it's not part of the Docker setup below.
-- **PlaylistChaser.Test** — automated tests.
+1. Copy this compose file. It is the same as `docker-compose.yml` in the repo, and each [release](https://github.com/elrabyte/PlaylistChaser/releases/latest) also attaches it with the image pinned to that version:
 
-If you just want to run the whole thing locally without installing anything but Docker, skip to
-[Running it with Docker](#running-it-with-docker-recommended).
+```yaml
+# PlaylistChaser: run with `docker compose up -d`, or paste into TrueNAS SCALE
+# (Apps > Discover Apps > Custom App > Install via YAML).
+#
+# Before starting, replace every CHANGE_ME below. PUBLIC_URL must be the https address
+# you open the app at: YouTube/Spotify logins and installing the app on a phone only work
+# over https. See the README for HTTPS, Google/Spotify setup, backups and upgrades.
 
-## Running it with Docker (recommended)
+x-db-password: &db-password CHANGE_ME  # Postgres password, shared by both services
 
-Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/) (or another Docker
-Compose-compatible setup).
+services:
+  app:
+    image: ghcr.io/elrabyte/playlistchaser:latest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      PUBLIC_URL: https://CHANGE_ME.example.com
+      ADMIN_USERNAME: admin
+      ADMIN_PASSWORD: CHANGE_ME     # 10+ characters; only used to create the first admin
+      POSTGRES_PASSWORD: *db-password
+      YOUTUBE_CLIENT_ID: ""         # optional; from Google Cloud (README: YouTube)
+      YOUTUBE_CLIENT_SECRET: ""
+      SPOTIFY_CLIENT_ID: ""         # optional; from the Spotify developer dashboard (README: Spotify)
+      SPOTIFY_CLIENT_SECRET: ""
+    volumes:
+      # encryption keys for logins and stored YouTube/Spotify tokens; back it up with the database.
+      # Using a host path instead? Give it to UID 1654 (the container's user).
+      - app-data:/data
 
-```powershell
-docker compose up --build
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: playlistchaser
+      POSTGRES_USER: playlistchaser
+      POSTGRES_PASSWORD: *db-password
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U playlistchaser -d playlistchaser"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  app-data:
+  db-data:
 ```
 
-This starts three containers:
-- the API on **http://localhost:5000**
-- the web app on **http://localhost:8080**
-- a PostgreSQL database (schema is created automatically on first start)
+2. Replace every `CHANGE_ME` in it:
+   - `PUBLIC_URL`: the **https** address you'll open the app at (see [HTTPS](#https)).
+   - `ADMIN_USERNAME` / `ADMIN_PASSWORD`: your first login. The password needs 10+ characters. These are only used when the database is empty.
+   - The Postgres password at the top. It's shared by both services, and Postgres only reads it the first time it creates its database. If you change it later, the app can't connect (`password authentication failed`). Either put the old password back, or, if you have no data yet, delete the app's `db-data` volume and start again.
+   - `YOUTUBE_*` / `SPOTIFY_*`: see [YouTube](#youtube) and [Spotify](#spotify). You can leave either one empty.
+3. Start it:
+   - **Plain Docker:** `docker compose up -d`.
+   - **TrueNAS SCALE:** Apps → Discover Apps → Custom App → *Install via YAML*, then paste the file. TrueNAS doesn't read `.env` files, which is why the values are written straight into the file.
+4. Open `PUBLIC_URL`, log in, go to **Settings** and connect YouTube and/or Spotify.
 
-Open **http://localhost:8080** in a browser (including on your phone, if it's on the same
-network as your computer, using your computer's IP instead of `localhost`). The very first
-account you register becomes an administrator.
+The app listens on port 8080. Images are published as `ghcr.io/elrabyte/playlistchaser`, for linux/amd64 only.
 
-> Note: to actually sync playlists you'll need Spotify/YouTube API credentials — add them to
-> `PlaylistChaser.Web/appsettings.Docker.json` (`Spotify:*` / `Youtube:*` sections) before
-> starting the containers. Without them, sign-up/sign-in and browsing already-synced playlists
-> still works.
+### HTTPS
 
-**Do you need to configure anything first?** No — every value has a working default, so
-`docker compose up --build` runs as-is. What you'd want to change before relying on it for real:
-- **Spotify/YouTube API credentials** (empty by default — needed to actually sync playlists).
-- **`Jwt:Key`** — the shipped value is an insecure placeholder, fine for a quick local test only.
-- Don't put real secrets directly into the tracked `appsettings.Docker.json` and push that — it
-  gets baked into the `api` image by the CI workflow below, which would leak them if the image
-  is pulled elsewhere. Use a local override file instead (see the commented `volumes:` line for
-  the `api` service in `docker-compose.yml` / `docker-compose.truenas.yml`).
+You need it. Google and Spotify only redirect logins back to `https://` addresses (plain `http` works only for `localhost`), and phones only install web apps from https sites. The app refuses to start when `PUBLIC_URL` isn't https.
 
-### Running it on TrueNAS
+Put a reverse proxy with a certificate in front of port 8080. Any of these work:
 
-- **TrueNAS SCALE**: yes — SCALE runs a real Docker engine under the hood. Its Apps UI expects
-  pre-built images rather than a build context though, so use **`docker-compose.truenas.yml`**
-  (not the root one) — see the comments at the top of that file for the exact steps (build the
-  images via the included GitHub Actions workflow, then paste the compose body into
-  *Apps → Discover Apps → Custom App → Install via YAML*).
-- **TrueNAS CORE**: no — CORE is FreeBSD-based and has no Docker support at all. You'd need to
-  run a Linux VM (via bhyve) on it and run Docker inside that VM instead.
-- The image-build workflow only runs on pushes to `master`/`main` (or a manual trigger) — until
-  this work is merged there, either merge the pull request first, or run it manually from
-  GitHub's Actions tab (`docker-publish` → *Run workflow*, picking this branch) to get images
-  pushed to GHCR before trying the TrueNAS steps above.
+- the reverse proxy / ingress of your NAS (e.g. Nginx Proxy Manager or Caddy as a TrueNAS app) with a domain you own
+- [Tailscale Serve](https://tailscale.com/kb/1312/serve), which gives a private `https://<machine>.<tailnet>.ts.net` address
+- a [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/), which needs no open ports
 
-## Running it without Docker
+The proxy must pass `X-Forwarded-Proto`; all of the above do.
 
-### Prerequisites
-- [.NET 8 SDK](https://dotnet.microsoft.com/download)
-- [Node.js 20+](https://nodejs.org/) (for the React app)
-- A database: either SQL Server (production setup, see below) or PostgreSQL (simpler for local
-  dev, same as the Docker setup)
+### YouTube
 
-### Backend
-```powershell
-cd PlaylistChaser.Web
-dotnet restore
-dotnet build
-dotnet run
-```
-You'll need an `appsettings.Development.json` (or `appsettings.Production.json`) file next to
-`appsettings.json` with your connection string(s), a `Database:Provider` of `SqlServer` or
-`Postgres`, a `Jwt:Key`, and your Spotify/YouTube API credentials — see
-`appsettings.Docker.json` for the shape of this file (it's a working example for Postgres).
-These per-environment files are intentionally left out of git since they hold secrets.
+1. In the [Google Cloud console](https://console.cloud.google.com/), create a project and enable **YouTube Data API v3**.
+2. Under *OAuth consent screen*, pick user type "External" and add the scope `.../auth/youtube`.
+3. Under *Credentials*, create an **OAuth client ID** of type "Web application". Its authorized redirect URI is `https://<your PUBLIC_URL host>/api/sources/youtube/callback`.
+4. Put the client ID and secret into `YOUTUBE_CLIENT_ID` / `YOUTUBE_CLIENT_SECRET`.
+5. **Publish the app** (consent screen → *Publish app*). While it is in "Testing", Google expires the login after 7 days and the daily sync stops; Settings then shows **Reconnect**. A published but unverified app works fine for you and your users. Google just shows an "unverified app" warning once while connecting.
 
-### Frontend
-```powershell
-cd PlaylistChaser.Client
-npm install
-npm run dev
-```
-Copy `.env.example` to `.env.local` and point `VITE_API_BASE_URL` at your running API
-(`http://localhost:5000` by default).
+**Quota:** Google gives each project 10,000 units a day. Adding one song to a YouTube playlist costs 50, so all users together can add about **200 songs per day** to YouTube. When the quota runs out, the copy stops and continues on the next daily sync. Searching YouTube uses no quota.
 
-### Database
-- **SQL Server** (original production setup): open `PlaylistChaser.sln` in Visual Studio with
-  SSDT installed, and build/publish `PlaylistChaser.DB` to your SQL Server instance. This is the
-  only supported path for production today (per-user database logins, native row-level
-  security — see `AGENTS.md` if you're curious how that works).
-- **PostgreSQL** (simpler for local dev / what Docker uses): just point
-  `ConnectionStrings:ServerConnectionString` at a Postgres database and set
-  `Database:Provider` to `Postgres` — the app creates and seeds the schema itself on startup
-  using EF Core migrations.
+### Spotify
 
-## Running the tests
+1. In the [Spotify developer dashboard](https://developer.spotify.com/dashboard), create an app with the *Web API*.
+2. Its redirect URI is `https://<your PUBLIC_URL host>/api/sources/spotify/callback`.
+3. Put the client ID and secret into `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET`.
+4. Apps in Spotify's development mode only work for users you add under *User Management* in the dashboard, so add every PlaylistChaser user's Spotify account there.
 
-```powershell
-dotnet test PlaylistChaser.Test\PlaylistChaser.Test.csproj
+### Backup, restore, upgrade
+
+- **Back up** both volumes:
+  - **`db-data`** (or `docker compose exec db pg_dump -U playlistchaser playlistchaser > backup.sql`)
+  - **`app-data`**, which holds the keys that encrypt logins and the stored YouTube/Spotify tokens. Lose it and everyone has to log in and reconnect, but no playlists are lost.
+- **Upgrade:** change the image tag (or download the new release's compose file) and restart. Database changes apply automatically on start. Back up before a major version, because they can't be rolled back.
+- **Host-path volume instead of a named one?** The container runs as UID 1654, so give that directory to that user.
+
+## How syncing works
+
+- **Update songs** (pull) reads a playlist from where it came from and adds new songs. Songs removed there stay in PlaylistChaser.
+- **Copy to …** (push) creates the playlist on the other service the first time.
+  - Each song is searched there once. YouTube is searched by "artist title"; Spotify first by exact artist and title, then by title alone.
+  - Only songs the copy doesn't have yet are added. A song you deleted from the copy is never added again.
+- Tap a song to see how it was matched. Paste the right link, mark it "not on Spotify/YouTube", or let it be searched again on the next copy.
+- **Daily sync** runs once a day per user: every playlist is updated, then copied to every service it was copied to before.
+- **Coming from an older PlaylistChaser?** Add your playlists again, then use *⋯ → Use an existing playlist as copy* to link the copies the old version made, so no duplicates are created.
+
+## Develop
+
+Requires the .NET 10 SDK and Node 22+. No Docker or Postgres is needed locally, because dev and tests use SQLite.
+
+```bash
+dotnet run --project server/PlaylistChaser --launch-profile dev
 ```
 
-Most tests pass without any setup — including `EfCorePlaylistDataStoreTests`, which runs the
-Postgres/Docker-path database logic against a real (in-memory, no-install-required) SQLite
-database, so you can confirm that part actually works even before trying Docker. `YoutubeApiTest`'s
-"get playlist/song" tests call the real YouTube API and need a valid access token to pass —
-they'll fail with an authentication error otherwise, which is expected without credentials
-configured.
-
-```powershell
-cd PlaylistChaser.Client
-npm run build   # type-checks and builds the app
-npm run lint
+```bash
+npm --prefix client install
 ```
 
-## Where things stand
+```bash
+npm --prefix client run dev
+```
 
-The React app currently covers the core flows: signing in, viewing your playlists, and viewing a
-playlist's songs. Creating/syncing/combining playlists, linking Spotify/YouTube accounts, and
-admin screens are still only available in the original web UI (both are running side by side, so
-nothing was taken away — the plan is to keep porting features over to the new app). See
-`AGENTS.md` for the full technical rundown if you're picking up this project's development.
+Open http://localhost:5173 and log in as `admin` / `dev-password-1` (from `server/PlaylistChaser/Properties/launchSettings.json`). Vite forwards `/api` to the server on port 5271.
+
+```bash
+dotnet test server/PlaylistChaser.Tests
+```
+
+- **Tests** run against SQLite with fake YouTube/Spotify services. CI runs them a second time against Postgres with the real migrations.
+- **Database changes:** edit `server/PlaylistChaser/Data/AppDb.cs`, then from `server/PlaylistChaser` run `POSTGRES_PASSWORD=x PUBLIC_URL=http://localhost dotnet ef migrations add <Name> -o Data/Migrations`. `dotnet tool restore` installs `dotnet-ef`.
+- **Release:** push a tag like `v1.2.0`. CI then tests, builds the image, smoke-tests `docker-compose.yml` with it, pushes it to GHCR and creates the GitHub release with the compose file attached. A tag with a hyphen (`v1.2.0-rc1`) becomes a pre-release and doesn't move `:latest`. After the very first release, make the GHCR package public (package settings → visibility) so TrueNAS can pull it without logging in.

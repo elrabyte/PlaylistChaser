@@ -1,0 +1,101 @@
+name: ci
+
+# Every push/PR: server tests (SQLite and Postgres) and a client build.
+# A v* tag additionally builds the image, smoke-tests docker-compose.yml with it, pushes it to
+# ghcr.io/<owner>/<repo> and creates a GitHub release with docker-compose.yml attached.
+# Tags with a hyphen (v1.2.0-rc1) become pre-releases and don't move :latest.
+
+on:
+  push:
+    branches: [master]
+    tags: ["v*"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: README's compose file matches docker-compose.yml
+        run: diff <(sed -n '/^```yaml$/,/^```$/p' README.md | sed '1d;$d') docker-compose.yml
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Server tests (SQLite)
+        run: dotnet test server/PlaylistChaser.Tests
+      - name: Server tests (Postgres, real migrations)
+        run: dotnet test server/PlaylistChaser.Tests
+        env:
+          TEST_POSTGRES: Host=localhost;Username=postgres;Password=postgres
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+      - name: Client lint and build
+        working-directory: client
+        run: npm ci && npm run lint && npm run build
+
+  release:
+    needs: test
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: |
+          IMAGE="ghcr.io/${GITHUB_REPOSITORY,,}"
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          docker build --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" -t "$IMAGE:$VERSION" .
+
+      - name: Pin the version in docker-compose.yml
+        run: |
+          sed -i "s|image: ghcr.io/elrabyte/playlistchaser:latest|image: $IMAGE:$VERSION|" docker-compose.yml
+          grep -q "$IMAGE:$VERSION" docker-compose.yml
+
+      - name: Smoke test docker-compose.yml
+        run: |
+          sed -e 's|https://CHANGE_ME.example.com|http://localhost:8080|' -e 's|CHANGE_ME|smoke-test-password|g' docker-compose.yml > smoke.yml
+          docker compose -f smoke.yml up -d
+          for i in $(seq 60); do curl -fs localhost:8080/api/health && break; sleep 2; done
+          curl -fs -c jar -H 'Content-Type: application/json' -d '{"userName":"admin","password":"smoke-test-password"}' localhost:8080/api/auth/login
+          curl -fs -b jar localhost:8080/api/auth/me
+          curl -fs localhost:8080/ | grep -q 'id="root"'
+
+      - name: Smoke test logs
+        if: failure()
+        run: docker compose -f smoke.yml logs
+
+      - name: Push image
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          docker push "$IMAGE:$VERSION"
+          if [[ "$VERSION" != *-* ]]; then
+            docker tag "$IMAGE:$VERSION" "$IMAGE:latest"
+            docker push "$IMAGE:latest"
+          fi
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PRERELEASE=""; [[ "$VERSION" == *-* ]] && PRERELEASE="--prerelease"
+          gh release create "$GITHUB_REF_NAME" docker-compose.yml --generate-notes $PRERELEASE

@@ -1,0 +1,4 @@
+{
+  "plugins": ["react", "typescript"],
+  "rules": { "react/rules-of-hooks": "error", "react/exhaustive-deps": "warn" }
+}

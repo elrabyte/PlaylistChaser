@@ -1,73 +1,50 @@
-version: "3.9"
+# PlaylistChaser: run with `docker compose up -d`, or paste into TrueNAS SCALE
+# (Apps > Discover Apps > Custom App > Install via YAML).
+#
+# Before starting, replace every CHANGE_ME below. PUBLIC_URL must be the https address
+# you open the app at: YouTube/Spotify logins and installing the app on a phone only work
+# over https. See the README for HTTPS, Google/Spotify setup, backups and upgrades.
 
-# Full PlaylistChaser stack for local/dev use:
-#   docker compose up --build
-# - api:      PlaylistChaser.Web (ASP.NET Core REST API), running against Postgres via the
-#             portable EF Core data-store path (see Database/Abstractions and AGENTS.md).
-# - client:   PlaylistChaser.Client (React SPA), served by nginx, proxies /api to the api
-#             service.
-# - db:       PostgreSQL, schema created automatically on API startup via EF Core migrations.
-#
-# This is the "swap the database backend" / "dockerize" path from the project brief. The
-# original SQL Server + VIEWPROG-stored-procedure deployment (PlaylistChaser.DB) remains the
-# default for the existing production environment and is not part of this compose file.
-#
-# Do you need to configure anything first? No - every value below has a working default, so
-# `docker compose up --build` runs as-is (you can sign up/sign in and browse playlists). To
-# actually sync playlists you need real Spotify/YouTube API credentials in
-# PlaylistChaser.Web/appsettings.Docker.json, and you should replace its placeholder Jwt:Key for
-# anything beyond a quick local test. Careful: that file gets baked into the api image at build
-# time, so if you push those changes and someone else pulls/builds the image, don't put real
-# secrets in it directly - bind-mount your own copy instead (see the commented `volumes:` line
-# under `api` below).
+x-db-password: &db-password CHANGE_ME  # Postgres password, shared by both services
+
 services:
-  db:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: playlistchaser
-      POSTGRES_USER: playlistchaser
-      POSTGRES_PASSWORD: playlistchaser
-    volumes:
-      - playlistchaser-db-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U playlistchaser"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
-  api:
-    build:
-      context: .
-      dockerfile: PlaylistChaser.Web/Dockerfile
+  app:
+    image: ghcr.io/elrabyte/playlistchaser:latest
     restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
-    # Runtime configuration (connection strings, CORS origins, JWT key, ...) comes from
-    # PlaylistChaser.Web/appsettings.Docker.json, not environment variables here - Program.cs
-    # loads appsettings.{ASPNETCORE_ENVIRONMENT}.json explicitly after the default configuration
-    # sources, so it takes precedence over plain environment variables.
+    ports:
+      - "8080:8080"
     environment:
-      ASPNETCORE_ENVIRONMENT: Docker
-    # volumes:
-    #   # Uncomment to supply your own secrets (Spotify/Youtube credentials, a real Jwt:Key)
-    #   # without editing/committing the tracked appsettings.Docker.json:
-    #   - ./appsettings.Docker.local.json:/app/appsettings.Docker.json:ro
-    ports:
-      - "5000:8080"
+      PUBLIC_URL: https://CHANGE_ME.example.com
+      ADMIN_USERNAME: admin
+      ADMIN_PASSWORD: CHANGE_ME     # 10+ characters; only used to create the first admin
+      POSTGRES_PASSWORD: *db-password
+      YOUTUBE_CLIENT_ID: ""         # optional; from Google Cloud (README: YouTube)
+      YOUTUBE_CLIENT_SECRET: ""
+      SPOTIFY_CLIENT_ID: ""         # optional; from the Spotify developer dashboard (README: Spotify)
+      SPOTIFY_CLIENT_SECRET: ""
+    volumes:
+      # encryption keys for logins and stored YouTube/Spotify tokens; back it up with the database.
+      # Using a host path instead? Give it to UID 1654 (the container's user).
+      - app-data:/data
 
-  client:
-    build:
-      context: ./PlaylistChaser.Client
-      dockerfile: Dockerfile
-      args:
-        VITE_API_BASE_URL: ""
+  db:
+    image: postgres:17-alpine
     restart: unless-stopped
-    depends_on:
-      - api
-    ports:
-      - "8080:80"
+    environment:
+      POSTGRES_DB: playlistchaser
+      POSTGRES_USER: playlistchaser
+      POSTGRES_PASSWORD: *db-password
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U playlistchaser -d playlistchaser"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
 volumes:
-  playlistchaser-db-data:
+  app-data:
+  db-data:

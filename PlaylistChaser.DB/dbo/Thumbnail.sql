@@ -1,6 +1,0 @@
-﻿CREATE TABLE [dbo].[Thumbnail]
-(
-	[Id] INT NOT NULL PRIMARY KEY IDENTITY, 
-    [FileContents] VARBINARY(MAX) NOT NULL,
-	[Url] NVARCHAR(255) NULL,
-)

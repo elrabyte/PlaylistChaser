@@ -1,7 +1,9 @@
 **/bin/
 **/obj/
 **/node_modules/
-**/dist/
+client/dist/
+client/dev-dist/
+server/PlaylistChaser/dev.db*
+server/PlaylistChaser/.data/
 .git/
-.vs/
-*.user
+.github/
