@@ -108,7 +108,7 @@ public class Job
     public DateTime? FinishedAt { get; set; }
 }
 
-public class AppDb(DbContextOptions<AppDb> options, IDataProtectionProvider dataProtection)
+public partial class AppDb(DbContextOptions<AppDb> options, IDataProtectionProvider dataProtection)
     : IdentityDbContext<AppUser>(options)
 {
     public DbSet<SourceAccount> SourceAccounts => Set<SourceAccount>();
@@ -137,8 +137,8 @@ public class AppDb(DbContextOptions<AppDb> options, IDataProtectionProvider data
         {
             e.HasKey(a => new { a.UserId, a.Source });
             e.HasOne<AppUser>().WithMany().HasForeignKey(a => a.UserId).OnDelete(DeleteBehavior.Cascade);
-            e.Property(a => a.AccessToken).HasConversion(v => protector.Protect(v), v => protector.Unprotect(v));
-            e.Property(a => a.RefreshToken).HasConversion(v => protector.Protect(v), v => protector.Unprotect(v));
+            e.Property(a => a.AccessToken).HasConversion(v => protector.Protect(v), v => TryUnprotect(protector, v));
+            e.Property(a => a.RefreshToken).HasConversion(v => protector.Protect(v), v => TryUnprotect(protector, v));
         });
 
         b.Entity<Playlist>().HasOne<AppUser>().WithMany().HasForeignKey(p => p.UserId).OnDelete(DeleteBehavior.Cascade);
@@ -179,6 +179,16 @@ public class AppDb(DbContextOptions<AppDb> options, IDataProtectionProvider data
             e.HasOne<AppUser>().WithMany().HasForeignKey(j => j.UserId).OnDelete(DeleteBehavior.Cascade);
             e.HasIndex(j => new { j.UserId, j.CreatedAt });
         });
+    }
+}
+
+public partial class AppDb
+{
+    // Tokens encrypted with lost keys (e.g. /data wasn't kept) read as "" so the account shows "Reconnect" instead of failing.
+    private static string TryUnprotect(IDataProtector protector, string value)
+    {
+        try { return protector.Unprotect(value); }
+        catch (System.Security.Cryptography.CryptographicException) { return ""; }
     }
 }
 

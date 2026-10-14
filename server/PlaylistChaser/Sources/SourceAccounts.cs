@@ -16,7 +16,8 @@ namespace PlaylistChaser.Sources;
 /// <summary>OAuth connect/callback, token refresh, and creating an <see cref="ISource"/> for a user.</summary>
 public class SourceAccounts(AppDb db, IConfiguration config, IDataProtectionProvider dataProtection) : ISourceProvider
 {
-    private static readonly string[] SpotifyScopes = [Scopes.PlaylistModifyPrivate, Scopes.PlaylistModifyPublic, Scopes.UserReadPrivate];
+    private static readonly string[] SpotifyScopes = [Scopes.PlaylistModifyPrivate, Scopes.PlaylistModifyPublic, Scopes.UserReadPrivate,
+        Scopes.PlaylistReadPrivate, Scopes.PlaylistReadCollaborative, Scopes.UserLibraryRead];
 
     public bool IsConfigured(Source source) =>
         !string.IsNullOrEmpty(ClientId(source)) && !string.IsNullOrEmpty(ClientSecret(source));
@@ -24,7 +25,7 @@ public class SourceAccounts(AppDb db, IConfiguration config, IDataProtectionProv
     public async Task<ISource> Get(string userId, Source source)
     {
         var account = await db.SourceAccounts.FindAsync(userId, source);
-        if (account == null || account.NeedsReconnect || !IsConfigured(source))
+        if (account == null || account.NeedsReconnect || account.RefreshToken == "" || !IsConfigured(source))
             throw new SourceNotConnectedException(source);
 
         if (account.ExpiresAt < DateTime.UtcNow.AddMinutes(1))
@@ -157,7 +158,7 @@ public static class SourceEndpoints
             return Enum.GetValues<Source>().Select(s =>
             {
                 var a = mine.FirstOrDefault(x => x.Source == s);
-                return new { source = s, configured = accounts.IsConfigured(s), connected = a != null, needsReconnect = a?.NeedsReconnect ?? false, displayName = a?.DisplayName };
+                return new { source = s, configured = accounts.IsConfigured(s), connected = a != null, needsReconnect = a != null && (a.NeedsReconnect || a.RefreshToken == ""), displayName = a?.DisplayName };
             });
         });
 
@@ -183,6 +184,15 @@ public static class SourceEndpoints
             }
             return Results.Redirect("/settings?connected=" + s.ToString().ToLowerInvariant());
         }).AllowAnonymous();
+
+        // for the "add from my account" picker: includes private playlists and liked songs, which have no shareable link
+        api.MapGet("/sources/{source}/playlists", (string source, ClaimsPrincipal user, ISourceProvider sources, ILogger<SourceAccounts> log) =>
+            Playlists.PlaylistEndpoints.Guard(log, async () =>
+            {
+                if (!ApiHelpers.TryParseSource(source, out var s)) return Results.NotFound();
+                var mine = await (await sources.Get(user.Id(), s)).GetMyPlaylists();
+                return Results.Ok(mine.Select(p => new { p.Id, p.Name, p.Creator, p.ThumbnailUrl, p.IsMine, Url = SourceUrls.Playlist(s, p.Id) }));
+            }));
 
         api.MapDelete("/sources/{source}", async (string source, ClaimsPrincipal user, AppDb db) =>
         {

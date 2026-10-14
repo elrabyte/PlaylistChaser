@@ -12,6 +12,8 @@ public interface ISource
     /// <summary>How many tracks one AddTracks call may take.</summary>
     int MaxBatch { get; }
     Task<RemotePlaylist> GetPlaylist(string id);
+    /// <summary>The connected user's own and followed playlists, private ones included, liked songs first.</summary>
+    Task<List<RemotePlaylist>> GetMyPlaylists();
     Task<List<RemoteTrack>> GetTracks(string playlistId);
     Task<RemoteTrack?> GetTrack(string id);
     Task<RemoteTrack?> Search(string name, string artist);
@@ -35,8 +37,12 @@ public class SourceNotConnectedException(Source source)
 
 public static partial class SourceUrls
 {
+    // Liked songs aren't a real playlist on either service; these ids stand in for them.
+    public const string YoutubeLiked = "LL";
+    public const string SpotifyLiked = "liked";
+
     [GeneratedRegex(@"[?&]list=([\w-]+)")] private static partial Regex YoutubePlaylist();
-    [GeneratedRegex(@"open\.spotify\.com/(?:[\w-]+/)?playlist/(\w+)")] private static partial Regex SpotifyPlaylist();
+    [GeneratedRegex(@"open\.spotify\.com/(?:[\w-]+/)?(?:playlist/(\w+)|collection/(tracks))")] private static partial Regex SpotifyPlaylist();
     [GeneratedRegex(@"(?:youtube\.com/(?:[^/]+/.+/|(?:v|e(?:mbed)?|shorts)/|.*[?&]v=)|youtu\.be/)([\w-]{11})")] private static partial Regex YoutubeVideo();
     [GeneratedRegex(@"open\.spotify\.com/(?:[\w-]+/)?track/(\w+)")] private static partial Regex SpotifyTrack();
 
@@ -45,7 +51,7 @@ public static partial class SourceUrls
         var m = SpotifyPlaylist().Match(url);
         source = m.Success ? Source.Spotify : Source.Youtube;
         if (!m.Success) m = YoutubePlaylist().Match(url);
-        id = m.Groups[1].Value;
+        id = m.Groups[2].Success ? SpotifyLiked : m.Groups[1].Value;
         return m.Success;
     }
 
@@ -55,8 +61,9 @@ public static partial class SourceUrls
         return m.Success ? m.Groups[1].Value : null;
     }
 
-    public static string Playlist(Source source, string id) => source == Source.Youtube
-        ? $"https://www.youtube.com/playlist?list={id}"
+    public static string Playlist(Source source, string id) =>
+        source == Source.Youtube ? $"https://www.youtube.com/playlist?list={id}"
+        : id == SpotifyLiked ? "https://open.spotify.com/collection/tracks"
         : $"https://open.spotify.com/playlist/{id}";
 
     public static string Track(Source source, string id) => source == Source.Youtube

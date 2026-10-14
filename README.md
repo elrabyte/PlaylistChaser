@@ -118,6 +118,10 @@ The proxy must pass `X-Forwarded-Proto`; all of the above do.
 
 ## How syncing works
 
+- **Add** a playlist by picking it from your connected accounts or by pasting a link.
+  - The picker includes **private playlists** and your **liked songs**: Spotify's *Liked Songs* and YouTube's *Liked videos*.
+  - YouTube's liked videos are everything you liked, not only music.
+  - Accounts connected before this feature existed have to **reconnect Spotify** once in Settings so PlaylistChaser may read private playlists and liked songs.
 - **Update songs** (pull) reads a playlist from where it came from and adds new songs. Songs removed there stay in PlaylistChaser.
 - **Copy to …** (push) creates the playlist on the other service the first time.
   - Each song is searched there once. YouTube is searched by "artist title"; Spotify first by exact artist and title, then by title alone.

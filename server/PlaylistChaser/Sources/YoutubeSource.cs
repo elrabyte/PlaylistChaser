@@ -25,6 +25,7 @@ public class YoutubeSource(string accessToken, string? channelId) : ISource
 
     public async Task<RemotePlaylist> GetPlaylist(string id)
     {
+        if (id == SourceUrls.YoutubeLiked) return Liked;
         var request = api.Playlists.List("snippet");
         request.Id = id;
         var playlist = (await Call(() => request.ExecuteAsync())).Items?.SingleOrDefault()
@@ -33,6 +34,25 @@ public class YoutubeSource(string accessToken, string? channelId) : ISource
         var thumb = t?.Maxres ?? t?.High ?? t?.Medium ?? t?.Standard ?? t?.Default__;
         return new RemotePlaylist(playlist.Id, playlist.Snippet.Title, NullIfEmpty(playlist.Snippet.Description),
             playlist.Snippet.ChannelTitle, thumb?.Url, playlist.Snippet.ChannelId == channelId);
+    }
+
+    // the API returns no metadata for LL, and it can't be written to like a normal playlist
+    private static readonly RemotePlaylist Liked = new(SourceUrls.YoutubeLiked, "Liked videos", null, null, null, false);
+
+    public async Task<List<RemotePlaylist>> GetMyPlaylists()
+    {
+        var playlists = new List<RemotePlaylist> { Liked };
+        var request = api.Playlists.List("snippet");
+        request.Mine = true;
+        request.MaxResults = 50;
+        do
+        {
+            var page = await Call(() => request.ExecuteAsync());
+            playlists.AddRange(page.Items.Select(p => new RemotePlaylist(p.Id, p.Snippet.Title, NullIfEmpty(p.Snippet.Description),
+                p.Snippet.ChannelTitle, p.Snippet.Thumbnails?.Medium?.Url ?? p.Snippet.Thumbnails?.Default__?.Url, true)));
+            request.PageToken = page.NextPageToken;
+        } while (request.PageToken != null);
+        return playlists;
     }
 
     public async Task<List<RemoteTrack>> GetTracks(string playlistId)

@@ -37,6 +37,9 @@ public class FakeSource(Source kind, int maxBatch) : ISource
     public Task<RemotePlaylist> GetPlaylist(string id) =>
         Task.FromResult(new RemotePlaylist(id, Playlists[id].Name, null, "creator", null, Playlists[id].IsMine));
 
+    public Task<List<RemotePlaylist>> GetMyPlaylists() =>
+        Task.FromResult(Playlists.Select(p => new RemotePlaylist(p.Key, p.Value.Name, null, "creator", null, p.Value.IsMine)).ToList());
+
     public Task<List<RemoteTrack>> GetTracks(string playlistId) =>
         Task.FromResult(Playlists[playlistId].Tracks.Select(t => Catalog[t]).ToList());
 
