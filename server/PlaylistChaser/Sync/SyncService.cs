@@ -72,6 +72,7 @@ public class SyncService(AppDb db, ISourceProvider sources)
         }
 
         // 2. create the target playlist on first push
+        var created = link == null;
         if (link == null)
         {
             var id = await source.CreatePlaylist(p.Name, "Created by PlaylistChaser");
@@ -81,7 +82,8 @@ public class SyncService(AppDb db, ISourceProvider sources)
         }
 
         // 3. add what is missing and was never pushed before
-        var remote = (await source.GetTracks(link.ExternalId)).Select(t => t.Id).ToHashSet();
+        // a brand-new playlist is empty, and YouTube may not list it for a few seconds anyway
+        var remote = created ? [] : (await source.GetTracks(link.ExternalId)).Select(t => t.Id).ToHashSet();
         var pushed = (await db.PushedSongs.Where(x => x.PlaylistId == p.Id && x.Source == target).Select(x => x.SongId).ToListAsync()).ToHashSet();
         var linked = songs
             .Select(s => (Song: s, Link: s.Links.Single(l => l.Source == target)))
@@ -102,8 +104,8 @@ public class SyncService(AppDb db, ISourceProvider sources)
                 db.PushedSongs.AddRange(chunk.Select(x => new PushedSong { PlaylistId = p.Id, SongId = x.Song.Id, Source = target }));
             }
             catch (QuotaExceededException ex) { quota = ex; break; }
-            // a single track the service refuses (removed, region-locked) shouldn't stop the rest
-            catch (Exception) when (chunk.Length == 1) { chunk[0].Link.Status = LinkStatus.NotFound; }
+            // a track the service refuses (removed, region-locked) shouldn't stop the rest
+            catch (TrackRejectedException) when (chunk.Length == 1) { chunk[0].Link.Status = LinkStatus.NotFound; }
             job.Done += chunk.Length;
             await db.SaveChangesAsync();
         }

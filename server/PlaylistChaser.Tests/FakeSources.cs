@@ -40,8 +40,18 @@ public class FakeSource(Source kind, int maxBatch) : ISource
     public Task<List<RemotePlaylist>> GetMyPlaylists() =>
         Task.FromResult(Playlists.Select(p => new RemotePlaylist(p.Key, p.Value.Name, null, "creator", null, p.Value.IsMine)).ToList());
 
-    public Task<List<RemoteTrack>> GetTracks(string playlistId) =>
-        Task.FromResult(Playlists[playlistId].Tracks.Select(t => Catalog[t]).ToList());
+    /// <summary>Playlists whose tracks were read, in order.</summary>
+    public List<string> Listed { get; } = [];
+    /// <summary>Track ids the service refuses to add.</summary>
+    public HashSet<string> Rejects { get; } = [];
+    /// <summary>When set, every add fails with this (e.g. the whole playlist is gone).</summary>
+    public Exception? AddFailure { get; set; }
+
+    public Task<List<RemoteTrack>> GetTracks(string playlistId)
+    {
+        Listed.Add(playlistId);
+        return Task.FromResult(Playlists[playlistId].Tracks.Select(t => Catalog[t]).ToList());
+    }
 
     public Task<RemoteTrack?> GetTrack(string id) => Task.FromResult(Catalog.GetValueOrDefault(id));
 
@@ -58,6 +68,8 @@ public class FakeSource(Source kind, int maxBatch) : ISource
     public Task AddTracks(string playlistId, IReadOnlyList<string> trackIds)
     {
         if (QuotaLeft-- <= 0) throw new QuotaExceededException("quota");
+        if (AddFailure != null) throw AddFailure;
+        if (trackIds.FirstOrDefault(Rejects.Contains) is { } rejected) throw new TrackRejectedException($"{rejected} refused");
         Playlists[playlistId].Tracks.AddRange(trackIds);
         return Task.CompletedTask;
     }

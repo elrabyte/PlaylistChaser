@@ -32,6 +32,9 @@ public interface ISourceProvider
 /// <summary>The service refused because the daily quota or rate limit is used up; retrying later works.</summary>
 public class QuotaExceededException(string message, Exception? inner = null) : Exception(message, inner);
 
+/// <summary>The service refused one specific track (removed, region-locked, ...); the rest of the push can go on.</summary>
+public class TrackRejectedException(string message, Exception? inner = null) : Exception(message, inner);
+
 public class SourceNotConnectedException(Source source)
     : Exception($"{source} is not connected. Connect it in Settings first.");
 
@@ -39,6 +42,7 @@ public static partial class SourceUrls
 {
     // Liked songs aren't a real playlist on either service; these ids stand in for them.
     public const string YoutubeLiked = "LL";
+    public const string YoutubeLikedMusic = "LM"; // YouTube Music's "Liked music"
     public const string SpotifyLiked = "liked";
 
     [GeneratedRegex(@"[?&]list=([\w-]+)")] private static partial Regex YoutubePlaylist();
@@ -62,7 +66,7 @@ public static partial class SourceUrls
     }
 
     public static string Playlist(Source source, string id) =>
-        source == Source.Youtube ? $"https://www.youtube.com/playlist?list={id}"
+        source == Source.Youtube ? $"https://{(id == YoutubeLikedMusic ? "music" : "www")}.youtube.com/playlist?list={id}"
         : id == SpotifyLiked ? "https://open.spotify.com/collection/tracks"
         : $"https://open.spotify.com/playlist/{id}";
 

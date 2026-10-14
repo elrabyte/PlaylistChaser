@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Google;
 using Google.Apis.Auth.OAuth2;
 using Google.Apis.Services;
@@ -26,6 +27,7 @@ public class YoutubeSource(string accessToken, string? channelId) : ISource
     public async Task<RemotePlaylist> GetPlaylist(string id)
     {
         if (id == SourceUrls.YoutubeLiked) return Liked;
+        if (id == SourceUrls.YoutubeLikedMusic) return LikedMusic;
         var request = api.Playlists.List("snippet");
         request.Id = id;
         var playlist = (await Call(() => request.ExecuteAsync())).Items?.SingleOrDefault()
@@ -38,10 +40,11 @@ public class YoutubeSource(string accessToken, string? channelId) : ISource
 
     // the API returns no metadata for LL, and it can't be written to like a normal playlist
     private static readonly RemotePlaylist Liked = new(SourceUrls.YoutubeLiked, "Liked videos", null, null, null, false);
+    private static readonly RemotePlaylist LikedMusic = new(SourceUrls.YoutubeLikedMusic, "Liked music", null, null, null, false);
 
     public async Task<List<RemotePlaylist>> GetMyPlaylists()
     {
-        var playlists = new List<RemotePlaylist> { Liked };
+        var playlists = new List<RemotePlaylist> { LikedMusic, Liked };
         var request = api.Playlists.List("snippet");
         request.Mine = true;
         request.MaxResults = 50;
@@ -56,6 +59,26 @@ public class YoutubeSource(string accessToken, string? channelId) : ISource
     }
 
     public async Task<List<RemoteTrack>> GetTracks(string playlistId)
+    {
+        if (playlistId != SourceUrls.YoutubeLikedMusic)
+            return await GetItems(playlistId);
+
+        // The API can't read YouTube Music's "LM"; songs liked there are in LL, so keep LL's Music-category videos.
+        var liked = await GetItems(SourceUrls.YoutubeLiked);
+        var music = new HashSet<string>();
+        foreach (var batch in liked.Select(t => t.Id).Chunk(50))
+        {
+            var request = api.Videos.List("snippet");
+            request.Id = string.Join(',', batch);
+            var page = await Call(() => request.ExecuteAsync());
+            music.UnionWith(page.Items.Where(v => v.Snippet.CategoryId == MusicCategory).Select(v => v.Id));
+        }
+        return liked.Where(t => music.Contains(t.Id)).ToList();
+    }
+
+    private const string MusicCategory = "10";
+
+    private async Task<List<RemoteTrack>> GetItems(string playlistId)
     {
         var tracks = new List<RemoteTrack>();
         var request = api.PlaylistItems.List("snippet");
@@ -134,12 +157,36 @@ public class YoutubeSource(string accessToken, string? channelId) : ISource
 
     private static async Task<T> Call<T>(Func<Task<T>> action)
     {
-        try { return await action(); }
-        catch (GoogleApiException ex) when (ex.Error?.Errors?.Any(e => e.Reason is "quotaExceeded" or "rateLimitExceeded") == true)
+        // A playlist created a moment ago can still answer "not found" for a few seconds.
+        foreach (var wait in new[] { 2, 5, 10, 0 })
         {
-            throw new QuotaExceededException("YouTube quota reached; the rest continues on the next sync.", ex);
+            try { return await action(); }
+            catch (GoogleApiException ex) when (wait > 0 && HasReason(ex, "playlistNotFound"))
+            {
+                await Task.Delay(TimeSpan.FromSeconds(wait));
+            }
+            catch (GoogleApiException ex) when (HasReason(ex, "quotaExceeded", "rateLimitExceeded"))
+            {
+                throw new QuotaExceededException("YouTube quota reached; the rest continues on the next sync.", ex);
+            }
+            catch (GoogleApiException ex) when (HasReason(ex, "videoNotFound", "invalidResourceId", "videoNotAvailable"))
+            {
+                throw new TrackRejectedException(Readable(ex), ex);
+            }
+            catch (GoogleApiException ex)
+            {
+                throw new InvalidOperationException(Readable(ex), ex);
+            }
         }
+        throw new UnreachableException();
     }
+
+    private static bool HasReason(GoogleApiException ex, params string[] reasons) =>
+        ex.Error?.Errors?.Any(e => reasons.Contains(e.Reason)) == true;
+
+    // Google's messages contain HTML like <code>playlistId</code>
+    private static string Readable(GoogleApiException ex) =>
+        "YouTube: " + System.Text.RegularExpressions.Regex.Replace(ex.Error?.Message ?? ex.Message, "<[^>]+>", "");
 
     private static string CleanArtist(string artist) => artist.EndsWith(" - Topic") ? artist[..^8] : artist;
     // YouTube rejects '<' and '>' in descriptions and caps them at 5000 characters.
