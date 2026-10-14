@@ -12,7 +12,61 @@ Repository: **https://github.com/elrabyte/PlaylistChaser**
 
 ## Install (Docker / TrueNAS SCALE)
 
-1. Download `docker-compose.yml` from the [latest release](https://github.com/elrabyte/PlaylistChaser/releases/latest).
+1. Copy this compose file. It is the same as `docker-compose.yml` in the repo, and each [release](https://github.com/elrabyte/PlaylistChaser/releases/latest) also attaches it with the image pinned to that version:
+
+```yaml
+# PlaylistChaser: run with `docker compose up -d`, or paste into TrueNAS SCALE
+# (Apps > Discover Apps > Custom App > Install via YAML).
+#
+# Before starting, replace every CHANGE_ME below. PUBLIC_URL must be the https address
+# you open the app at: YouTube/Spotify logins and installing the app on a phone only work
+# over https. See the README for HTTPS, Google/Spotify setup, backups and upgrades.
+
+x-db-password: &db-password CHANGE_ME  # Postgres password, shared by both services
+
+services:
+  app:
+    image: ghcr.io/elrabyte/playlistchaser:latest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      PUBLIC_URL: https://CHANGE_ME.example.com
+      ADMIN_USERNAME: admin
+      ADMIN_PASSWORD: CHANGE_ME     # 10+ characters; only used to create the first admin
+      POSTGRES_PASSWORD: *db-password
+      YOUTUBE_CLIENT_ID: ""         # optional; from Google Cloud (README: YouTube)
+      YOUTUBE_CLIENT_SECRET: ""
+      SPOTIFY_CLIENT_ID: ""         # optional; from the Spotify developer dashboard (README: Spotify)
+      SPOTIFY_CLIENT_SECRET: ""
+    volumes:
+      # encryption keys for logins and stored YouTube/Spotify tokens; back it up with the database.
+      # Using a host path instead? Give it to UID 1654 (the container's user).
+      - app-data:/data
+
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: playlistchaser
+      POSTGRES_USER: playlistchaser
+      POSTGRES_PASSWORD: *db-password
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U playlistchaser -d playlistchaser"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  app-data:
+  db-data:
+```
+
 2. Replace every `CHANGE_ME` in it:
    - `PUBLIC_URL`: the **https** address you'll open the app at (see [HTTPS](#https)).
    - `ADMIN_USERNAME` / `ADMIN_PASSWORD`: your first login. The password needs 10+ characters. These are only used when the database is empty.
