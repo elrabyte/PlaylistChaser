@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json.schemastore.org/launchsettings.json",
+  "profiles": {
+    "dev": {
+      "commandName": "Project",
+      "applicationUrl": "http://localhost:5271",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "PUBLIC_URL": "http://localhost:5173",
+        "DB_CONNECTION": "Data Source=dev.db",
+        "DATA_DIR": ".data",
+        "ADMIN_USERNAME": "admin",
+        "ADMIN_PASSWORD": "dev-password-1"
+      }
+    }
+  }
+}
