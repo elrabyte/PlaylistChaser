@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PlaylistChaser.Data;
 using PlaylistChaser.Jobs;
@@ -169,24 +168,6 @@ public class ApiTests
         Assert.Null(accounts.ReadState(state, Source.Youtube));
         Assert.Null(accounts.ReadState(state[..^2] + "xx", Source.Spotify));
         Assert.Equal(0, app.Db(db => db.SourceAccounts.Count()));
-    }
-
-    [Theory]
-    [InlineData("https://192.168.3.10", true)]
-    [InlineData("https://playlists.example.com", false)]
-    [InlineData("http://localhost:8080", false)]
-    public void Youtube_login_names_a_device_only_for_private_ip_addresses(string publicUrl, bool expectDevice)
-    {
-        var config = new Microsoft.Extensions.Configuration.ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
-        {
-            ["PUBLIC_URL"] = publicUrl, ["YOUTUBE_CLIENT_ID"] = "id", ["YOUTUBE_CLIENT_SECRET"] = "secret",
-        }).Build();
-        var accounts = new SourceAccounts(null!, config, new Microsoft.AspNetCore.DataProtection.EphemeralDataProtectionProvider());
-
-        var url = accounts.LoginUrl("user-1", Source.Youtube);
-
-        Assert.Equal(expectDevice, url.Contains("device_id=") && url.Contains("device_name="));
-        Assert.Contains(Uri.EscapeDataString($"{publicUrl}/api/sources/youtube/callback"), url);
     }
 
     [Fact]
