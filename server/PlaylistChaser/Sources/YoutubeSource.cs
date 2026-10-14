@@ -27,6 +27,7 @@ public class YoutubeSource(string accessToken, string? channelId) : ISource
     public async Task<RemotePlaylist> GetPlaylist(string id)
     {
         if (id == SourceUrls.YoutubeLiked) return Liked;
+        if (id == SourceUrls.YoutubeLikedMusic) return LikedMusic;
         var request = api.Playlists.List("snippet");
         request.Id = id;
         var playlist = (await Call(() => request.ExecuteAsync())).Items?.SingleOrDefault()
@@ -39,10 +40,11 @@ public class YoutubeSource(string accessToken, string? channelId) : ISource
 
     // the API returns no metadata for LL, and it can't be written to like a normal playlist
     private static readonly RemotePlaylist Liked = new(SourceUrls.YoutubeLiked, "Liked videos", null, null, null, false);
+    private static readonly RemotePlaylist LikedMusic = new(SourceUrls.YoutubeLikedMusic, "Liked music", null, null, null, false);
 
     public async Task<List<RemotePlaylist>> GetMyPlaylists()
     {
-        var playlists = new List<RemotePlaylist> { Liked };
+        var playlists = new List<RemotePlaylist> { LikedMusic, Liked };
         var request = api.Playlists.List("snippet");
         request.Mine = true;
         request.MaxResults = 50;
@@ -57,6 +59,26 @@ public class YoutubeSource(string accessToken, string? channelId) : ISource
     }
 
     public async Task<List<RemoteTrack>> GetTracks(string playlistId)
+    {
+        if (playlistId != SourceUrls.YoutubeLikedMusic)
+            return await GetItems(playlistId);
+
+        // The API can't read YouTube Music's "LM"; songs liked there are in LL, so keep LL's Music-category videos.
+        var liked = await GetItems(SourceUrls.YoutubeLiked);
+        var music = new HashSet<string>();
+        foreach (var batch in liked.Select(t => t.Id).Chunk(50))
+        {
+            var request = api.Videos.List("snippet");
+            request.Id = string.Join(',', batch);
+            var page = await Call(() => request.ExecuteAsync());
+            music.UnionWith(page.Items.Where(v => v.Snippet.CategoryId == MusicCategory).Select(v => v.Id));
+        }
+        return liked.Where(t => music.Contains(t.Id)).ToList();
+    }
+
+    private const string MusicCategory = "10";
+
+    private async Task<List<RemoteTrack>> GetItems(string playlistId)
     {
         var tracks = new List<RemoteTrack>();
         var request = api.PlaylistItems.List("snippet");

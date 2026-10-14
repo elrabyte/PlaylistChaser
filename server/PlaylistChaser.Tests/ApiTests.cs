@@ -253,6 +253,7 @@ public class ApiTests
     [InlineData("https://open.spotify.com/collection/tracks", Source.Spotify, SourceUrls.SpotifyLiked)]
     [InlineData("https://open.spotify.com/intl-de/playlist/37i9dQZF1DX0XUsuxWHRQd?si=x", Source.Spotify, "37i9dQZF1DX0XUsuxWHRQd")]
     [InlineData("https://www.youtube.com/playlist?list=LL", Source.Youtube, SourceUrls.YoutubeLiked)]
+    [InlineData("https://music.youtube.com/playlist?list=LM", Source.Youtube, SourceUrls.YoutubeLikedMusic)]
     [InlineData("https://music.youtube.com/playlist?list=PLabc-123_x", Source.Youtube, "PLabc-123_x")]
     public void Playlist_links_are_recognised(string url, Source source, string id)
     {

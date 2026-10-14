@@ -120,7 +120,8 @@ The proxy must pass `X-Forwarded-Proto`; all of the above do.
 
 - **Add** a playlist by picking it from your connected accounts or by pasting a link.
   - The picker includes **private playlists** and your **liked songs**: Spotify's *Liked Songs* and YouTube's *Liked videos*.
-  - YouTube's liked videos are everything you liked, not only music.
+  - On YouTube there are two: *Liked videos* is everything you liked, and *Liked music* (YouTube Music's `list=LM` link works too) keeps only the videos YouTube files under Music.
+  - YouTube's API can't read YouTube Music's list directly, so it may differ slightly from what the YouTube Music app shows.
   - Accounts connected before this feature existed have to **reconnect Spotify** once in Settings so PlaylistChaser may read private playlists and liked songs.
 - **Update songs** (pull) reads a playlist from where it came from and adds new songs. Songs removed there stay in PlaylistChaser.
 - **Copy to …** (push) creates the playlist on the other service the first time.
