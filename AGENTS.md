@@ -18,7 +18,6 @@
 - **`docker-compose.yml`** (app + Postgres): this exact file is attached to each GitHub release, with the image tag pinned by CI.
 - **`.github/workflows/ci.yml`**: tests on every push/PR; a `v*` tag builds the image, smoke-tests compose, pushes to GHCR and creates the release.
 
-Legacy (being removed once the rewrite is verified on the real deployment): `PlaylistChaser.Web/`, `PlaylistChaser.DB/`, `PlaylistChaser.Test/`, `PlaylistChaser.Client/`, `.github/workflows/docker-publish.yml`, `PlaylistChaser.sln`. Don't build on them. `PlaylistChaser.Web/Util/API/*ApiHelper.cs` is only a reference for how the old app called YouTube/Spotify.
 
 ## Commands
 

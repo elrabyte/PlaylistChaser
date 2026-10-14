@@ -1,0 +1,6 @@
+<Solution>
+  <Folder Name="/server/">
+    <Project Path="server/PlaylistChaser.Tests/PlaylistChaser.Tests.csproj" />
+    <Project Path="server/PlaylistChaser/PlaylistChaser.csproj" />
+  </Folder>
+</Solution>
