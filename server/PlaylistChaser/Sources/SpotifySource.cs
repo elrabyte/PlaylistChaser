@@ -8,19 +8,46 @@ public class SpotifySource(string accessToken, string? spotifyUserId) : ISource
 
     public int MaxBatch => 100;
 
+    // Liked Songs is a library, not a playlist, so it can't be pushed to
+    private static readonly RemotePlaylist Liked = new(SourceUrls.SpotifyLiked, "Liked Songs", null, null, null, false);
+
     public async Task<RemotePlaylist> GetPlaylist(string id)
     {
+        if (id == SourceUrls.SpotifyLiked) return Liked;
         var p = await Call(() => api.Playlists.Get(id));
         return new RemotePlaylist(p.Id!, p.Name ?? "", string.IsNullOrEmpty(p.Description) ? null : p.Description,
             p.Owner?.DisplayName, p.Images?.OrderByDescending(i => i.Height).FirstOrDefault()?.Url,
             p.Owner?.Id == spotifyUserId);
     }
 
+    public async Task<List<RemotePlaylist>> GetMyPlaylists()
+    {
+        var all = await NeedsScope(async () => await api.PaginateAll(await api.Playlists.CurrentUsers()));
+        return all.Where(p => p.Id != null).Select(p => new RemotePlaylist(p.Id!, p.Name ?? "", null, p.Owner?.DisplayName,
+                p.Images?.OrderBy(i => i.Height).FirstOrDefault()?.Url, p.Owner?.Id == spotifyUserId))
+            .Prepend(Liked).ToList();
+    }
+
     public async Task<List<RemoteTrack>> GetTracks(string playlistId)
     {
-        var items = await Call(async () => await api.PaginateAll(await api.Playlists.GetPlaylistItems(playlistId)));
         // skips episodes, local files and removed tracks
+        if (playlistId == SourceUrls.SpotifyLiked)
+        {
+            var saved = await NeedsScope(async () => await api.PaginateAll(await api.Library.GetTracks()));
+            return saved.Select(s => s.Track).Where(t => t?.Id != null).Select(ToTrack).ToList();
+        }
+        var items = await Call(async () => await api.PaginateAll(await api.Playlists.GetPlaylistItems(playlistId)));
         return items.Select(i => i.Track).OfType<FullTrack>().Where(t => t.Id != null).Select(ToTrack).ToList();
+    }
+
+    /// <summary>Accounts connected before private playlists/liked songs were supported lack the read scopes.</summary>
+    private static async Task<T> NeedsScope<T>(Func<Task<T>> action)
+    {
+        try { return await Call(action); }
+        catch (APIException ex) when (ex.Response?.StatusCode is System.Net.HttpStatusCode.Forbidden or System.Net.HttpStatusCode.Unauthorized)
+        {
+            throw new InvalidOperationException("Spotify needs one more permission for this. Reconnect Spotify in Settings, then try again.", ex);
+        }
     }
 
     public async Task<RemoteTrack?> GetTrack(string id)

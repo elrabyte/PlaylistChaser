@@ -235,7 +235,7 @@ public static class PlaylistEndpoints
         db.PushedSongs.Where(x => x.SongId == songId && x.Source == source).ExecuteDeleteAsync();
 
     /// <summary>Turns errors from the music services (not connected, not found, quota) into a 400 with their message.</summary>
-    private static async Task<IResult> Guard(ILogger log, Func<Task<IResult>> action)
+    internal static async Task<IResult> Guard(ILogger log, Func<Task<IResult>> action)
     {
         try { return await action(); }
         catch (Exception ex) when (ex is not OperationCanceledException)

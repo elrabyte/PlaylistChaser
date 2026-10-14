@@ -41,6 +41,7 @@ export interface Job {
 }
 export interface SourceAccount { source: Source; configured: boolean; connected: boolean; needsReconnect: boolean; displayName: string | null }
 export interface User { id: string; userName: string; isAdmin: boolean }
+export interface AccountPlaylist { id: string; name: string; creator: string | null; thumbnailUrl: string | null; isMine: boolean; url: string }
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -80,6 +81,7 @@ export const api = {
   playlist: (id: number) => call<{ playlist: Playlist; members: number[] }>("GET", `/playlists/${id}`),
   songs: (id: number) => call<Song[]>("GET", `/playlists/${id}/songs`),
   addPlaylist: (url: string) => call<{ id: number }>("POST", "/playlists", { url }),
+  myPlaylists: (source: Source) => call<AccountPlaylist[]>("GET", `/sources/${source}/playlists`),
   combine: (name: string, playlistIds: number[]) => call<{ id: number }>("POST", "/playlists/combined", { name, playlistIds }),
   editPlaylist: (id: number, name: string, description: string | null) => call<void>("PATCH", `/playlists/${id}`, { name, description }),
   deletePlaylist: (id: number) => call<void>("DELETE", `/playlists/${id}`),

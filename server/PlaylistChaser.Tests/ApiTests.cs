@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using PlaylistChaser.Data;
 using PlaylistChaser.Jobs;
@@ -168,6 +169,61 @@ public class ApiTests
         Assert.Null(accounts.ReadState(state, Source.Youtube));
         Assert.Null(accounts.ReadState(state[..^2] + "xx", Source.Spotify));
         Assert.Equal(0, app.Db(db => db.SourceAccounts.Count()));
+    }
+
+    [Fact]
+    public async Task Account_playlists_can_be_picked_including_liked_songs()
+    {
+        await using var app = new TestApp();
+        app.Sources.Spotify.Track("s1", "Liked One").Track("s2", "Private One")
+            .Playlist(SourceUrls.SpotifyLiked, "Liked Songs", false, "s1")
+            .Playlist("priv", "My private mix", true, "s2");
+        var admin = await app.Login();
+
+        var mine = await admin.GetFromJsonAsync<List<JsonElement>>("/api/sources/spotify/playlists");
+        var liked = mine!.Single(p => p.GetProperty("id").GetString() == SourceUrls.SpotifyLiked);
+        Assert.Equal("https://open.spotify.com/collection/tracks", liked.GetProperty("url").GetString());
+
+        // the picker adds by the url it was given; liked songs have no real playlist link, so it is a stand-in
+        var id = await AddPlaylist(admin, liked.GetProperty("url").GetString()!);
+        await app.Run("admin", JobKind.Pull, id);
+
+        Assert.Equal(["Liked One"], SongNames(app, id));
+        Assert.Equal(SourceUrls.SpotifyLiked, app.Db(db => db.PlaylistLinks.Single(l => l.PlaylistId == id).ExternalId));
+    }
+
+    [Fact]
+    public async Task Tokens_that_cant_be_decrypted_ask_for_a_reconnect()
+    {
+        await using var app = new TestApp();
+        var admin = await app.Login();
+        // as if /data (the encryption keys) was lost: the stored tokens are unreadable
+        app.Db(db =>
+        {
+            var userId = db.Users.Single().Id;
+            return db.Database.ExecuteSql($"""
+                INSERT INTO "SourceAccounts" ("UserId", "Source", "AccessToken", "RefreshToken", "ExpiresAt", "NeedsReconnect")
+                VALUES ({userId}, {(int)Source.Spotify}, {"unreadable"}, {"unreadable"}, {DateTime.UtcNow}, {false})
+                """);
+        });
+
+        var spotify = (await admin.GetFromJsonAsync<List<JsonElement>>("/api/sources"))!.Single(s => s.GetProperty("source").GetString() == "spotify");
+
+        Assert.True(spotify.GetProperty("connected").GetBoolean());
+        Assert.True(spotify.GetProperty("needsReconnect").GetBoolean());
+    }
+
+    [Theory]
+    [InlineData("https://open.spotify.com/collection/tracks", Source.Spotify, SourceUrls.SpotifyLiked)]
+    [InlineData("https://open.spotify.com/intl-de/playlist/37i9dQZF1DX0XUsuxWHRQd?si=x", Source.Spotify, "37i9dQZF1DX0XUsuxWHRQd")]
+    [InlineData("https://www.youtube.com/playlist?list=LL", Source.Youtube, SourceUrls.YoutubeLiked)]
+    [InlineData("https://music.youtube.com/playlist?list=PLabc-123_x", Source.Youtube, "PLabc-123_x")]
+    public void Playlist_links_are_recognised(string url, Source source, string id)
+    {
+        Assert.True(SourceUrls.TryParsePlaylist(url, out var s, out var parsed));
+        Assert.Equal((source, id), (s, parsed));
+        Assert.True(SourceUrls.TryParsePlaylist(SourceUrls.Playlist(s, parsed), out _, out var roundTrip));
+        Assert.Equal(id, roundTrip);
     }
 
     [Fact]

@@ -1,9 +1,10 @@
-import { Alert, Anchor, AspectRatio, Button, Card, Center, Checkbox, Group, Image, Loader, Modal, SimpleGrid, Stack, Text, TextInput, Title } from "@mantine/core";
+import { Alert, Anchor, AspectRatio, Button, Card, Center, Checkbox, Group, Image, Loader, Modal, SegmentedControl, SimpleGrid, Stack, Text, TextInput, Title } from "@mantine/core";
 import { IconArrowsJoin, IconMusic, IconPlus, IconRefresh } from "@tabler/icons-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { api, type Playlist } from "../api";
+import { AccountPlaylistPicker } from "../components/AccountPlaylistPicker";
 import { useJobStarted } from "../components/JobsIndicator";
 import { SourceBadge } from "../components/SourceBadge";
 import { notifications } from "@mantine/notifications";
@@ -16,6 +17,7 @@ export function PlaylistsPage() {
   const sharedUrl = (location.state as { addUrl?: string } | null)?.addUrl;
   const [adding, setAdding] = useState(!!sharedUrl);
   const [url, setUrl] = useState(sharedUrl ?? "");
+  const [addFrom, setAddFrom] = useState(sharedUrl ? "link" : "account");
   const [combining, setCombining] = useState<number[] | null>(null);
   const [combinedName, setCombinedName] = useState("");
 
@@ -82,10 +84,14 @@ export function PlaylistsPage() {
       <Modal opened={adding} onClose={() => setAdding(false)} title="Add a playlist">
         <form onSubmit={(e) => { e.preventDefault(); add.mutate(); }}>
           <Stack>
-            <TextInput label="YouTube or Spotify playlist link" placeholder="https://open.spotify.com/playlist/…"
-              value={url} onChange={(e) => setUrl(e.currentTarget.value)} required data-autofocus />
+            <SegmentedControl fullWidth value={addFrom} onChange={setAddFrom}
+              data={[{ value: "account", label: "From my account" }, { value: "link", label: "Paste a link" }]} />
+            {addFrom === "account"
+              ? <AccountPlaylistPicker value={url} onChange={setUrl} />
+              : <TextInput label="YouTube or Spotify playlist link" placeholder="https://open.spotify.com/playlist/…"
+                  value={url} onChange={(e) => setUrl(e.currentTarget.value)} required data-autofocus />}
             {add.error && <Alert color="red">{add.error.message}</Alert>}
-            <Button type="submit" loading={add.isPending}>Add and import songs</Button>
+            <Button type="submit" loading={add.isPending} disabled={!url.trim()}>Add and import songs</Button>
           </Stack>
         </form>
       </Modal>
