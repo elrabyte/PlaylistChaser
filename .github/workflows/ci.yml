@@ -65,7 +65,9 @@ jobs:
           docker build --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" -t "$IMAGE:$VERSION" .
 
       - name: Pin the version in docker-compose.yml
-        run: sed -i "s|image: ghcr.io/elrabyte/playlistchaser:latest|image: $IMAGE:$VERSION|" docker-compose.yml && grep -q "$IMAGE:$VERSION" docker-compose.yml
+        run: |
+          sed -i "s|image: ghcr.io/elrabyte/playlistchaser:latest|image: $IMAGE:$VERSION|" docker-compose.yml
+          grep -q "$IMAGE:$VERSION" docker-compose.yml
 
       - name: Smoke test docker-compose.yml
         run: |
