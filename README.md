@@ -70,7 +70,7 @@ volumes:
 2. Replace every `CHANGE_ME` in it:
    - `PUBLIC_URL`: the **https** address you'll open the app at (see [HTTPS](#https)).
    - `ADMIN_USERNAME` / `ADMIN_PASSWORD`: your first login. The password needs 10+ characters. These are only used when the database is empty.
-   - The Postgres password at the top. It's set once and shared by both services.
+   - The Postgres password at the top. It's shared by both services, and Postgres only reads it the first time it creates its database. If you change it later, the app can't connect (`password authentication failed`). Either put the old password back, or, if you have no data yet, delete the app's `db-data` volume and start again.
    - `YOUTUBE_*` / `SPOTIFY_*`: see [YouTube](#youtube) and [Spotify](#spotify). You can leave either one empty.
 3. Start it:
    - **Plain Docker:** `docker compose up -d`.
