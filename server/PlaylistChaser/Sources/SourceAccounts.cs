@@ -66,7 +66,11 @@ public class SourceAccounts(AppDb db, IConfiguration config, IDataProtectionProv
             url.State = state;
             url.AccessType = "offline";
             url.Prompt = "consent"; // always return a refresh token
-            return url.Build().AbsoluteUri;
+            var login = url.Build().AbsoluteUri;
+            // Google only accepts a private-IP redirect (e.g. https://192.168.1.10) when the request names a device
+            if (System.Net.IPAddress.TryParse(new Uri(RedirectUri(source)).Host, out var ip) && !System.Net.IPAddress.IsLoopback(ip))
+                login += "&device_id=playlistchaser-server&device_name=PlaylistChaser";
+            return login;
         }
         return new LoginRequest(new Uri(RedirectUri(source)), ClientId(source)!, LoginRequest.ResponseType.Code)
         {
