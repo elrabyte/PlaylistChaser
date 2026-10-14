@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Google;
 using Google.Apis.Auth.OAuth2;
 using Google.Apis.Services;
@@ -134,12 +135,36 @@ public class YoutubeSource(string accessToken, string? channelId) : ISource
 
     private static async Task<T> Call<T>(Func<Task<T>> action)
     {
-        try { return await action(); }
-        catch (GoogleApiException ex) when (ex.Error?.Errors?.Any(e => e.Reason is "quotaExceeded" or "rateLimitExceeded") == true)
+        // A playlist created a moment ago can still answer "not found" for a few seconds.
+        foreach (var wait in new[] { 2, 5, 10, 0 })
         {
-            throw new QuotaExceededException("YouTube quota reached; the rest continues on the next sync.", ex);
+            try { return await action(); }
+            catch (GoogleApiException ex) when (wait > 0 && HasReason(ex, "playlistNotFound"))
+            {
+                await Task.Delay(TimeSpan.FromSeconds(wait));
+            }
+            catch (GoogleApiException ex) when (HasReason(ex, "quotaExceeded", "rateLimitExceeded"))
+            {
+                throw new QuotaExceededException("YouTube quota reached; the rest continues on the next sync.", ex);
+            }
+            catch (GoogleApiException ex) when (HasReason(ex, "videoNotFound", "invalidResourceId", "videoNotAvailable"))
+            {
+                throw new TrackRejectedException(Readable(ex), ex);
+            }
+            catch (GoogleApiException ex)
+            {
+                throw new InvalidOperationException(Readable(ex), ex);
+            }
         }
+        throw new UnreachableException();
     }
+
+    private static bool HasReason(GoogleApiException ex, params string[] reasons) =>
+        ex.Error?.Errors?.Any(e => reasons.Contains(e.Reason)) == true;
+
+    // Google's messages contain HTML like <code>playlistId</code>
+    private static string Readable(GoogleApiException ex) =>
+        "YouTube: " + System.Text.RegularExpressions.Regex.Replace(ex.Error?.Message ?? ex.Message, "<[^>]+>", "");
 
     private static string CleanArtist(string artist) => artist.EndsWith(" - Topic") ? artist[..^8] : artist;
     // YouTube rejects '<' and '>' in descriptions and caps them at 5000 characters.

@@ -122,6 +122,42 @@ public class ApiTests
     }
 
     [Fact]
+    public async Task Push_to_a_new_playlist_does_not_read_it_back_and_skips_refused_videos()
+    {
+        await using var app = new TestApp();
+        app.Sources.Spotify.Track("a", "A").Track("b", "B").Playlist("SP1", "One", false, "a", "b");
+        app.Sources.Youtube.Track("ya", "A").Track("yb", "B");
+        app.Sources.Youtube.Rejects.Add("ya"); // e.g. a removed or region-locked video
+        var admin = await app.Login();
+        var id = await AddPlaylist(admin, SpUrl + "SP1");
+        await app.Run("admin", JobKind.Pull, id);
+
+        await app.Run("admin", JobKind.Push, id, Source.Youtube);
+
+        var (createdId, target) = app.Sources.Youtube.Playlists.Single(p => p.Key.Contains("created"));
+        Assert.DoesNotContain(createdId, app.Sources.Youtube.Listed); // YouTube can 404 on a playlist created a moment ago
+        Assert.Equal(["yb"], target.Tracks);
+        Assert.Equal(LinkStatus.NotFound, app.Db(db => db.SongLinks.Single(l => l.Song.Name == "A" && l.Source == Source.Youtube).Status));
+    }
+
+    [Fact]
+    public async Task A_playlist_level_failure_fails_the_push_without_marking_songs_not_found()
+    {
+        await using var app = new TestApp();
+        app.Sources.Spotify.Track("a", "A").Playlist("SP1", "One", false, "a");
+        app.Sources.Youtube.Track("ya", "A");
+        app.Sources.Youtube.AddFailure = new InvalidOperationException("YouTube: The playlist cannot be found.");
+        var admin = await app.Login();
+        var id = await AddPlaylist(admin, SpUrl + "SP1");
+        await app.Run("admin", JobKind.Pull, id);
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => app.Run("admin", JobKind.Push, id, Source.Youtube));
+
+        Assert.Contains("cannot be found", error.Message);
+        Assert.Equal(LinkStatus.Found, app.Db(db => db.SongLinks.Single(l => l.Song.Name == "A" && l.Source == Source.Youtube).Status));
+    }
+
+    [Fact]
     public async Task Combined_playlist_is_the_union_of_its_members()
     {
         await using var app = new TestApp();

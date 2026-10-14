@@ -32,6 +32,9 @@ public interface ISourceProvider
 /// <summary>The service refused because the daily quota or rate limit is used up; retrying later works.</summary>
 public class QuotaExceededException(string message, Exception? inner = null) : Exception(message, inner);
 
+/// <summary>The service refused one specific track (removed, region-locked, ...); the rest of the push can go on.</summary>
+public class TrackRejectedException(string message, Exception? inner = null) : Exception(message, inner);
+
 public class SourceNotConnectedException(Source source)
     : Exception($"{source} is not connected. Connect it in Settings first.");
 
