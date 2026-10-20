@@ -4,7 +4,7 @@
 
 - **Copy** a playlist from one service to the other. Songs are found automatically, and you can fix any wrong matches.
 - **Combine** several playlists into one and copy that anywhere.
-- **Sync daily** without you doing anything: new songs get added, and songs you removed from a copy stay removed.
+- **Sync on a schedule** you set on the **Tasks** page (default: every 6 hours): new songs get added, and songs you removed from a copy stay removed.
 - **Use it on phone or desktop.** It installs to your home screen like an app. On Android you can share a playlist from the YouTube or Spotify app straight into it.
 - **Multiple users**, each with their own playlists and accounts.
 
@@ -38,6 +38,7 @@ services:
       ADMIN_USERNAME: admin
       ADMIN_PASSWORD: CHANGE_ME     # 10+ characters; only used to create the first admin
       POSTGRES_PASSWORD: *db-password
+      TZ: Etc/UTC                   # time zone for task schedules, e.g. Europe/Berlin
       YOUTUBE_CLIENT_ID: ""         # optional; from Google Cloud (README: YouTube)
       YOUTUBE_CLIENT_SECRET: ""
       SPOTIFY_CLIENT_ID: ""         # optional; from the Spotify developer dashboard (README: Spotify)
@@ -97,9 +98,9 @@ The proxy must pass `X-Forwarded-Proto`; all of the above do.
 2. Under *OAuth consent screen*, pick user type "External" and add the scope `.../auth/youtube`.
 3. Under *Credentials*, create an **OAuth client ID** of type "Web application". Its authorized redirect URI is `https://<your PUBLIC_URL host>/api/sources/youtube/callback`.
 4. Put the client ID and secret into `YOUTUBE_CLIENT_ID` / `YOUTUBE_CLIENT_SECRET`.
-5. **Publish the app** (consent screen → *Publish app*). While it is in "Testing", Google expires the login after 7 days and the daily sync stops; Settings then shows **Reconnect**. A published but unverified app works fine for you and your users. Google just shows an "unverified app" warning once while connecting.
+5. **Publish the app** (consent screen → *Publish app*). While it is in "Testing", Google expires the login after 7 days and the scheduled sync stops; Settings then shows **Reconnect**. A published but unverified app works fine for you and your users. Google just shows an "unverified app" warning once while connecting.
 
-**Quota:** Google gives each project 10,000 units a day. Adding one song to a YouTube playlist costs 50, so all users together can add about **200 songs per day** to YouTube. When the quota runs out, the copy stops and continues on the next daily sync. Searching YouTube uses no quota.
+**Quota:** Google gives each project 10,000 units a day. Adding one song to a YouTube playlist costs 50, so all users together can add about **200 songs per day** to YouTube. When the quota runs out, the copy stops and continues on the next scheduled run. Searching YouTube uses no quota.
 
 ### Spotify
 
@@ -128,7 +129,12 @@ The proxy must pass `X-Forwarded-Proto`; all of the above do.
   - Each song is searched there once. YouTube is searched by "artist title"; Spotify first by exact artist and title, then by title alone.
   - Only songs the copy doesn't have yet are added. A song you deleted from the copy is never added again.
 - Tap a song to see how it was matched. Paste the right link, mark it "not on Spotify/YouTube", or let it be searched again on the next copy.
-- **Daily sync** runs once a day per user: every playlist is updated, then copied to every service it was copied to before.
+- **Tasks** (the Tasks tab) run on their own, per user, on a cron schedule:
+  - *Fetch all playlists* updates every playlist from where it came from.
+  - *Copy new songs everywhere* copies new songs to every service a playlist was copied to before.
+  - *Fetch and copy everything* does both.
+  - Each user starts with *Fetch* every 6 hours (`0 */6 * * *`) and *Copy* half an hour later (`30 */6 * * *`). Change, add, switch off or delete them there.
+  - Schedules use the `TZ` time zone from the compose file (default UTC).
 - **Coming from an older PlaylistChaser?** Add your playlists again, then use *⋯ → Use an existing playlist as copy* to link the copies the old version made, so no duplicates are created.
 
 ## Develop

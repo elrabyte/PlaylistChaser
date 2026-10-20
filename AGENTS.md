@@ -6,9 +6,11 @@
   - `Program.cs`: config checks, DI, Identity cookie auth, migrate on start, admin seed, routes.
   - `Data/AppDb.cs`: every entity and the EF model. `Data/Migrations` is Npgsql-only.
   - `Auth/`: login/logout/me/password, admin user management, and the env-var admin seed.
-  - `Sources/`: `ISource` (one music service acting as one user), `YoutubeSource`, `SpotifySource`, and `SourceAccounts` (OAuth connect/callback, token refresh, `ISourceProvider`).
+  - `Sources/`: providers by capability. `IPlaylistSource` (read playlists) and `IPlaylistDestination` (match songs, write playlists; extends source), the `Providers` list (name, colour, capabilities incl. Downloadable/Metadata flags that have no interface yet), `YoutubeSource`, `SpotifySource`, and `SourceAccounts` (OAuth connect/callback, token refresh, `ISourceProvider`; `GetDestination` checks the capability).
+    - Adding a provider: a `Source` enum value, an entry in `Providers.All`, its class, a case in `SourceAccounts.Create`, and its login. The client builds its menus from `GET /api/sources`, so it needs no change except an optional brand icon in `SourceBadge.tsx`.
   - `Sync/SyncService.cs`: pull, push and sync-all. The core logic lives here.
-  - `Jobs/Jobs.cs`: in-process `Channel` queue, a single worker, the daily scheduler, and `/api/jobs`.
+  - `Jobs/Jobs.cs`: in-process `Channel` queue, a single worker, and `/api/jobs`.
+  - `Tasks/Tasks.cs`: per-user scheduled tasks (cron via Cronos, server `TZ`), the minute-tick `Scheduler`, default tasks for new users, and `/api/tasks`.
   - `Playlists/PlaylistEndpoints.cs`: playlist and song-link endpoints.
 - **`server/PlaylistChaser.Tests`**: xUnit + `WebApplicationFactory` (`TestApp`) with `FakeSources` in place of the real services.
   - Runs on SQLite by default, or on Postgres when `TEST_POSTGRES` is set (CI does both).

@@ -58,26 +58,6 @@ public class JobRunner(IServiceScopeFactory scopes, JobQueue queue, ILogger<JobR
     }
 }
 
-/// <summary>Once a day per user: pull every playlist, then push it to the services it was pushed to before.</summary>
-public class DailySync(IServiceScopeFactory scopes, JobQueue queue) : BackgroundService
-{
-    protected override async Task ExecuteAsync(CancellationToken stop)
-    {
-        using var timer = new PeriodicTimer(TimeSpan.FromHours(1));
-        while (await timer.WaitForNextTickAsync(stop))
-        {
-            using var scope = scopes.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<AppDb>();
-            var since = DateTime.UtcNow.AddHours(-23);
-            var due = await db.Playlists.Select(p => p.UserId).Distinct()
-                .Where(u => !db.Jobs.Any(j => j.UserId == u && j.Kind == JobKind.SyncAll && j.CreatedAt > since))
-                .ToListAsync(stop);
-            foreach (var userId in due)
-                await queue.Enqueue(db, userId, JobKind.SyncAll);
-        }
-    }
-}
-
 public static class JobEndpoints
 {
     public static void MapJobEndpoints(this RouteGroupBuilder api)

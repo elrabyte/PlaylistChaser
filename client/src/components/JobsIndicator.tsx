@@ -3,7 +3,8 @@ import { useDisclosure, useMediaQuery } from "@mantine/hooks";
 import { IconListCheck } from "@tabler/icons-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
-import { api, SOURCE_LABEL, type Job, type Playlist } from "../api";
+import { api, TASK_LABEL, type Job, type Playlist } from "../api";
+import { useProviders } from "../useProviders";
 import { ago } from "../format";
 
 const isActive = (j: Job) => j.status === "queued" || j.status === "running";
@@ -13,6 +14,7 @@ const STATUS_COLOR = { queued: "gray", running: "blue", done: "green", failed: "
 export function JobsIndicator() {
   const queryClient = useQueryClient();
   const [opened, { open, close }] = useDisclosure(false);
+  const providers = useProviders();
   const isMobile = useMediaQuery("(max-width: 48em)");
   const jobs = useQuery({
     queryKey: ["jobs"],
@@ -34,8 +36,8 @@ export function JobsIndicator() {
   const title = (j: Job) => {
     const name = playlists?.find((p) => p.id === j.playlistId)?.name ?? "playlist";
     if (j.kind === "pull") return `Update ${name}`;
-    if (j.kind === "push") return `Copy ${name} to ${SOURCE_LABEL[j.target!]}`;
-    return "Sync everything";
+    if (j.kind === "push") return `Copy ${name} to ${providers.label(j.target!)}`;
+    return TASK_LABEL[j.kind];
   };
 
   return (

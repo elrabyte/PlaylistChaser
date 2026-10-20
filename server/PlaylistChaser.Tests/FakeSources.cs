@@ -8,11 +8,11 @@ public class FakeSources : ISourceProvider
     public FakeSource Youtube { get; } = new(Source.Youtube, maxBatch: 1);
     public FakeSource Spotify { get; } = new(Source.Spotify, maxBatch: 100);
 
-    public Task<ISource> Get(string userId, Source source) => Task.FromResult<ISource>(source == Source.Youtube ? Youtube : Spotify);
+    public Task<IPlaylistSource> Get(string userId, Source source) => Task.FromResult<IPlaylistSource>(source == Source.Youtube ? Youtube : Spotify);
 }
 
 /// <summary>An in-memory music service. Search matches by exact track name.</summary>
-public class FakeSource(Source kind, int maxBatch) : ISource
+public class FakeSource(Source kind, int maxBatch) : IPlaylistDestination
 {
     public record FakePlaylist(string Name, bool IsMine, List<string> Tracks);
 

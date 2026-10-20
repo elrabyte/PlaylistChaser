@@ -21,7 +21,9 @@ COPY --from=client /client/dist /app/wwwroot
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
 COPY --from=server /app .
-RUN mkdir /data && chown $APP_UID /data
+# tzdata so TZ works for task schedules
+RUN apt-get update && apt-get install -y --no-install-recommends tzdata && rm -rf /var/lib/apt/lists/* \
+    && mkdir /data && chown $APP_UID /data
 USER $APP_UID
 EXPOSE 8080
 VOLUME /data

@@ -1,9 +1,8 @@
 // REST client for the PlaylistChaser server. Same origin, so the login cookie is sent automatically.
 
-export type Source = "youtube" | "spotify";
-export const SOURCES: Source[] = ["youtube", "spotify"];
-export const SOURCE_LABEL: Record<Source, string> = { youtube: "YouTube", spotify: "Spotify" };
-export const SOURCE_COLOR: Record<Source, string> = { youtube: "red", spotify: "green" };
+/** A provider id such as "youtube"; the list of providers and what they can do comes from the server (useProviders). */
+export type Source = string;
+export type Capability = "source" | "destination" | "downloadable" | "metadata";
 
 export interface Me { userName: string; isAdmin: boolean }
 export interface PlaylistLink { source: Source; url: string; isMine: boolean; lastPushedAt: string | null; pushed: number }
@@ -29,7 +28,7 @@ export interface Song {
 }
 export interface Job {
   id: number;
-  kind: "pull" | "push" | "syncAll";
+  kind: "pull" | "push" | TaskKind;
   playlistId: number | null;
   target: Source | null;
   status: "queued" | "running" | "done" | "failed";
@@ -39,7 +38,20 @@ export interface Job {
   createdAt: string;
   finishedAt: string | null;
 }
-export interface SourceAccount { source: Source; configured: boolean; connected: boolean; needsReconnect: boolean; displayName: string | null }
+export interface SourceAccount {
+  source: Source;
+  name: string;
+  color: string;
+  capabilities: Capability[];
+  configured: boolean;
+  connected: boolean;
+  needsReconnect: boolean;
+  displayName: string | null;
+}
+export type TaskKind = "pullAll" | "pushAll" | "syncAll";
+export const TASK_LABEL: Record<TaskKind, string> = { pullAll: "Fetch all playlists", pushAll: "Copy new songs everywhere", syncAll: "Fetch and copy everything" };
+export interface ScheduledTask { id: number; kind: TaskKind; cron: string; enabled: boolean; lastRunAt: string | null; nextRunAt: string | null }
+export type TaskInput = Pick<ScheduledTask, "kind" | "cron" | "enabled">;
 export interface User { id: string; userName: string; isAdmin: boolean }
 export interface AccountPlaylist { id: string; name: string; creator: string | null; thumbnailUrl: string | null; isMine: boolean; url: string }
 
@@ -97,4 +109,10 @@ export const api = {
 
   jobs: () => call<Job[]>("GET", "/jobs"),
   syncAll: () => call<Job>("POST", "/sync"),
+
+  tasks: () => call<ScheduledTask[]>("GET", "/tasks"),
+  addTask: (task: TaskInput) => call<ScheduledTask>("POST", "/tasks", task),
+  updateTask: (id: number, task: TaskInput) => call<ScheduledTask>("PUT", `/tasks/${id}`, task),
+  deleteTask: (id: number) => call<void>("DELETE", `/tasks/${id}`),
+  runTask: (id: number) => call<Job>("POST", `/tasks/${id}/run`),
 };

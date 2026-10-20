@@ -4,7 +4,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { notifications } from "@mantine/notifications";
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import { api, SOURCE_LABEL, SOURCES, type Playlist, type Song, type Source } from "../api";
+import { api, type Playlist, type Song, type Source } from "../api";
+import { useProviders } from "../useProviders";
 import { useJobStarted } from "../components/JobsIndicator";
 import { SongDrawer } from "../components/SongDrawer";
 import { SourceBadge, SourceIcon, STATUS } from "../components/SourceBadge";
@@ -17,7 +18,7 @@ export function PlaylistPage() {
   const jobStarted = useJobStarted();
   const detail = useQuery({ queryKey: ["playlist", id], queryFn: () => api.playlist(id) });
   const songs = useQuery({ queryKey: ["songs", id], queryFn: () => api.songs(id) });
-  const accounts = useQuery({ queryKey: ["sources"], queryFn: api.sources });
+  const providers = useProviders();
   const allPlaylists = useQuery({ queryKey: ["playlists"], queryFn: api.playlists });
   const [filter, setFilter] = useState("");
   const [openSong, setOpenSong] = useState<Song | null>(null);
@@ -32,7 +33,7 @@ export function PlaylistPage() {
   const pull = useMutation({ mutationFn: () => api.pull(id), onSuccess: started("Updating songs in the background.") });
   const push = useMutation({
     mutationFn: (s: Source) => api.push(id, s),
-    onSuccess: (_, s) => started(`Copying to ${SOURCE_LABEL[s]} in the background.`)(),
+    onSuccess: (_, s) => started(`Copying to ${providers.label(s)} in the background.`)(),
   });
   const unlink = useMutation({
     mutationFn: ({ source, deleteRemote }: { source: Source; deleteRemote: boolean }) => api.unlink(id, source, deleteRemote),
@@ -46,8 +47,8 @@ export function PlaylistPage() {
   if (detail.isPending) return <Center p="xl"><Loader /></Center>;
   if (detail.isError) return <Alert color="red">{detail.error.message}</Alert>;
   const p = detail.data.playlist;
-  const connected = (s: Source) => accounts.data?.find((a) => a.source === s)?.connected && !accounts.data?.find((a) => a.source === s)?.needsReconnect;
-  const pushTargets = SOURCES.filter((s) => s !== p.mainSource);
+  const connected = providers.usable;
+  const pushTargets = providers.list.map((x) => x.source).filter((s) => providers.can(s, "destination") && s !== p.mainSource);
   const members = allPlaylists.data?.filter((x) => detail.data.members.includes(x.id)) ?? [];
   const q = filter.toLowerCase();
   const visibleSongs = songs.data?.filter((s) => !q || s.name.toLowerCase().includes(q) || s.artist.toLowerCase().includes(q));
@@ -82,8 +83,8 @@ export function PlaylistPage() {
         {pushTargets.map((s) => (
           <Button key={s} variant="default" leftSection={<IconUpload size={18} />} disabled={!connected(s)}
             onClick={() => push.mutate(s)} loading={push.isPending && push.variables === s}
-            title={connected(s) ? undefined : `Connect ${SOURCE_LABEL[s]} in Settings first`}>
-            Copy to {SOURCE_LABEL[s]}
+            title={connected(s) ? undefined : `Connect ${providers.label(s)} in Settings first`}>
+            Copy to {providers.label(s)}
           </Button>
         ))}
       </Group>
@@ -100,17 +101,17 @@ export function PlaylistPage() {
                 </Text>
               </Group>
               <Group gap={4} wrap="nowrap">
-                <ActionIcon variant="subtle" component="a" href={l.url} target="_blank" rel="noreferrer" aria-label={`Open on ${SOURCE_LABEL[l.source]}`}>
+                <ActionIcon variant="subtle" component="a" href={l.url} target="_blank" rel="noreferrer" aria-label={`Open on ${providers.label(l.source)}`}>
                   <IconExternalLink size={18} />
                 </ActionIcon>
                 {l.source !== p.mainSource && (
                   <Menu position="bottom-end">
                     <Menu.Target><ActionIcon variant="subtle" aria-label="Copy actions"><IconDots size={18} /></ActionIcon></Menu.Target>
                     <Menu.Dropdown>
-                      <Menu.Item onClick={() => unlink.mutate({ source: l.source, deleteRemote: false })}>Stop syncing (keep it on {SOURCE_LABEL[l.source]})</Menu.Item>
+                      <Menu.Item onClick={() => unlink.mutate({ source: l.source, deleteRemote: false })}>Stop syncing (keep it on {providers.label(l.source)})</Menu.Item>
                       {l.isMine && (
-                        <Menu.Item color="red" onClick={() => window.confirm(`Delete this playlist on ${SOURCE_LABEL[l.source]}?`) && unlink.mutate({ source: l.source, deleteRemote: true })}>
-                          Delete on {SOURCE_LABEL[l.source]}
+                        <Menu.Item color="red" onClick={() => window.confirm(`Delete this playlist on ${providers.label(l.source)}?`) && unlink.mutate({ source: l.source, deleteRemote: true })}>
+                          Delete on {providers.label(l.source)}
                         </Menu.Item>
                       )}
                     </Menu.Dropdown>
@@ -138,10 +139,10 @@ export function PlaylistPage() {
                 <Text size="xs" c="dimmed" truncate>{s.artist}</Text>
               </Stack>
               <Group gap={4} wrap="nowrap">
-                {SOURCES.map((src) => {
+                {providers.list.map(({ source: src }) => {
                   const status = STATUS[s.links.find((l) => l.source === src)?.status ?? "missing"];
                   return (
-                    <Badge key={src} size="lg" circle color={status.color} variant="light" title={`${SOURCE_LABEL[src]}: ${status.label}`}>
+                    <Badge key={src} size="lg" circle color={status.color} variant="light" title={`${providers.label(src)}: ${status.label}`}>
                       <SourceIcon source={src} size={14} />
                     </Badge>
                   );

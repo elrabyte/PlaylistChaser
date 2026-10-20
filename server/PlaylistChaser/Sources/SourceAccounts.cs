@@ -13,7 +13,7 @@ using SpotifyAPI.Web;
 
 namespace PlaylistChaser.Sources;
 
-/// <summary>OAuth connect/callback, token refresh, and creating an <see cref="ISource"/> for a user.</summary>
+/// <summary>OAuth connect/callback, token refresh, and creating a provider for a user.</summary>
 public class SourceAccounts(AppDb db, IConfiguration config, IDataProtectionProvider dataProtection) : ISourceProvider
 {
     private static readonly string[] SpotifyScopes = [Scopes.PlaylistModifyPrivate, Scopes.PlaylistModifyPublic, Scopes.UserReadPrivate,
@@ -22,7 +22,7 @@ public class SourceAccounts(AppDb db, IConfiguration config, IDataProtectionProv
     public bool IsConfigured(Source source) =>
         !string.IsNullOrEmpty(ClientId(source)) && !string.IsNullOrEmpty(ClientSecret(source));
 
-    public async Task<ISource> Get(string userId, Source source)
+    public async Task<IPlaylistSource> Get(string userId, Source source)
     {
         var account = await db.SourceAccounts.FindAsync(userId, source);
         if (account == null || account.NeedsReconnect || account.RefreshToken == "" || !IsConfigured(source))
@@ -51,7 +51,7 @@ public class SourceAccounts(AppDb db, IConfiguration config, IDataProtectionProv
         return Create(source, account.AccessToken, account.ExternalUserId);
     }
 
-    public static ISource Create(Source source, string accessToken, string? externalUserId) => source switch
+    public static IPlaylistSource Create(Source source, string accessToken, string? externalUserId) => source switch
     {
         Source.Youtube => new YoutubeSource(accessToken, externalUserId),
         Source.Spotify => new SpotifySource(accessToken, externalUserId),
@@ -155,10 +155,21 @@ public static class SourceEndpoints
         api.MapGet("/sources", async (ClaimsPrincipal user, AppDb db, SourceAccounts accounts) =>
         {
             var mine = await db.SourceAccounts.Where(a => a.UserId == user.Id()).ToListAsync();
-            return Enum.GetValues<Source>().Select(s =>
+            // the client builds its provider menus and labels from this list
+            return Providers.All.Select(p =>
             {
-                var a = mine.FirstOrDefault(x => x.Source == s);
-                return new { source = s, configured = accounts.IsConfigured(s), connected = a != null, needsReconnect = a != null && (a.NeedsReconnect || a.RefreshToken == ""), displayName = a?.DisplayName };
+                var a = mine.FirstOrDefault(x => x.Source == p.Id);
+                return new
+                {
+                    source = p.Id,
+                    name = p.Name,
+                    color = p.Color,
+                    capabilities = Enum.GetValues<Capability>().Where(c => p.Capabilities.HasFlag(c)),
+                    configured = accounts.IsConfigured(p.Id),
+                    connected = a != null,
+                    needsReconnect = a != null && (a.NeedsReconnect || a.RefreshToken == ""),
+                    displayName = a?.DisplayName,
+                };
             });
         });
 

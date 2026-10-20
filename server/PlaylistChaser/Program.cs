@@ -11,6 +11,7 @@ using PlaylistChaser.Jobs;
 using PlaylistChaser.Playlists;
 using PlaylistChaser.Sources;
 using PlaylistChaser.Sync;
+using PlaylistChaser.Tasks;
 
 var builder = WebApplication.CreateBuilder(args);
 var config = builder.Configuration;
@@ -67,7 +68,7 @@ builder.Services.AddScoped<ISourceProvider>(sp => sp.GetRequiredService<SourceAc
 builder.Services.AddScoped<SyncService>();
 builder.Services.AddSingleton<JobQueue>();
 builder.Services.AddHostedService<JobRunner>();
-builder.Services.AddHostedService<DailySync>();
+builder.Services.AddHostedService<Scheduler>();
 
 var app = builder.Build();
 
@@ -95,6 +96,7 @@ api.MapAuthEndpoints();
 api.MapSourceEndpoints();
 api.MapPlaylistEndpoints();
 api.MapJobEndpoints();
+api.MapTaskEndpoints();
 app.MapFallback("/api/{**rest}", () => Results.NotFound());
 app.MapFallbackToFile("index.html"); // client-side routes of the SPA
 

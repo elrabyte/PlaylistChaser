@@ -12,6 +12,8 @@ public class SyncService(AppDb db, ISourceProvider sources)
     {
         JobKind.Pull => Pull(job, job.PlaylistId!.Value),
         JobKind.Push => Push(job, job.PlaylistId!.Value, job.Target!.Value),
+        JobKind.PullAll => SyncAll(job, push: false),
+        JobKind.PushAll => SyncAll(job, pull: false),
         _ => SyncAll(job),
     };
 
@@ -49,7 +51,7 @@ public class SyncService(AppDb db, ISourceProvider sources)
         var link = p.Links.SingleOrDefault(l => l.Source == target);
         if (link is { IsMine: false })
             throw new InvalidOperationException($"The {target} playlist linked to {p.Name} isn't yours, so it can't be changed.");
-        var source = await sources.Get(job.UserId, target);
+        var source = await sources.GetDestination(job.UserId, target);
 
         var songs = await db.Songs.Include(s => s.Links).Where(s => db.PlaylistSongs.Any(ps => ps.PlaylistId == p.Id && ps.SongId == s.Id)).ToListAsync();
 
@@ -117,15 +119,20 @@ public class SyncService(AppDb db, ISourceProvider sources)
         job.Message = null;
     }
 
-    public async Task SyncAll(Job job)
+    /// <summary>Every playlist of the user: pull it, then push it to each copy it was pushed to before.</summary>
+    public async Task SyncAll(Job job, bool pull = true, bool push = true)
     {
         var playlists = await db.Playlists.Owned(job.UserId).Include(p => p.Links).OrderBy(p => p.Kind).ToListAsync();
         var errors = new List<string>();
         var blocked = new HashSet<Source>();
         foreach (var p in playlists)
         {
-            try { await Pull(job, p.Id, pullMembers: false); } // members are simple playlists, pulled earlier in this loop
-            catch (Exception ex) { errors.Add($"{p.Name}: {ex.Message}"); continue; }
+            if (pull)
+            {
+                try { await Pull(job, p.Id, pullMembers: false); } // members are simple playlists, pulled earlier in this loop
+                catch (Exception ex) { errors.Add($"{p.Name}: {ex.Message}"); continue; }
+            }
+            if (!push) continue;
 
             foreach (var target in p.Links.Where(l => l.IsMine && l.Source != p.MainSource).Select(l => l.Source).ToList())
             {
