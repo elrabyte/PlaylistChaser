@@ -13,7 +13,7 @@ namespace PlaylistChaser.Sources;
 /// Writes and listing go through the official Data API (quota: list = 1 unit, insert = 50 units, 10k/day).
 /// Search and single-video lookups go through YoutubeExplode, which uses no quota.
 /// </summary>
-public class YoutubeSource(string accessToken, string? channelId) : ISource
+public class YoutubeSource(string accessToken, string? channelId) : IPlaylistDestination
 {
     private readonly YouTubeService api = new(new BaseClientService.Initializer
     {

@@ -6,15 +6,23 @@ namespace PlaylistChaser.Sources;
 public record RemotePlaylist(string Id, string Name, string? Description, string? Creator, string? ThumbnailUrl, bool IsMine);
 public record RemoteTrack(string Id, string Name, string Artist, string? ThumbnailUrl);
 
-/// <summary>One music service, acting as the connected user.</summary>
-public interface ISource
+// A provider (YouTube, Spotify, ...) implements only the capabilities it has; see Providers for the list.
+
+/// <summary>Source capability: playlists can be read from this provider, acting as the connected user.</summary>
+public interface IPlaylistSource
 {
-    /// <summary>How many tracks one AddTracks call may take.</summary>
-    int MaxBatch { get; }
     Task<RemotePlaylist> GetPlaylist(string id);
     /// <summary>The connected user's own and followed playlists, private ones included, liked songs first.</summary>
     Task<List<RemotePlaylist>> GetMyPlaylists();
     Task<List<RemoteTrack>> GetTracks(string playlistId);
+}
+
+/// <summary>Destination capability: songs can be matched here and playlists created and filled.
+/// Writing needs reading your own playlists (what's in them, are they yours), hence it extends the source.</summary>
+public interface IPlaylistDestination : IPlaylistSource
+{
+    /// <summary>How many tracks one AddTracks call may take.</summary>
+    int MaxBatch { get; }
     Task<RemoteTrack?> GetTrack(string id);
     Task<RemoteTrack?> Search(string name, string artist);
     Task<string> CreatePlaylist(string name, string description);
@@ -23,10 +31,36 @@ public interface ISource
     Task DeletePlaylist(string playlistId);
 }
 
+[Flags]
+public enum Capability { Source = 1, Destination = 2, Downloadable = 4, Metadata = 8 }
+
+public record ProviderInfo(Source Id, string Name, string Color, Capability Capabilities);
+
+/// <summary>Every provider and what it can do. Adding one: a <see cref="Source"/> value, an entry here, its class
+/// (implementing the capability interfaces), a case in <see cref="SourceAccounts.Create"/> and its login in SourceAccounts.</summary>
+public static class Providers
+{
+    // Downloadable and Metadata have no interface yet; they arrive with the local download feature.
+    public static readonly ProviderInfo[] All =
+    [
+        new(Source.Youtube, "YouTube", "red", Capability.Source | Capability.Destination | Capability.Downloadable),
+        new(Source.Spotify, "Spotify", "green", Capability.Source | Capability.Destination | Capability.Metadata),
+    ];
+
+    public static ProviderInfo Info(Source source) => All.Single(p => p.Id == source);
+}
+
 public interface ISourceProvider
 {
     /// <summary>Throws <see cref="SourceNotConnectedException"/> when the user has no usable account for the source.</summary>
-    Task<ISource> Get(string userId, Source source);
+    Task<IPlaylistSource> Get(string userId, Source source);
+}
+
+public static class SourceProviderExtensions
+{
+    public static async Task<IPlaylistDestination> GetDestination(this ISourceProvider sources, string userId, Source source) =>
+        await sources.Get(userId, source) as IPlaylistDestination
+        ?? throw new InvalidOperationException($"Playlists can't be copied to {Providers.Info(source).Name}.");
 }
 
 /// <summary>The service refused because the daily quota or rate limit is used up; retrying later works.</summary>

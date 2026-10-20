@@ -21,6 +21,7 @@ services:
       ADMIN_USERNAME: admin
       ADMIN_PASSWORD: CHANGE_ME     # 10+ characters; only used to create the first admin
       POSTGRES_PASSWORD: *db-password
+      TZ: Etc/UTC                   # time zone for task schedules, e.g. Europe/Berlin
       YOUTUBE_CLIENT_ID: ""         # optional; from Google Cloud (README: YouTube)
       YOUTUBE_CLIENT_SECRET: ""
       SPOTIFY_CLIENT_ID: ""         # optional; from the Spotify developer dashboard (README: Spotify)

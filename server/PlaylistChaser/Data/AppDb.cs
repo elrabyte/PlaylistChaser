@@ -9,7 +9,8 @@ public enum Source { Youtube = 1, Spotify = 2 }
 public enum PlaylistKind { Simple = 1, Combined = 2 }
 // Origin = the song was imported from this service; it is the song's identity there and can't be edited.
 public enum LinkStatus { Origin = 1, Found = 2, NotFound = 3, Manual = 4 }
-public enum JobKind { Pull = 1, Push = 2, SyncAll = 3 }
+// PullAll/PushAll/SyncAll cover all of a user's playlists; scheduled tasks run those three
+public enum JobKind { Pull = 1, Push = 2, SyncAll = 3, PullAll = 4, PushAll = 5 }
 public enum JobStatus { Queued = 1, Running = 2, Done = 3, Failed = 4 }
 
 public class AppUser : IdentityUser { }
@@ -108,6 +109,19 @@ public class Job
     public DateTime? FinishedAt { get; set; }
 }
 
+/// <summary>A recurring job a user set up on the Tasks page; <see cref="Kind"/> is PullAll, PushAll or SyncAll.</summary>
+public class ScheduledTask
+{
+    public int Id { get; set; }
+    public string UserId { get; set; } = "";
+    public JobKind Kind { get; set; }
+    public string Cron { get; set; } = "";
+    public bool Enabled { get; set; }
+    public DateTime? LastRunAt { get; set; }
+    /// <summary>null until the scheduler first computes it.</summary>
+    public DateTime? NextRunAt { get; set; }
+}
+
 public partial class AppDb(DbContextOptions<AppDb> options, IDataProtectionProvider dataProtection)
     : IdentityDbContext<AppUser>(options)
 {
@@ -120,6 +134,7 @@ public partial class AppDb(DbContextOptions<AppDb> options, IDataProtectionProvi
     public DbSet<PlaylistSong> PlaylistSongs => Set<PlaylistSong>();
     public DbSet<PushedSong> PushedSongs => Set<PushedSong>();
     public DbSet<Job> Jobs => Set<Job>();
+    public DbSet<ScheduledTask> ScheduledTasks => Set<ScheduledTask>();
 
     // all times are stored as UTC; SQLite forgets the kind, so mark them UTC on read (Postgres already does)
     protected override void ConfigureConventions(ModelConfigurationBuilder c) =>
@@ -179,6 +194,7 @@ public partial class AppDb(DbContextOptions<AppDb> options, IDataProtectionProvi
             e.HasOne<AppUser>().WithMany().HasForeignKey(j => j.UserId).OnDelete(DeleteBehavior.Cascade);
             e.HasIndex(j => new { j.UserId, j.CreatedAt });
         });
+        b.Entity<ScheduledTask>().HasOne<AppUser>().WithMany().HasForeignKey(t => t.UserId).OnDelete(DeleteBehavior.Cascade);
     }
 }
 

@@ -2,7 +2,7 @@ using SpotifyAPI.Web;
 
 namespace PlaylistChaser.Sources;
 
-public class SpotifySource(string accessToken, string? spotifyUserId) : ISource
+public class SpotifySource(string accessToken, string? spotifyUserId) : IPlaylistDestination
 {
     private readonly SpotifyClient api = new(accessToken);
 

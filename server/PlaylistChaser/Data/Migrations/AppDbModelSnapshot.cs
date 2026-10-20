@@ -383,6 +383,41 @@ namespace PlaylistChaser.Data.Migrations
                     b.ToTable("PushedSongs");
                 });
 
+            modelBuilder.Entity("PlaylistChaser.Data.ScheduledTask", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Cron")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("LastRunAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("NextRunAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("ScheduledTasks");
+                });
+
             modelBuilder.Entity("PlaylistChaser.Data.Song", b =>
                 {
                     b.Property<int>("Id")
@@ -594,6 +629,15 @@ namespace PlaylistChaser.Data.Migrations
                     b.HasOne("PlaylistChaser.Data.Song", null)
                         .WithMany()
                         .HasForeignKey("SongId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("PlaylistChaser.Data.ScheduledTask", b =>
+                {
+                    b.HasOne("PlaylistChaser.Data.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

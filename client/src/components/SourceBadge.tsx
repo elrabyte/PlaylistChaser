@@ -1,15 +1,21 @@
 import { Badge } from "@mantine/core";
-import { IconBrandSpotify, IconBrandYoutube } from "@tabler/icons-react";
-import { SOURCE_COLOR, SOURCE_LABEL, type LinkStatus, type Source } from "../api";
+import { IconBrandSpotify, IconBrandYoutube, IconMusic } from "@tabler/icons-react";
+import { type LinkStatus, type Source } from "../api";
+import { useProviders } from "../useProviders";
+
+// brand icons for the providers we know; any other provider gets a generic note
+const ICONS: Record<string, typeof IconMusic> = { youtube: IconBrandYoutube, spotify: IconBrandSpotify };
 
 export function SourceIcon({ source, size = 16 }: { source: Source; size?: number }) {
-  return source === "youtube" ? <IconBrandYoutube size={size} /> : <IconBrandSpotify size={size} />;
+  const Icon = ICONS[source] ?? IconMusic;
+  return <Icon size={size} />;
 }
 
 export function SourceBadge({ source, variant = "light" }: { source: Source; variant?: string }) {
+  const providers = useProviders();
   return (
-    <Badge color={SOURCE_COLOR[source]} variant={variant} leftSection={<SourceIcon source={source} size={12} />}>
-      {SOURCE_LABEL[source]}
+    <Badge color={providers.color(source)} variant={variant} leftSection={<SourceIcon source={source} size={12} />}>
+      {providers.label(source)}
     </Badge>
   );
 }

@@ -37,7 +37,7 @@ public sealed class TestApp : WebApplicationFactory<Program>
         {
             services.RemoveAll<ISourceProvider>();
             services.AddSingleton<ISourceProvider>(Sources);
-            foreach (var worker in services.Where(d => d.ImplementationType == typeof(JobRunner) || d.ImplementationType == typeof(DailySync)).ToList())
+            foreach (var worker in services.Where(d => d.ImplementationType == typeof(JobRunner) || d.ImplementationType == typeof(PlaylistChaser.Tasks.Scheduler)).ToList())
                 services.Remove(worker);
         });
     }

@@ -4,22 +4,23 @@ import { IconLogout, IconTrash } from "@tabler/icons-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
-import { api, SOURCE_LABEL, type Me, type SourceAccount } from "../api";
+import { api, type Me, type SourceAccount } from "../api";
+import { useProviders } from "../useProviders";
 import { SourceIcon } from "../components/SourceBadge";
 
 export function SettingsPage({ me }: { me: Me }) {
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const accounts = useQuery({ queryKey: ["sources"], queryFn: api.sources });
+  const providers = useProviders();
 
   // result of the YouTube/Spotify login redirect
   useEffect(() => {
     const error = params.get("error");
     const connected = params.get("connected");
     if (error) notifications.show({ color: "red", title: "Not connected", message: error, autoClose: false });
-    if (connected) notifications.show({ color: "green", message: `${SOURCE_LABEL[connected as keyof typeof SOURCE_LABEL] ?? connected} connected.` });
+    if (connected) notifications.show({ color: "green", message: `${providers.label(connected)} connected.` });
     if (error || connected) navigate("/settings", { replace: true });
-  }, [params, navigate]);
+  }, [params, navigate, providers]);
 
   return (
     <Stack maw={640}>
@@ -28,7 +29,7 @@ export function SettingsPage({ me }: { me: Me }) {
       <Card withBorder>
         <Stack>
           <Title order={4}>Music services</Title>
-          {accounts.data?.map((a) => <AccountRow key={a.source} account={a} />)}
+          {providers.list.map((a) => <AccountRow key={a.source} account={a} />)}
         </Stack>
       </Card>
 
@@ -59,7 +60,7 @@ function AccountRow({ account: a }: { account: SourceAccount }) {
       <Group gap="sm" wrap="nowrap" style={{ minWidth: 0 }}>
         <SourceIcon source={a.source} size={24} />
         <Stack gap={0} style={{ minWidth: 0 }}>
-          <Text fw={500}>{SOURCE_LABEL[a.source]}</Text>
+          <Text fw={500}>{a.name}</Text>
           <Text size="sm" c="dimmed" truncate>
             {!a.configured ? "Not set up on this server (see README)" : a.connected ? a.displayName ?? "Connected" : "Not connected"}
           </Text>

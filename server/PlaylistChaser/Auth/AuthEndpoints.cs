@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using PlaylistChaser.Data;
+using PlaylistChaser.Tasks;
 
 namespace PlaylistChaser.Auth;
 
@@ -52,13 +53,16 @@ public static class AuthEndpoints
                 .Select(u => new { id = u.Id, userName = u.UserName, isAdmin = adminIds.Contains(u.Id) });
         });
 
-        admin.MapPost("", async (NewUserRequest req, UserManager<AppUser> users) =>
+        admin.MapPost("", async (NewUserRequest req, UserManager<AppUser> users, AppDb db) =>
         {
             var user = new AppUser { UserName = req.UserName };
             var result = await users.CreateAsync(user, req.Password);
             if (result.Succeeded && req.IsAdmin)
                 result = await users.AddToRoleAsync(user, AdminRole);
-            return result.Succeeded ? Results.Ok(new { id = user.Id }) : Problem(result);
+            if (!result.Succeeded) return Problem(result);
+            Scheduler.AddDefaults(db, user.Id);
+            await db.SaveChangesAsync();
+            return Results.Ok(new { id = user.Id });
         });
 
         admin.MapDelete("/{id}", async (string id, ClaimsPrincipal principal, UserManager<AppUser> users) =>
@@ -93,6 +97,9 @@ public static class AuthEndpoints
         if (!result.Succeeded)
             throw new InvalidOperationException("Creating the admin from ADMIN_USERNAME/ADMIN_PASSWORD failed: "
                                                 + string.Join(" ", result.Errors.Select(e => e.Description)));
+        var db = services.GetRequiredService<AppDb>();
+        Scheduler.AddDefaults(db, admin.Id);
+        await db.SaveChangesAsync();
         log.LogInformation("Created admin user {UserName}.", name);
     }
 

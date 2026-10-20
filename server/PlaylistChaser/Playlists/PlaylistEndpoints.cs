@@ -137,7 +137,7 @@ public static class PlaylistEndpoints
                 if (link == null) return Results.NotFound();
                 if (s == p.MainSource) return Results.Problem("That's where this playlist comes from; delete the playlist instead.", statusCode: 400);
                 if (deleteRemote == true && link.IsMine)
-                    await (await sources.Get(user.Id(), s)).DeletePlaylist(link.ExternalId);
+                    await (await sources.GetDestination(user.Id(), s)).DeletePlaylist(link.ExternalId);
                 p.Links.Remove(link);
                 await db.PushedSongs.Where(x => x.PlaylistId == id && x.Source == s).ExecuteDeleteAsync();
                 await db.SaveChangesAsync();
@@ -171,7 +171,7 @@ public static class PlaylistEndpoints
                 {
                     externalId = SourceUrls.TryParseTrack(s, req.Url ?? "");
                     if (externalId == null) return Results.Problem($"Paste a {s} track link.", statusCode: 400);
-                    if (await (await sources.Get(user.Id(), s)).GetTrack(externalId) == null)
+                    if (await (await sources.GetDestination(user.Id(), s)).GetTrack(externalId) == null)
                         return Results.Problem($"That {s} track doesn't exist.", statusCode: 400);
                 }
                 if (link == null) song.Links.Add(link = new SongLink { Source = s });
