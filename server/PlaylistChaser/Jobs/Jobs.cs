@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Threading.Channels;
 using Microsoft.EntityFrameworkCore;
 using PlaylistChaser.Data;
+using PlaylistChaser.Sources;
 using PlaylistChaser.Sync;
 
 namespace PlaylistChaser.Jobs;
@@ -39,9 +40,11 @@ public class JobRunner(IServiceScopeFactory scopes, JobQueue queue, ILogger<JobR
             if (job == null) continue;
             job.Status = JobStatus.Running;
             await db.SaveChangesAsync(stop);
+            var sync = scope.ServiceProvider.GetRequiredService<SyncService>();
+            log.LogInformation("Job {JobId} ({Kind}) started", job.Id, job.Kind);
             try
             {
-                await scope.ServiceProvider.GetRequiredService<SyncService>().Run(job);
+                await sync.Run(job);
                 job.Status = JobStatus.Done;
             }
             catch (Exception ex)
@@ -49,11 +52,20 @@ public class JobRunner(IServiceScopeFactory scopes, JobQueue queue, ILogger<JobR
                 log.LogWarning(ex, "Job {JobId} ({Kind}) failed", job.Id, job.Kind);
                 job.Status = JobStatus.Failed;
                 job.Message = ex.Message;
+                var quota = ex is QuotaExceededException;
+                // a push already wrote a clearer "limit reached" line; reading a playlist did not
+                var hasQuotaLine = db.ChangeTracker.Entries<JobLog>().Any(e => e.Entity.IsQuota) || await db.JobLogs.AnyAsync(l => l.JobId == job.Id && l.IsQuota, stop);
+                if (!quota || !hasQuotaLine)
+                    sync.Note(job, quota ? JobLogLevel.Warn : JobLogLevel.Error, ex.Message, isQuota: quota);
             }
             job.FinishedAt = DateTime.UtcNow;
-            db.ChangeTracker.Clear(); // a failed SaveChanges inside the job must not block saving the job's result
+            // a failed SaveChanges inside the job must not block saving the job's result; its unsaved log lines are kept
+            var lines = db.ChangeTracker.Entries<JobLog>().Where(e => e.State == EntityState.Added).Select(e => e.Entity).ToList();
+            db.ChangeTracker.Clear();
+            db.JobLogs.AddRange(lines);
             db.Jobs.Update(job);
             await db.SaveChangesAsync(stop);
+            log.LogInformation("Job {JobId} ({Kind}) {Status}", job.Id, job.Kind, job.Status);
         }
     }
 }

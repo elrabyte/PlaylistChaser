@@ -10,6 +10,7 @@ using PlaylistChaser.Data;
 using PlaylistChaser.Jobs;
 using PlaylistChaser.Playlists;
 using PlaylistChaser.Sources;
+using PlaylistChaser.Status;
 using PlaylistChaser.Sync;
 using PlaylistChaser.Tasks;
 
@@ -63,6 +64,10 @@ builder.Services.Configure<ForwardedHeadersOptions>(o =>
 });
 builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)));
 
+var serverLog = new ServerLogBuffer();
+builder.Logging.AddProvider(serverLog);
+builder.Services.AddSingleton(serverLog);
+
 builder.Services.AddScoped<SourceAccounts>();
 builder.Services.AddScoped<ISourceProvider>(sp => sp.GetRequiredService<SourceAccounts>());
 builder.Services.AddScoped<SyncService>();
@@ -97,6 +102,7 @@ api.MapSourceEndpoints();
 api.MapPlaylistEndpoints();
 api.MapJobEndpoints();
 api.MapTaskEndpoints();
+api.MapStatusEndpoints();
 app.MapFallback("/api/{**rest}", () => Results.NotFound());
 app.MapFallbackToFile("index.html"); // client-side routes of the SPA
 

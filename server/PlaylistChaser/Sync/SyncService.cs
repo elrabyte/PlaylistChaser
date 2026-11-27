@@ -17,6 +17,16 @@ public class SyncService(AppDb db, ISourceProvider sources)
         _ => SyncAll(job),
     };
 
+    /// <summary>Adds a line to the job's log on the Status page; it is saved with the job's next save.</summary>
+    public void Note(Job job, JobLogLevel level, string text, bool isQuota = false) =>
+        db.JobLogs.Add(new JobLog { JobId = job.Id, At = DateTime.UtcNow, Level = level, Message = text, IsQuota = isQuota });
+
+    private static string Names(IEnumerable<string> names, int show = 5)
+    {
+        var list = names.ToList();
+        return string.Join(", ", list.Take(show)) + (list.Count > show ? $" (+{list.Count - show} more)" : "");
+    }
+
     public async Task Pull(Job job, int playlistId, bool pullMembers = true)
     {
         var p = await db.Playlists.Owned(job.UserId).Include(x => x.Links).SingleAsync(x => x.Id == playlistId);
@@ -36,7 +46,10 @@ public class SyncService(AppDb db, ISourceProvider sources)
             await db.SaveChangesAsync();
             var source = await sources.Get(job.UserId, link.Source);
             var tracks = (await source.GetTracks(link.ExternalId)).DistinctBy(t => t.Id).ToList();
+            var before = await db.PlaylistSongs.CountAsync(ps => ps.PlaylistId == p.Id);
             await AddPlaylistSongs(p.Id, await ImportSongs(job.UserId, link.Source, tracks));
+            var added = await db.PlaylistSongs.CountAsync(ps => ps.PlaylistId == p.Id) - before;
+            Note(job, JobLogLevel.Info, $"{p.Name}: {tracks.Count} songs on {link.Source}, {added} new.");
         }
         p.LastPulledAt = DateTime.UtcNow;
         job.Message = null;
@@ -71,6 +84,12 @@ public class SyncService(AppDb db, ISourceProvider sources)
             });
             job.Done++;
             await db.SaveChangesAsync();
+        }
+        if (unmatched.Count > 0)
+        {
+            var missing = unmatched.Where(s => s.Links.Single(l => l.Source == target).Status == LinkStatus.NotFound).ToList();
+            Note(job, missing.Count > 0 ? JobLogLevel.Warn : JobLogLevel.Info,
+                $"{p.Name}: searched {unmatched.Count} songs on {target}, {missing.Count} not found" + (missing.Count > 0 ? $": {Names(missing.Select(s => s.Name))}." : "."));
         }
 
         // 2. create the target playlist on first push
@@ -107,12 +126,20 @@ public class SyncService(AppDb db, ISourceProvider sources)
             }
             catch (QuotaExceededException ex) { quota = ex; break; }
             // a track the service refuses (removed, region-locked) shouldn't stop the rest
-            catch (TrackRejectedException) when (chunk.Length == 1) { chunk[0].Link.Status = LinkStatus.NotFound; }
+            catch (TrackRejectedException) when (chunk.Length == 1)
+            {
+                chunk[0].Link.Status = LinkStatus.NotFound;
+                Note(job, JobLogLevel.Warn, $"{p.Name}: {target} refused \"{chunk[0].Song.Name}\" (removed or not available).");
+            }
             job.Done += chunk.Length;
             await db.SaveChangesAsync();
         }
 
         link.LastPushedAt = DateTime.UtcNow;
+        if (job.Done > 0 || quota == null)
+            Note(job, JobLogLevel.Info, $"{p.Name}: added {job.Done} of {toAdd.Count} songs to {target}.");
+        if (quota != null)
+            Note(job, JobLogLevel.Warn, $"{p.Name}: {target}'s daily limit was reached. {toAdd.Count - job.Done} songs wait until it resets.", isQuota: true);
         await db.SaveChangesAsync();
         if (quota != null) throw quota;
         await source.UpdatePlaylist(link.ExternalId, p.Name, await Describe(p, target));
@@ -130,7 +157,7 @@ public class SyncService(AppDb db, ISourceProvider sources)
             if (pull)
             {
                 try { await Pull(job, p.Id, pullMembers: false); } // members are simple playlists, pulled earlier in this loop
-                catch (Exception ex) { errors.Add($"{p.Name}: {ex.Message}"); continue; }
+                catch (Exception ex) { errors.Add($"{p.Name}: {ex.Message}"); Note(job, JobLogLevel.Error, $"{p.Name}: update failed: {ex.Message}"); continue; }
             }
             if (!push) continue;
 
@@ -139,7 +166,7 @@ public class SyncService(AppDb db, ISourceProvider sources)
                 if (blocked.Contains(target)) continue;
                 try { await Push(job, p.Id, target); }
                 catch (QuotaExceededException ex) { blocked.Add(target); errors.Add(ex.Message); }
-                catch (Exception ex) { errors.Add($"{p.Name} → {target}: {ex.Message}"); }
+                catch (Exception ex) { errors.Add($"{p.Name} → {target}: {ex.Message}"); Note(job, JobLogLevel.Error, $"{p.Name}: copy to {target} failed: {ex.Message}"); }
             }
         }
         job.Message = errors.Count == 0 ? null : string.Join("\n", errors.Distinct());

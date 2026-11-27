@@ -12,6 +12,7 @@ public enum LinkStatus { Origin = 1, Found = 2, NotFound = 3, Manual = 4 }
 // PullAll/PushAll/SyncAll cover all of a user's playlists; scheduled tasks run those three
 public enum JobKind { Pull = 1, Push = 2, SyncAll = 3, PullAll = 4, PushAll = 5 }
 public enum JobStatus { Queued = 1, Running = 2, Done = 3, Failed = 4 }
+public enum JobLogLevel { Info = 1, Warn = 2, Error = 3 }
 
 public class AppUser : IdentityUser { }
 
@@ -109,6 +110,17 @@ public class Job
     public DateTime? FinishedAt { get; set; }
 }
 
+/// <summary>One line of what a job did, shown on the Status page. <see cref="IsQuota"/> marks "a daily limit was reached".</summary>
+public class JobLog
+{
+    public int Id { get; set; }
+    public int JobId { get; set; }
+    public DateTime At { get; set; }
+    public JobLogLevel Level { get; set; }
+    public string Message { get; set; } = "";
+    public bool IsQuota { get; set; }
+}
+
 /// <summary>A recurring job a user set up on the Tasks page; <see cref="Kind"/> is PullAll, PushAll or SyncAll.</summary>
 public class ScheduledTask
 {
@@ -134,6 +146,7 @@ public partial class AppDb(DbContextOptions<AppDb> options, IDataProtectionProvi
     public DbSet<PlaylistSong> PlaylistSongs => Set<PlaylistSong>();
     public DbSet<PushedSong> PushedSongs => Set<PushedSong>();
     public DbSet<Job> Jobs => Set<Job>();
+    public DbSet<JobLog> JobLogs => Set<JobLog>();
     public DbSet<ScheduledTask> ScheduledTasks => Set<ScheduledTask>();
 
     // all times are stored as UTC; SQLite forgets the kind, so mark them UTC on read (Postgres already does)
@@ -193,6 +206,11 @@ public partial class AppDb(DbContextOptions<AppDb> options, IDataProtectionProvi
         {
             e.HasOne<AppUser>().WithMany().HasForeignKey(j => j.UserId).OnDelete(DeleteBehavior.Cascade);
             e.HasIndex(j => new { j.UserId, j.CreatedAt });
+        });
+        b.Entity<JobLog>(e =>
+        {
+            e.HasOne<Job>().WithMany().HasForeignKey(l => l.JobId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(l => new { l.JobId, l.At });
         });
         b.Entity<ScheduledTask>().HasOne<AppUser>().WithMany().HasForeignKey(t => t.UserId).OnDelete(DeleteBehavior.Cascade);
     }

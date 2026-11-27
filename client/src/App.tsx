@@ -1,6 +1,6 @@
 import { AppShell, Center, Group, Loader, NavLink, Text, UnstyledButton, Stack } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
-import { IconClock, IconPlaylist, IconSettings } from "@tabler/icons-react";
+import { IconActivity, IconClock, IconPlaylist, IconSettings } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, Route, Routes, useLocation } from "react-router";
 import { api, ApiError } from "./api";
@@ -10,11 +10,13 @@ import { PlaylistPage } from "./pages/PlaylistPage";
 import { PlaylistsPage } from "./pages/PlaylistsPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { SharePage } from "./pages/SharePage";
+import { StatusPage } from "./pages/StatusPage";
 import { TasksPage } from "./pages/TasksPage";
 
 const NAV = [
   { to: "/", label: "Playlists", icon: IconPlaylist },
   { to: "/tasks", label: "Tasks", icon: IconClock },
+  { to: "/status", label: "Status", icon: IconActivity },
   { to: "/settings", label: "Settings", icon: IconSettings },
 ];
 
@@ -53,6 +55,7 @@ export function App() {
           <Route path="/" element={<PlaylistsPage />} />
           <Route path="/playlists/:id" element={<PlaylistPage />} />
           <Route path="/tasks" element={<TasksPage />} />
+          <Route path="/status" element={<StatusPage me={me.data} />} />
           <Route path="/settings" element={<SettingsPage me={me.data} />} />
           <Route path="/share" element={<SharePage />} />
           <Route path="*" element={<PlaylistsPage />} />

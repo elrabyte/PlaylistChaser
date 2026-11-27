@@ -10,18 +10,29 @@ import { ago } from "../format";
 const isActive = (j: Job) => j.status === "queued" || j.status === "running";
 const STATUS_COLOR = { queued: "gray", running: "blue", done: "green", failed: "red" } as const;
 
+/** Describes a job in words, e.g. "Copy Road Trip to Spotify". */
+export function useJobTitle() {
+  const queryClient = useQueryClient();
+  const providers = useProviders();
+  return (j: Job) => {
+    const name = queryClient.getQueryData<Playlist[]>(["playlists"])?.find((p) => p.id === j.playlistId)?.name ?? "playlist";
+    if (j.kind === "pull") return `Update ${name}`;
+    if (j.kind === "push") return `Copy ${name} to ${providers.label(j.target!)}`;
+    return TASK_LABEL[j.kind];
+  };
+}
+
 /** Header button showing background jobs; polls quickly while one is running. */
 export function JobsIndicator() {
   const queryClient = useQueryClient();
   const [opened, { open, close }] = useDisclosure(false);
-  const providers = useProviders();
+  const title = useJobTitle();
   const isMobile = useMediaQuery("(max-width: 48em)");
   const jobs = useQuery({
     queryKey: ["jobs"],
     queryFn: api.jobs,
     refetchInterval: (q) => (q.state.data?.some(isActive) ? 2000 : 30000),
   });
-  const playlists = queryClient.getQueryData<Playlist[]>(["playlists"]);
   const active = jobs.data?.filter(isActive).length ?? 0;
 
   // when a job finishes, the playlists it touched have changed
@@ -32,13 +43,6 @@ export function JobsIndicator() {
     }
     previous.current = active;
   }, [active, queryClient]);
-
-  const title = (j: Job) => {
-    const name = playlists?.find((p) => p.id === j.playlistId)?.name ?? "playlist";
-    if (j.kind === "pull") return `Update ${name}`;
-    if (j.kind === "push") return `Copy ${name} to ${providers.label(j.target!)}`;
-    return TASK_LABEL[j.kind];
-  };
 
   return (
     <>
