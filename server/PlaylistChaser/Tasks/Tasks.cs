@@ -38,13 +38,19 @@ public class Scheduler(IServiceScopeFactory scopes, JobQueue queue) : Background
         await db.SaveChangesAsync();
     }
 
+    /// <summary>Finished jobs and their log lines are kept for 30 days.</summary>
+    public static Task Purge(AppDb db, DateTime now) =>
+        db.Jobs.Where(j => j.FinishedAt != null && j.FinishedAt < now.AddDays(-30)).ExecuteDeleteAsync();
+
     protected override async Task ExecuteAsync(CancellationToken stop)
     {
         using var timer = new PeriodicTimer(TimeSpan.FromMinutes(1));
         while (await timer.WaitForNextTickAsync(stop))
         {
             using var scope = scopes.CreateScope();
-            await RunDue(scope.ServiceProvider.GetRequiredService<AppDb>(), queue, DateTime.UtcNow);
+            var db = scope.ServiceProvider.GetRequiredService<AppDb>();
+            await RunDue(db, queue, DateTime.UtcNow);
+            await Purge(db, DateTime.UtcNow);
         }
     }
 }

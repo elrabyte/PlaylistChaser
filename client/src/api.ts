@@ -52,6 +52,24 @@ export type TaskKind = "pullAll" | "pushAll" | "syncAll";
 export const TASK_LABEL: Record<TaskKind, string> = { pullAll: "Fetch all playlists", pushAll: "Copy new songs everywhere", syncAll: "Fetch and copy everything" };
 export interface ScheduledTask { id: number; kind: TaskKind; cron: string; enabled: boolean; lastRunAt: string | null; nextRunAt: string | null }
 export type TaskInput = Pick<ScheduledTask, "kind" | "cron" | "enabled">;
+
+export interface JobLogLine { id: number; jobId: number; at: string; level: "info" | "warn" | "error"; message: string; isQuota: boolean }
+export interface StatusInfo {
+  tasks: (ScheduledTask & { lastResult: { status: Job["status"]; finishedAt: string | null; message: string | null } | null })[];
+  playlists: {
+    id: number;
+    name: string;
+    kind: Playlist["kind"];
+    mainSource: Source | null;
+    lastPulledAt: string | null;
+    songCount: number;
+    links: { source: Source; lastPushedAt: string | null; pushed: number }[];
+  }[];
+  /** set while a service's daily limit is reached and has not reset yet */
+  limit: { message: string; at: string; resetsAt: string } | null;
+}
+export type ServerLogLevel = "information" | "warning" | "error";
+export interface ServerLogLine { at: string; level: string; category: string; message: string }
 export interface User { id: string; userName: string; isAdmin: boolean }
 export interface AccountPlaylist { id: string; name: string; creator: string | null; thumbnailUrl: string | null; isMine: boolean; url: string }
 
@@ -115,4 +133,8 @@ export const api = {
   updateTask: (id: number, task: TaskInput) => call<ScheduledTask>("PUT", `/tasks/${id}`, task),
   deleteTask: (id: number) => call<void>("DELETE", `/tasks/${id}`),
   runTask: (id: number) => call<Job>("POST", `/tasks/${id}/run`),
+
+  status: () => call<StatusInfo>("GET", "/status"),
+  jobLogs: (id: number) => call<JobLogLine[]>("GET", `/jobs/${id}/logs`),
+  serverLogs: (level: ServerLogLevel) => call<ServerLogLine[]>("GET", `/logs?level=${level}`),
 };

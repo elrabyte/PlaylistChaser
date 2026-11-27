@@ -279,6 +279,37 @@ namespace PlaylistChaser.Data.Migrations
                     b.ToTable("Jobs");
                 });
 
+            modelBuilder.Entity("PlaylistChaser.Data.JobLog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("At")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsQuota")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("JobId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Level")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("JobId", "At");
+
+                    b.ToTable("JobLogs");
+                });
+
             modelBuilder.Entity("PlaylistChaser.Data.Playlist", b =>
                 {
                     b.Property<int>("Id")
@@ -579,6 +610,15 @@ namespace PlaylistChaser.Data.Migrations
                     b.HasOne("PlaylistChaser.Data.AppUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("PlaylistChaser.Data.JobLog", b =>
+                {
+                    b.HasOne("PlaylistChaser.Data.Job", null)
+                        .WithMany()
+                        .HasForeignKey("JobId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

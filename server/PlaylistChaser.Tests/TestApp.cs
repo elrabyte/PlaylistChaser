@@ -66,6 +66,7 @@ public sealed class TestApp : WebApplicationFactory<Program>
         db.Jobs.Add(job);
         await db.SaveChangesAsync();
         await scope.ServiceProvider.GetRequiredService<SyncService>().Run(job);
+        (job.Status, job.FinishedAt) = (JobStatus.Done, DateTime.UtcNow); // what the real worker does when a job ends
         await db.SaveChangesAsync();
         return job;
     }
