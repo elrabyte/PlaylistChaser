@@ -10,7 +10,7 @@ public enum PlaylistKind { Simple = 1, Combined = 2 }
 // Origin = the song was imported from this service; it is the song's identity there and can't be edited.
 public enum LinkStatus { Origin = 1, Found = 2, NotFound = 3, Manual = 4 }
 // PullAll/PushAll/SyncAll cover all of a user's playlists; scheduled tasks run those three
-public enum JobKind { Pull = 1, Push = 2, SyncAll = 3, PullAll = 4, PushAll = 5 }
+public enum JobKind { Pull = 1, Push = 2, SyncAll = 3, PullAll = 4, PushAll = 5, Plugin = 6 }
 public enum JobStatus { Queued = 1, Running = 2, Done = 3, Failed = 4 }
 public enum JobLogLevel { Info = 1, Warn = 2, Error = 3 }
 
@@ -106,6 +106,8 @@ public class Job
     public int Done { get; set; }
     public int Total { get; set; }
     public string? Message { get; set; }
+    /// <summary>Only for plugin jobs: what they are called on the Status page.</summary>
+    public string? Title { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? FinishedAt { get; set; }
 }

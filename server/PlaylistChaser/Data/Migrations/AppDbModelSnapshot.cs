@@ -265,6 +265,9 @@ namespace PlaylistChaser.Data.Migrations
                     b.Property<int?>("Target")
                         .HasColumnType("integer");
 
+                    b.Property<string>("Title")
+                        .HasColumnType("text");
+
                     b.Property<int>("Total")
                         .HasColumnType("integer");
 

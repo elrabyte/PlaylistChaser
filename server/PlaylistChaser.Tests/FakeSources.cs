@@ -12,7 +12,7 @@ public class FakeSources : ISourceProvider
 }
 
 /// <summary>An in-memory music service. Search matches by exact track name.</summary>
-public class FakeSource(Source kind, int maxBatch) : IPlaylistDestination
+public class FakeSource(Source kind, int maxBatch) : IPlaylistDestination, IMetadataSource
 {
     public record FakePlaylist(string Name, bool IsMine, List<string> Tracks);
 
@@ -54,6 +54,9 @@ public class FakeSource(Source kind, int maxBatch) : IPlaylistDestination
     }
 
     public Task<RemoteTrack?> GetTrack(string id) => Task.FromResult(Catalog.GetValueOrDefault(id));
+
+    public Task<TrackMetadata?> GetMetadata(string trackId) => Task.FromResult<TrackMetadata?>(
+        Catalog.TryGetValue(trackId, out var t) ? new TrackMetadata(t.Name, t.Artist, "Album of " + t.Name, 2020, 3, null, "ISRC-" + trackId) : null);
 
     public Task<RemoteTrack?> Search(string name, string artist) =>
         Task.FromResult(Catalog.Values.FirstOrDefault(t => t.Name == name));

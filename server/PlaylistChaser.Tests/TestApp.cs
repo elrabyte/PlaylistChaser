@@ -16,6 +16,7 @@ namespace PlaylistChaser.Tests;
 public sealed class TestApp : WebApplicationFactory<Program>
 {
     public const string AdminPassword = "admin-password-1";
+    public const string PluginToken = "test-plugin-token";
     public FakeSources Sources { get; } = new();
     private readonly string dir = Directory.CreateTempSubdirectory("playlistchaser-test").FullName;
 
@@ -29,6 +30,7 @@ public sealed class TestApp : WebApplicationFactory<Program>
         builder.UseSetting("DATA_DIR", dir);
         builder.UseSetting("ADMIN_USERNAME", "admin");
         builder.UseSetting("ADMIN_PASSWORD", AdminPassword);
+        builder.UseSetting("PLUGIN_TOKEN", PluginToken);
         builder.UseSetting("YOUTUBE_CLIENT_ID", "yt-id");
         builder.UseSetting("YOUTUBE_CLIENT_SECRET", "yt-secret");
         builder.UseSetting("SPOTIFY_CLIENT_ID", "sp-id");

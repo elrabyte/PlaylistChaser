@@ -1,6 +1,6 @@
 import { AppShell, Center, Group, Loader, NavLink, Text, UnstyledButton, Stack } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
-import { IconActivity, IconClock, IconPlaylist, IconSettings } from "@tabler/icons-react";
+import { IconActivity, IconClock, IconPlaylist, IconPuzzle, IconSettings } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, Route, Routes, useLocation } from "react-router";
 import { api, ApiError } from "./api";
@@ -10,6 +10,7 @@ import { PlaylistPage } from "./pages/PlaylistPage";
 import { PlaylistsPage } from "./pages/PlaylistsPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { SharePage } from "./pages/SharePage";
+import { PluginPage } from "./pages/PluginPage";
 import { StatusPage } from "./pages/StatusPage";
 import { TasksPage } from "./pages/TasksPage";
 
@@ -22,6 +23,8 @@ const NAV = [
 
 export function App() {
   const me = useQuery({ queryKey: ["me"], queryFn: api.me });
+  const plugins = useQuery({ queryKey: ["plugins"], queryFn: api.plugins, enabled: !!me.data, staleTime: 60_000 });
+  const nav = [...NAV, ...(plugins.data ?? []).map((p) => ({ to: `/plugin/${p.id}`, label: p.name, icon: IconPuzzle }))];
   const isMobile = useMediaQuery("(max-width: 48em)");
   const { pathname } = useLocation();
   const active = (to: string) => (to === "/" ? pathname === "/" || pathname.startsWith("/playlists") : pathname.startsWith(to));
@@ -45,7 +48,7 @@ export function App() {
       </AppShell.Header>
 
       <AppShell.Navbar p="sm">
-        {NAV.map((n) => (
+        {nav.map((n) => (
           <NavLink key={n.to} component={Link} to={n.to} label={n.label} leftSection={<n.icon size={18} />} active={active(n.to)} />
         ))}
       </AppShell.Navbar>
@@ -56,6 +59,7 @@ export function App() {
           <Route path="/playlists/:id" element={<PlaylistPage />} />
           <Route path="/tasks" element={<TasksPage />} />
           <Route path="/status" element={<StatusPage me={me.data} />} />
+          <Route path="/plugin/:id" element={<PluginPage />} />
           <Route path="/settings" element={<SettingsPage me={me.data} />} />
           <Route path="/share" element={<SharePage />} />
           <Route path="*" element={<PlaylistsPage />} />
@@ -64,7 +68,7 @@ export function App() {
 
       <AppShell.Footer style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
         <Group grow h="100%" gap={0}>
-          {NAV.map((n) => (
+          {nav.map((n) => (
             <UnstyledButton key={n.to} component={Link} to={n.to} h="100%" c={active(n.to) ? "blue" : "dimmed"}>
               <Stack align="center" gap={2}>
                 <n.icon size={22} />

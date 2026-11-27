@@ -17,6 +17,7 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.13" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
     <PackageReference Include="SpotifyAPI.Web" Version="7.4.2" />
+    <PackageReference Include="Yarp.ReverseProxy" Version="2.3.0" />
     <PackageReference Include="YoutubeExplode" Version="6.6.2" />
   </ItemGroup>
 
