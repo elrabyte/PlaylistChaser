@@ -8,6 +8,7 @@ using PlaylistChaser;
 using PlaylistChaser.Auth;
 using PlaylistChaser.Data;
 using PlaylistChaser.Jobs;
+using PlaylistChaser.Plugins;
 using PlaylistChaser.Playlists;
 using PlaylistChaser.Sources;
 using PlaylistChaser.Status;
@@ -72,6 +73,14 @@ builder.Services.AddScoped<SourceAccounts>();
 builder.Services.AddScoped<ISourceProvider>(sp => sp.GetRequiredService<SourceAccounts>());
 builder.Services.AddScoped<SyncService>();
 builder.Services.AddSingleton<JobQueue>();
+
+// download plugins run as their own containers; PLUGINS lists them, PLUGIN_TOKEN is their shared secret
+var plugins = PluginConfig.Parse(config["PLUGINS"]);
+var pluginToken = config["PLUGIN_TOKEN"];
+if (plugins.Count > 0 && string.IsNullOrEmpty(pluginToken)) throw new InvalidOperationException("PLUGIN_TOKEN must be set when PLUGINS is.");
+builder.Services.AddSingleton<IReadOnlyList<PluginDef>>(plugins);
+builder.Services.AddHttpClient("plugins", c => c.Timeout = TimeSpan.FromSeconds(3));
+builder.Services.AddProxy(plugins);
 builder.Services.AddHostedService<JobRunner>();
 builder.Services.AddHostedService<Scheduler>();
 
@@ -103,6 +112,9 @@ api.MapPlaylistEndpoints();
 api.MapJobEndpoints();
 api.MapTaskEndpoints();
 api.MapStatusEndpoints();
+api.MapPluginMenu(plugins, app.Services.GetRequiredService<IHttpClientFactory>());
+app.MapPluginApi(pluginToken);
+app.MapReverseProxy().RequireAuthorization();
 app.MapFallback("/api/{**rest}", () => Results.NotFound());
 app.MapFallbackToFile("index.html"); // client-side routes of the SPA
 

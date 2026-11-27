@@ -18,6 +18,7 @@ export function useJobTitle() {
     const name = queryClient.getQueryData<Playlist[]>(["playlists"])?.find((p) => p.id === j.playlistId)?.name ?? "playlist";
     if (j.kind === "pull") return `Update ${name}`;
     if (j.kind === "push") return `Copy ${name} to ${providers.label(j.target!)}`;
+    if (j.kind === "plugin") return j.title ?? "Plugin job";
     return TASK_LABEL[j.kind];
   };
 }

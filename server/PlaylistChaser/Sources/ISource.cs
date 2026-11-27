@@ -108,3 +108,12 @@ public static partial class SourceUrls
         ? $"https://www.youtube.com/watch?v={id}"
         : $"https://open.spotify.com/track/{id}";
 }
+
+/// <summary>Track details a download plugin tags files with: album, year, track number, cover, ISRC.</summary>
+public record TrackMetadata(string Title, string Artist, string? Album, int? Year, int? TrackNumber, string? CoverUrl, string? Isrc);
+
+/// <summary>Metadata capability: trustworthy details for a track on this service.</summary>
+public interface IMetadataSource
+{
+    Task<TrackMetadata?> GetMetadata(string trackId);
+}

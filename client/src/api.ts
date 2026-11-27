@@ -28,7 +28,8 @@ export interface Song {
 }
 export interface Job {
   id: number;
-  kind: "pull" | "push" | TaskKind;
+  kind: "pull" | "push" | "plugin" | TaskKind;
+  title: string | null;
   playlistId: number | null;
   target: Source | null;
   status: "queued" | "running" | "done" | "failed";
@@ -126,6 +127,7 @@ export const api = {
   resetSongLink: (songId: number, source: Source) => call<void>("DELETE", `/songs/${songId}/links/${source}`),
 
   jobs: () => call<Job[]>("GET", "/jobs"),
+  plugins: () => call<{ id: string; name: string }[]>("GET", "/plugins"),
   syncAll: () => call<Job>("POST", "/sync"),
 
   tasks: () => call<ScheduledTask[]>("GET", "/tasks"),

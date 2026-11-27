@@ -2,7 +2,7 @@ using SpotifyAPI.Web;
 
 namespace PlaylistChaser.Sources;
 
-public class SpotifySource(string accessToken, string? spotifyUserId) : IPlaylistDestination
+public class SpotifySource(string accessToken, string? spotifyUserId) : IPlaylistDestination, IMetadataSource
 {
     private readonly SpotifyClient api = new(accessToken);
 
@@ -53,6 +53,18 @@ public class SpotifySource(string accessToken, string? spotifyUserId) : IPlaylis
     public async Task<RemoteTrack?> GetTrack(string id)
     {
         try { return ToTrack(await Call(() => api.Tracks.Get(id))); }
+        catch (APIException ex) when (ex.Response?.StatusCode is System.Net.HttpStatusCode.NotFound or System.Net.HttpStatusCode.BadRequest) { return null; }
+    }
+
+    public async Task<TrackMetadata?> GetMetadata(string trackId)
+    {
+        try
+        {
+            var t = await Call(() => api.Tracks.Get(trackId));
+            var year = t.Album?.ReleaseDate is { Length: >= 4 } date && int.TryParse(date[..4], out var y) ? y : (int?)null;
+            return new TrackMetadata(t.Name, t.Artists.FirstOrDefault()?.Name ?? "", t.Album?.Name, year, t.TrackNumber,
+                t.Album?.Images?.OrderByDescending(i => i.Height).FirstOrDefault()?.Url, t.ExternalIds?.GetValueOrDefault("isrc"));
+        }
         catch (APIException ex) when (ex.Response?.StatusCode is System.Net.HttpStatusCode.NotFound or System.Net.HttpStatusCode.BadRequest) { return null; }
     }
 
