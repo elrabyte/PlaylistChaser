@@ -368,3 +368,4 @@ server/PlaylistChaser/.data/
 server/PlaylistChaser/wwwroot/
 client/dist/
 client/dev-dist/
+.data-local/

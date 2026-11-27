@@ -6,6 +6,7 @@
 # over https. See the README for HTTPS, Google/Spotify setup, backups and upgrades.
 
 x-db-password: &db-password CHANGE_ME  # Postgres password, shared by both services
+x-plugin-token: &plugin-token CHANGE_ME  # shared secret between the app and the download plugin
 
 services:
   app:
@@ -26,10 +27,29 @@ services:
       YOUTUBE_CLIENT_SECRET: ""
       SPOTIFY_CLIENT_ID: ""         # optional; from the Spotify developer dashboard (README: Spotify)
       SPOTIFY_CLIENT_SECRET: ""
+      # the download plugin: a container that writes music files to the share below (remove both lines to turn it off)
+      PLUGINS: download=http://downloader:8080
+      PLUGIN_TOKEN: *plugin-token
     volumes:
       # encryption keys for logins and stored YouTube/Spotify tokens; back it up with the database.
       # Using a host path instead? Give it to UID 1654 (the container's user).
       - app-data:/data
+
+  # Downloads songs of your playlists as tagged audio files, plus playlist files for Navidrome, Jellyfin or Plex.
+  # Set it up in the app: Download music (menu). It is not reachable from outside; the app reaches it.
+  downloader:
+    image: ghcr.io/elrabyte/playlistchaser-downloader:latest
+    restart: unless-stopped
+    user: "568:568"              # the TrueNAS apps user, so Plex and Navidrome can read what it writes
+    depends_on:
+      - app
+    environment:
+      APP_URL: http://app:8080
+      PLUGIN_TOKEN: *plugin-token
+      TZ: Etc/UTC                # time zone for the download schedule
+    volumes:
+      - downloader-config:/config
+      - /mnt/CHANGE_ME/music:/music   # the music share (a TrueNAS dataset) that Plex/Navidrome/Jellyfin read
 
   db:
     image: postgres:17-alpine
@@ -49,3 +69,4 @@ services:
 volumes:
   app-data:
   db-data:
+  downloader-config:

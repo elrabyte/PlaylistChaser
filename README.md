@@ -23,6 +23,7 @@ Repository: **https://github.com/elrabyte/PlaylistChaser**
 # over https. See the README for HTTPS, Google/Spotify setup, backups and upgrades.
 
 x-db-password: &db-password CHANGE_ME  # Postgres password, shared by both services
+x-plugin-token: &plugin-token CHANGE_ME  # shared secret between the app and the download plugin
 
 services:
   app:
@@ -43,10 +44,29 @@ services:
       YOUTUBE_CLIENT_SECRET: ""
       SPOTIFY_CLIENT_ID: ""         # optional; from the Spotify developer dashboard (README: Spotify)
       SPOTIFY_CLIENT_SECRET: ""
+      # the download plugin: a container that writes music files to the share below (remove both lines to turn it off)
+      PLUGINS: download=http://downloader:8080
+      PLUGIN_TOKEN: *plugin-token
     volumes:
       # encryption keys for logins and stored YouTube/Spotify tokens; back it up with the database.
       # Using a host path instead? Give it to UID 1654 (the container's user).
       - app-data:/data
+
+  # Downloads songs of your playlists as tagged audio files, plus playlist files for Navidrome, Jellyfin or Plex.
+  # Set it up in the app: Download music (menu). It is not reachable from outside; the app reaches it.
+  downloader:
+    image: ghcr.io/elrabyte/playlistchaser-downloader:latest
+    restart: unless-stopped
+    user: "568:568"              # the TrueNAS apps user, so Plex and Navidrome can read what it writes
+    depends_on:
+      - app
+    environment:
+      APP_URL: http://app:8080
+      PLUGIN_TOKEN: *plugin-token
+      TZ: Etc/UTC                # time zone for the download schedule
+    volumes:
+      - downloader-config:/config
+      - /mnt/CHANGE_ME/music:/music   # the music share (a TrueNAS dataset) that Plex/Navidrome/Jellyfin read
 
   db:
     image: postgres:17-alpine
@@ -66,6 +86,7 @@ services:
 volumes:
   app-data:
   db-data:
+  downloader-config:
 ```
 
 2. Replace every `CHANGE_ME` in it:
@@ -136,6 +157,23 @@ The proxy must pass `X-Forwarded-Proto`; all of the above do.
   - Each user starts with *Fetch* every 6 hours (`0 */6 * * *`) and *Copy* half an hour later (`30 */6 * * *`). Change, add, switch off or delete them there.
   - Schedules use the `TZ` time zone from the compose file (default UTC).
 - **Coming from an older PlaylistChaser?** Add your playlists again, then use *⋯ → Use an existing playlist as copy* to link the copies the old version made, so no duplicates are created.
+
+## Download music (plugin)
+
+The download plugin saves the songs of your playlists as tagged audio files, plus one playlist file per playlist, into a folder that Navidrome, Jellyfin or Plex can read. It runs as its own container (`downloader` in the compose file), so yt-dlp and ffmpeg never touch the main app.
+
+1. **Mount a music share.** In the compose file, replace `/mnt/CHANGE_ME/music` with the TrueNAS dataset your music apps read. The container runs as `568:568` (the TrueNAS apps user), so give that user write access to the dataset.
+2. **Set the token.** `PLUGIN_TOKEN` (top of the file) must be the same in both services. Any long random string works.
+3. **Start both.** Restart the app and the downloader.
+4. **Configure it in the app.** Open **Download music** in the menu: pick a folder inside `/music` (created if missing), the playlists to download, where to get the audio (YouTube) and the metadata (Spotify, or name and artist only), and a schedule in cron form (`0 4 * * *` is every day at 04:00). Save, then **Download now** to try it.
+5. **Point your music app** at the folder. Playlist files are in `Playlists/`.
+
+What happens on each run:
+- Songs without a YouTube match get one (free search). A song that isn't on YouTube is skipped and reported on the Status page.
+- New songs are downloaded and tagged (title, artist, album, year, track number, cover). Songs already on disk are not downloaded again.
+- A song removed from every chosen playlist is deleted from disk. A corrected YouTube match replaces the old file.
+
+**Downloading from YouTube breaks YouTube's terms of service** and can stop working whenever YouTube changes something. yt-dlp is pinned in the image; when downloads start failing, the fix is a newer image.
 
 ## Develop
 
