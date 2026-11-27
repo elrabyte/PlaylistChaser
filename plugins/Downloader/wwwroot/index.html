@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Download music</title>
+  <style>
+    :root { color-scheme: light dark; --fg: #1b1b1b; --bg: #fff; --muted: #777; --line: #d8d8d8; --accent: #1c7ed6; }
+    @media (prefers-color-scheme: dark) { :root { --fg: #eee; --bg: #1f1f1f; --muted: #999; --line: #3a3a3a; } }
+    body { font: 15px system-ui, sans-serif; color: var(--fg); background: var(--bg); margin: 0; padding: 16px; }
+    h1 { font-size: 20px; margin: 0 0 12px; }
+    fieldset { border: 1px solid var(--line); border-radius: 8px; margin: 0 0 14px; padding: 12px; }
+    legend { padding: 0 6px; color: var(--muted); }
+    label { display: flex; gap: 8px; align-items: center; padding: 4px 0; }
+    input[type=text], select { width: 100%; box-sizing: border-box; padding: 9px; border: 1px solid var(--line); border-radius: 6px; background: transparent; color: inherit; font: inherit; }
+    .row { display: grid; gap: 10px; }
+    @media (min-width: 640px) { .row { grid-template-columns: 1fr 1fr; } }
+    button { padding: 10px 16px; border: 0; border-radius: 6px; background: var(--accent); color: #fff; font: inherit; cursor: pointer; }
+    button.secondary { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+    button:disabled { opacity: .5; cursor: default; }
+    .hint { color: var(--muted); font-size: 13px; margin: 4px 0 0; }
+    #msg { margin-top: 12px; min-height: 1.2em; }
+    .ok { color: #2b8a3e; } .err { color: #c92a2a; }
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  </style>
+</head>
+<body>
+  <h1>Download music</h1>
+  <p class="hint">Downloads the songs of the playlists you pick as audio files with tags, plus one playlist file per playlist. Point Navidrome, Jellyfin or Plex at the folder.</p>
+
+  <form id="form">
+    <fieldset>
+      <legend>Where</legend>
+      <label>Folder (inside the music share)
+        <input type="text" id="folder" required placeholder="/music/Downloads" />
+      </label>
+      <p class="hint">Use a folder inside <code>/music</code>. It is created if it doesn't exist yet.</p>
+    </fieldset>
+
+    <fieldset>
+      <legend>Which playlists</legend>
+      <div id="playlists"><span class="hint">Loading…</span></div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Where songs come from and what they are tagged with</legend>
+      <div class="row">
+        <label>Download from
+          <select id="downloadFrom"></select>
+        </label>
+        <label>Metadata from
+          <select id="metadataFrom"></select>
+        </label>
+      </div>
+      <p class="hint">Metadata (album, year, track number, cover) comes from the service you pick. Without it, tags use the song name and artist as they are.</p>
+    </fieldset>
+
+    <fieldset>
+      <legend>When</legend>
+      <label><input type="checkbox" id="enabled" /> Download automatically</label>
+      <label>Schedule (cron, server time zone)
+        <input type="text" id="cron" required placeholder="0 4 * * *" />
+      </label>
+      <p class="hint">Examples: <code>0 4 * * *</code> every day at 04:00, <code>0 */6 * * *</code> every 6 hours.</p>
+    </fieldset>
+
+    <div class="actions">
+      <button type="submit" id="save">Save</button>
+      <button type="button" class="secondary" id="run">Download now</button>
+    </div>
+    <div id="msg" role="status"></div>
+  </form>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const show = (text, ok) => { $("msg").textContent = text; $("msg").className = ok ? "ok" : "err"; };
+    const DEFAULT_CRON = "0 4 * * *";
+
+    async function call(path, options) {
+      const res = await fetch(path, options);
+      if (!res.ok) throw new Error((await res.text()) || res.statusText);
+      return res.status === 204 || res.status === 202 ? null : res.json();
+    }
+
+    function fillSelect(select, options, selected, extra = []) {
+      select.innerHTML = "";
+      for (const o of [...extra, ...options]) {
+        const el = document.createElement("option");
+        el.value = o.id; el.textContent = o.name;
+        if (o.id === selected) el.selected = true;
+        select.appendChild(el);
+      }
+    }
+
+    async function load() {
+      const data = await call("api/options");
+      const s = data.settings || {};
+      $("folder").value = s.folder || "/music/Downloads";
+      $("enabled").checked = s.enabled ?? true;
+      $("cron").value = s.cron || DEFAULT_CRON;
+      const chosen = new Set(s.playlistIds || []);
+      $("playlists").innerHTML = "";
+      for (const p of data.playlists) {
+        const label = document.createElement("label");
+        const box = document.createElement("input");
+        box.type = "checkbox"; box.value = p.id; box.checked = chosen.has(p.id);
+        label.append(box, " " + p.name);
+        $("playlists").appendChild(label);
+      }
+      if (data.playlists.length === 0) $("playlists").innerHTML = '<span class="hint">No playlists yet. Add some in PlaylistChaser first.</span>';
+      fillSelect($("downloadFrom"), data.downloadFrom, s.downloadFrom || "youtube");
+      fillSelect($("metadataFrom"), data.metadataFrom, s.metadataFrom || "spotify", [{ id: "none", name: "Nothing (name and artist only)" }]);
+    }
+
+    $("form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const playlistIds = [...document.querySelectorAll("#playlists input:checked")].map((b) => Number(b.value));
+      $("save").disabled = true;
+      try {
+        await call("api/settings", {
+          method: "PUT", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            folder: $("folder").value.trim(), playlistIds,
+            downloadFrom: $("downloadFrom").value, metadataFrom: $("metadataFrom").value,
+            cron: $("cron").value.trim(), enabled: $("enabled").checked,
+          }),
+        });
+        show("Saved.", true);
+      } catch (err) { show(err.message, false); }
+      finally { $("save").disabled = false; }
+    });
+
+    $("run").addEventListener("click", async () => {
+      try { await call("api/run", { method: "POST" }); show("Started. Follow it on the Status page.", true); }
+      catch (err) { show(err.message, false); }
+    });
+
+    load().catch((err) => show("Could not load the settings: " + err.message, false));
+  </script>
+</body>
+</html>

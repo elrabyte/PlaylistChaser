@@ -12,6 +12,9 @@
   - `Jobs/Jobs.cs`: in-process `Channel` queue, a single worker, and `/api/jobs`.
   - `Tasks/Tasks.cs`: per-user scheduled tasks (cron via Cronos, server `TZ`), the minute-tick `Scheduler`, default tasks for new users, and `/api/tasks`.
   - `Playlists/PlaylistEndpoints.cs`: playlist and song-link endpoints.
+  - `Status/StatusEndpoints.cs`: the Status page's data, per-job log lines (`JobLog`), and the admin-only in-memory server log.
+  - `Plugins/Plugins.cs`: plugin host. `PLUGINS=id=url` routes `/plugins/{id}/...` through YARP (login required; the plugin gets only `X-PlaylistChaser-User`). `/api/plugin/...` is the plugin's API, guarded by `PLUGIN_TOKEN` and the user header. Plugin jobs (`JobKind.Plugin`) are created and updated by the plugin, never queued here.
+- **`plugins/Downloader/`**: the download plugin, its own container (yt-dlp pinned, ffmpeg, TagLibSharp). Config page in `wwwroot`, worker in `Worker.cs`, pure planning in `Library.cs`. Tests in `plugins/Downloader.Tests`. Runs as UID 568 in compose so the music apps can read its files.
 - **`server/PlaylistChaser.Tests`**: xUnit + `WebApplicationFactory` (`TestApp`) with `FakeSources` in place of the real services.
   - Runs on SQLite by default, or on Postgres when `TEST_POSTGRES` is set (CI does both).
 - **`client/`**: React 19 + Vite + TypeScript + Mantine 9 + TanStack Query + react-router 8 + `vite-plugin-pwa`.
