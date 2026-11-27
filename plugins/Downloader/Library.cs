@@ -16,7 +16,9 @@ public static class Library
 {
     public static string Safe(string name, string fallback)
     {
-        var cleaned = new string(name.Select(c => Path.GetInvalidFileNameChars().Contains(c) || c == '/' ? '_' : c).ToArray()).Trim().TrimEnd('.');
+        // a fixed list: the files are written on Linux and must read the same on Windows and Samba shares
+        const string unsafeChars = "/\\:*?\"<>|";
+        var cleaned = new string(name.Select(c => unsafeChars.Contains(c) || char.IsControl(c) ? '_' : c).ToArray()).Trim().TrimEnd('.');
         if (cleaned.Length == 0) return fallback;
         return cleaned.Length > 120 ? cleaned[..120] : cleaned;
     }
